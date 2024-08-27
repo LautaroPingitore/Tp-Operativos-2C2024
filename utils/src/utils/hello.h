@@ -19,6 +19,21 @@
 * @param quien Módulo desde donde se llama a la función
 * @return No devuelve nada
 */
-void saludar(char* quien);
+
+
+typedef enum
+{
+	MENSAJE,
+	PAQUETE
+}op_code;
+
+extern t_log* logger;
+
+void* recibir_buffer(int*, int);
+
+int iniciar_servidor(char*, t_log*);
+int esperar_cliente(int);
+void recibir_mensaje(int);
+int recibir_operacion(int);
 
 #endif
