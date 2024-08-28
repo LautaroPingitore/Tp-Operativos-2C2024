@@ -35,5 +35,7 @@ int iniciar_servidor(char*, t_log*);
 int esperar_cliente(int);
 void recibir_mensaje(int);
 int recibir_operacion(int);
+t_log* iniciar_logger(char*, char*);
+t_config* iniciar_config(char*,char*);
 
 #endif

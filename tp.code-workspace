@@ -24,7 +24,8 @@
   "settings": {
     "debug.onTaskErrors": "abort",
     "files.associations": {
-      "*.h": "c"
+      "*.h": "c",
+      "typeinfo": "c"
     },
     "C_Cpp.errorSquiggles": "disabled"
   }

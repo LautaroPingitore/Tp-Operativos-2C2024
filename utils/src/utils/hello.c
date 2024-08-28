@@ -12,8 +12,6 @@ int iniciar_servidor(char* puerto, t_log* logger) // Guarda pq capaz el puerto e
 	hints.ai_socktype = SOCK_STREAM;
 	hints.ai_flags = AI_PASSIVE;
 
-
-
 	getaddrinfo(NULL, puerto, &hints, &servinfo);
 
 	// Creamos el socket de escucha del servidor
@@ -91,3 +89,29 @@ void recibir_mensaje(int socket_cliente)
 }
 
 */
+
+t_log* iniciar_logger(char* file_name, char* logger_name)
+{
+	t_log* nuevo_logger = log_create(file_name, logger_name, 1, LOG_LEVEL_INFO);
+
+	if (nuevo_logger == NULL)
+	{
+		perror("Error creando el log ");
+		printf("%s", logger_name);
+		exit(EXIT_FAILURE);
+	};
+	return nuevo_logger;
+}
+
+t_config* iniciar_config(char* file_name, char* config_name)
+{
+	t_config* nuevo_config = config_create(file_name);
+
+	if (nuevo_config == NULL)
+	{
+		perror("Error creando el config ");
+		printf("%s", config_name);
+		exit(EXIT_FAILURE);
+	};
+	return nuevo_config;
+}
