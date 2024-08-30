@@ -27,6 +27,18 @@ typedef enum
 	PAQUETE
 }op_code;
 
+typedef struct
+{
+	int size;
+	void* stream;
+} t_buffer;
+
+typedef struct
+{
+	op_code codigo_operacion;
+	t_buffer* buffer;
+} t_paquete;
+
 extern t_log* logger;
 
 void* recibir_buffer(int*, int);
@@ -37,5 +49,15 @@ void recibir_mensaje(int);
 int recibir_operacion(int);
 t_log* iniciar_logger(char*, char*);
 t_config* iniciar_config(char*,char*);
+int crear_conexion(char* ip, char* puerto);
+void enviar_mensaje(char* mensaje, int socket_cliente);
+t_paquete* crear_paquete(void);
+void agregar_a_paquete(t_paquete* paquete, void* valor, int tamanio);
+void enviar_paquete(t_paquete* paquete, int socket_cliente);
+void liberar_conexion(int socket_cliente);
+void eliminar_paquete(t_paquete* paquete);
+t_list* recibir_paquete(int);
+void paquete(int, t_log*);
+void terminar_programa(int, t_log*, t_config*);
 
 #endif

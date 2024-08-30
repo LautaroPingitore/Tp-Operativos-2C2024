@@ -3,11 +3,11 @@
 
 #include <utils/hello.h>
 
-int PUERTO_ESCUCHA;
+char* PUERTO_ESCUCHA;
 char* MOUNT_DIR;
-int BLOCK_SIZE;
-int BLOCK_COUNT;
-int RETARDO_ACCESO_BLOQUE;
+char* BLOCK_SIZE;
+char* BLOCK_COUNT;
+char* RETARDO_ACCESO_BLOQUE;
 char* LOG_LEVEL;
 
 t_log *LOGGER_FILESYSTEM;

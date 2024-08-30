@@ -16,10 +16,10 @@ void inicializar_config(char* arg){
     LOGGER_FILESYSTEM = iniciar_logger("filesystem.config", "FILESYSTEM");
     CONFIG_FILESYSTEM = iniciar_config(config_path,"FILESYSTEM");
     
-    PUERTO_ESCUCHA = config_get_int_value(CONFIG_FILESYSTEM, "PUERTO");
+    PUERTO_ESCUCHA = config_get_string_value(CONFIG_FILESYSTEM, "PUERTO");
     MOUNT_DIR = config_get_string_value(CONFIG_FILESYSTEM, "MOUNT_DIR");
-    BLOCK_SIZE = config_get_int_value(CONFIG_FILESYSTEM, "BLOCK_SIZE");
-    BLOCK_COUNT = config_get_int_value(CONFIG_FILESYSTEM, "BLOCK_COUNT");
-    RETARDO_ACCESO_BLOQUE = config_get_int_value(CONFIG_FILESYSTEM, "RETARDO_ACCESO_BLOQUE");
+    BLOCK_SIZE = config_get_string_value(CONFIG_FILESYSTEM, "BLOCK_SIZE");
+    BLOCK_COUNT = config_get_string_value(CONFIG_FILESYSTEM, "BLOCK_COUNT");
+    RETARDO_ACCESO_BLOQUE = config_get_string_value(CONFIG_FILESYSTEM, "RETARDO_ACCESO_BLOQUE");
     LOG_LEVEL = config_get_string_value(CONFIG_FILESYSTEM, "LOG_LEVEL");
     }

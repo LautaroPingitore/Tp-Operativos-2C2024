@@ -4,8 +4,23 @@ int main(int argc, char** argv) {
     
     inicializar_config(argv[1]);
 
+//	int socket_memoria = iniciar_servidor(PUERTO_ESCUCHA, LOGGER_MEMORIA);
+
+
     return 0;
 }
+
+
+
+
+
+
+
+
+
+
+
+
 
 void inicializar_config(char *arg)
 {
@@ -17,12 +32,12 @@ void inicializar_config(char *arg)
 	LOGGER_MEMORIA = iniciar_logger("memoria.log", "Servidor Memoria");
 	CONFIG_MEMORIA = iniciar_config(config_path, "MEMORIA");
 
-	PUERTO_ESCUCHA = config_get_int_value(CONFIG_MEMORIA, "PUERTO_ESCUCHA");
+	PUERTO_ESCUCHA = config_get_string_value(CONFIG_MEMORIA, "PUERTO_ESCUCHA");
     IP_FILESYSTEM = config_get_string_value(CONFIG_MEMORIA,"IP_FILESYSTEM");
-    PUERTO_FILESYSTEM = config_get_int_value(CONFIG_MEMORIA,"PUERTO_FYLESYSTEM");
-	TAM_MEMORIA = config_get_int_value(CONFIG_MEMORIA, "TAM_MEMORIA");
+    PUERTO_FILESYSTEM = config_get_string_value(CONFIG_MEMORIA,"PUERTO_FYLESYSTEM");
+	TAM_MEMORIA = config_get_string_value(CONFIG_MEMORIA, "TAM_MEMORIA");
 	PATH_INSTRUCCIONES = config_get_string_value(CONFIG_MEMORIA, "PATH_INSTRUCCIONES");
-	RETARDO_RESPUESTA = config_get_int_value(CONFIG_MEMORIA, "RETARDO_RESPUESTA");
+	RETARDO_RESPUESTA = config_get_string_value(CONFIG_MEMORIA, "RETARDO_RESPUESTA");
 
     ESQUEMA = config_get_string_value(CONFIG_MEMORIA,"ESQUMA");
 	ALGORITMO_BUSQUEDA = config_get_string_value(CONFIG_MEMORIA, "ALGORITMO_BUSQUEDA");
