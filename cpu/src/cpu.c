@@ -21,4 +21,6 @@ void inicializar_config(char* arg){
     PUERTO_ESCUCHA_DISPATCH = config_get_string_value(CONFIG_CPU, "PUERTO_ESCUCHA_DISPATCH");
     PUERTO_ESCUCHA_INTERRUPT = config_get_string_value(CONFIG_CPU, "PUERTO_ESCUCHA_INTERRUPT");
     LOG_LEVEL = config_get_string_value(CONFIG_CPU, "LOG_LEVEL");
+
+    IP_CPU = config_get_string_value(CONFIG_CPU,"IP_CPU");
 }

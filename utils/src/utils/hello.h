@@ -43,7 +43,7 @@ extern t_log* logger;
 
 void* recibir_buffer(int*, int);
 
-int iniciar_servidor(char*, t_log*);
+int iniciar_servidor(char*, t_log*,char*,char*);
 int esperar_cliente(int);
 void recibir_mensaje(int);
 int recibir_operacion(int);

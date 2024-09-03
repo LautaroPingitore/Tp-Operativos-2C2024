@@ -4,7 +4,7 @@ int main(int argc, char** argv) {
     
     inicializar_config(argv[1]);
 
-//	int socket_memoria = iniciar_servidor(PUERTO_ESCUCHA, LOGGER_MEMORIA);
+	int socket_memoria = iniciar_servidor(PUERTO_ESCUCHA, LOGGER_MEMORIA, IP_MEMORIA, "MEMORIA");
 
 
     return 0;
@@ -43,4 +43,6 @@ void inicializar_config(char *arg)
 	ALGORITMO_BUSQUEDA = config_get_string_value(CONFIG_MEMORIA, "ALGORITMO_BUSQUEDA");
 	PARTICIONES = config_get_array_value(CONFIG_MEMORIA, "PARTICIONES");
     LOG_LEVEL = config_get_string_value(CONFIG_MEMORIA,"LOG_LEVEL");
+
+	IP_MEMORIA = config_get_string_value(CONFIG_MEMORIA,"IP_MEMORIA");
 }

@@ -1,6 +1,6 @@
 #include <utils/hello.h>
 
-int iniciar_servidor(char* puerto, t_log* logger) // Guarda pq capaz el puerto es char*
+int iniciar_servidor(char* puerto, t_log* logger, char* ip, char* nombreServidor) // Guarda pq capaz el puerto es char*
 {
 	int socket_servidor;
 	int err;
@@ -12,7 +12,7 @@ int iniciar_servidor(char* puerto, t_log* logger) // Guarda pq capaz el puerto e
 	hints.ai_socktype = SOCK_STREAM;
 	hints.ai_flags = AI_PASSIVE;
 
-	getaddrinfo(NULL, puerto, &hints, &servinfo);
+	getaddrinfo(ip, puerto, &hints, &servinfo);
 
 	// Creamos el socket de escucha del servidor
 
@@ -26,12 +26,14 @@ int iniciar_servidor(char* puerto, t_log* logger) // Guarda pq capaz el puerto e
 
 	if(err == (-1)){
 		perror("Error en la funcion setsockopt");
+		log_info(logger, "Error en la funcion setsockopt");
 	}
 
 	err = bind(socket_servidor, servinfo->ai_addr, servinfo->ai_addrlen);
 
 	if(err == (-1)){
 		perror("Error en la funcion bind");
+		log_info(logger, "Error en la funcion bind");
 	}
 
 	// Escuchamos las conexiones entrantes
@@ -40,11 +42,13 @@ int iniciar_servidor(char* puerto, t_log* logger) // Guarda pq capaz el puerto e
 
 	if(err == (-1)){
 		perror("Error en la funcion listen");
+		log_info(logger, "Error en la funcion listen");
 	}
 	
 
 	freeaddrinfo(servinfo);
-	log_trace(logger, "Listo para escuchar a mi cliente");
+	log_info(logger, "El servidor %s esta escuchando. \nIP: %s \nPUERTO: %s \n", nombreServidor, ip, puerto);
+
 
 	return socket_servidor;
 }
@@ -77,8 +81,7 @@ int recibir_operacion(int socket_cliente)
 }
 
 
-/* 
-GUARDA CON ESTA CHEEE
+
 
 void recibir_mensaje(int socket_cliente)
 {
@@ -121,7 +124,7 @@ t_list* recibir_paquete(int socket_cliente)
 	return valores;
 }
 
-*/
+
 
 t_log* iniciar_logger(char* file_name, char* logger_name)
 {

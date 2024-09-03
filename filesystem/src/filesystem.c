@@ -22,4 +22,6 @@ void inicializar_config(char* arg){
     BLOCK_COUNT = config_get_string_value(CONFIG_FILESYSTEM, "BLOCK_COUNT");
     RETARDO_ACCESO_BLOQUE = config_get_string_value(CONFIG_FILESYSTEM, "RETARDO_ACCESO_BLOQUE");
     LOG_LEVEL = config_get_string_value(CONFIG_FILESYSTEM, "LOG_LEVEL");
+
+    IP_FILESYSTEM = config_get_string_value(CONFIG_FILESYSTEM,"IP_FILESYSTEM");
     }

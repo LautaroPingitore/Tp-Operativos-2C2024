@@ -19,4 +19,6 @@ t_config* CONFIG_MEMORIA;
 
 void inicializar_config(char*);
 
+char* IP_MEMORIA;
+
 #endif /* MEMORIA_H_ */

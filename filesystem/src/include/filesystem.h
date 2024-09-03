@@ -15,4 +15,6 @@ t_config *CONFIG_FILESYSTEM;
 
 void inicializar_config(char*);
 
+char* IP_FILESYSTEM;
+
 #endif /* FILESYSTEM_H_ */

@@ -12,6 +12,8 @@ char* LOG_LEVEL;
 t_log *LOGGER_CPU;
 t_config *CONFIG_CPU;
 
+char* IP_CPU;
+
 void inicializar_config(char*);
 
 
