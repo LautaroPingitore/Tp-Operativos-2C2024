@@ -60,4 +60,7 @@ t_list* recibir_paquete(int);
 void paquete(int, t_log*);
 void terminar_programa(int, t_log*, t_config*);
 
+
+void iterator(char* );
+
 #endif

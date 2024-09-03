@@ -5,7 +5,29 @@ int main(int argc, char** argv) {
     inicializar_config(argv[1]);
 
 	int socket_memoria = iniciar_servidor(PUERTO_ESCUCHA, LOGGER_MEMORIA, IP_MEMORIA, "MEMORIA");
+	int socket_kernel = esperar_cliente(socket_memoria);
 
+	t_list* lista;
+	while (1) {
+		int cod_op = recibir_operacion(socket_kernel);
+		switch (cod_op) {
+		case MENSAJE:
+			recibir_mensaje(socket_kernel);
+			break;
+		case PAQUETE:
+			lista = recibir_paquete(socket_kernel);
+			log_info(LOGGER_MEMORIA, "Me llegaron los siguientes valores:\n");
+			list_iterate(lista, (void*) iterator);
+			break;
+		case -1:
+			log_error(LOGGER_MEMORIA, "El cliente se desconecto. Terminando servidor");
+			return EXIT_FAILURE;
+		default:
+			log_warning(LOGGER_MEMORIA,"Operacion desconocida. No quieras meter la pata");
+			break;
+		}
+	}
+	return EXIT_SUCCESS;
 
     return 0;
 }
