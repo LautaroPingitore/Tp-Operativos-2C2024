@@ -1,8 +1,8 @@
 #include <include/kernel.h>
 
-int main(int argc, char** argv) {
+int main() {
 
-    inicializar_config(argv[1]);    
+    inicializar_config("CHAAUUUU");    
     log_info(LOGGER_KERNEL, "Iniciando KERNEL\n");
 
     int socket_kernel_memoria = crear_conexion(IP_MEMORIA, PUERTO_MEMORIA);

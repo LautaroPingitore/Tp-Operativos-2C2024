@@ -1,8 +1,8 @@
 #include <include/memoria.h>
 
-int main(int argc, char** argv) {
+int main() {
     
-    inicializar_config(argv[1]);
+    inicializar_config("HOLAAAA");
 
 	int socket_memoria = iniciar_servidor(PUERTO_ESCUCHA, LOGGER_MEMORIA, IP_MEMORIA, "MEMORIA");
 	int socket_kernel = esperar_cliente(socket_memoria, LOGGER_MEMORIA);
