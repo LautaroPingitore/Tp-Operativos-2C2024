@@ -14,6 +14,7 @@ t_log *LOGGER_FILESYSTEM;
 t_config *CONFIG_FILESYSTEM;
 
 void inicializar_config(char*);
+void iterator(char*);
 
 char* IP_FILESYSTEM;
 

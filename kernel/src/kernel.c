@@ -31,3 +31,4 @@ void inicializar_config(char* arg){
     QUANTUM = config_get_string_value(CONFIG_KERNEL, "QUANTUM");
     LOG_LEVEL = config_get_string_value(CONFIG_KERNEL, "lOG_LEVEL");
 }
+

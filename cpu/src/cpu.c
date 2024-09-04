@@ -24,3 +24,7 @@ void inicializar_config(char* arg){
 
     IP_CPU = config_get_string_value(CONFIG_CPU,"IP_CPU");
 }
+
+void iterator(char* value) {
+	log_info(LOGGER_CPU,"%s", value);
+}

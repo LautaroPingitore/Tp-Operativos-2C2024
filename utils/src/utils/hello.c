@@ -53,7 +53,7 @@ int iniciar_servidor(char* puerto, t_log* logger, char* ip, char* nombreServidor
 	return socket_servidor;
 }
 
-int esperar_cliente(int socket_servidor)
+int esperar_cliente(int socket_servidor, t_log* logger)
 {
 	// Aceptamos un nuevo cliente
 	int socket_cliente = accept(socket_servidor, NULL, NULL);
@@ -83,7 +83,7 @@ int recibir_operacion(int socket_cliente)
 
 
 
-void recibir_mensaje(int socket_cliente)
+void recibir_mensaje(int socket_cliente, t_log* logger)
 {
 	int size;
 	char* buffer = recibir_buffer(&size, socket_cliente);
@@ -307,6 +307,3 @@ void terminar_programa(int conexion, t_log* logger, t_config* config)
 }
 
 
-void iterator(char* value) {
-	log_info(logger,"%s", value);
-}

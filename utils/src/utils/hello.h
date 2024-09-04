@@ -44,8 +44,8 @@ extern t_log* logger;
 void* recibir_buffer(int*, int);
 
 int iniciar_servidor(char*, t_log*,char*,char*);
-int esperar_cliente(int);
-void recibir_mensaje(int);
+int esperar_cliente(int, t_log*);
+void recibir_mensaje(int, t_log*);
 int recibir_operacion(int);
 t_log* iniciar_logger(char*, char*);
 t_config* iniciar_config(char*,char*);
@@ -61,6 +61,5 @@ void paquete(int, t_log*);
 void terminar_programa(int, t_log*, t_config*);
 
 
-void iterator(char* );
 
 #endif

@@ -15,6 +15,7 @@ char* ALGORITMO_PLANIFICACION;
 char* QUANTUM;
 char* LOG_LEVEL;
 
+
 void inicializar_config(char*);
 
 

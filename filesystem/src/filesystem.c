@@ -24,4 +24,8 @@ void inicializar_config(char* arg){
     LOG_LEVEL = config_get_string_value(CONFIG_FILESYSTEM, "LOG_LEVEL");
 
     IP_FILESYSTEM = config_get_string_value(CONFIG_FILESYSTEM,"IP_FILESYSTEM");
-    }
+}
+
+void iterator(char* value) {
+	log_info(LOGGER_FILESYSTEM,"%s", value);
+}

@@ -5,14 +5,14 @@ int main(int argc, char** argv) {
     inicializar_config(argv[1]);
 
 	int socket_memoria = iniciar_servidor(PUERTO_ESCUCHA, LOGGER_MEMORIA, IP_MEMORIA, "MEMORIA");
-	int socket_kernel = esperar_cliente(socket_memoria);
+	int socket_kernel = esperar_cliente(socket_memoria, LOGGER_MEMORIA);
 
 	t_list* lista;
 	while (1) {
 		int cod_op = recibir_operacion(socket_kernel);
 		switch (cod_op) {
 		case MENSAJE:
-			recibir_mensaje(socket_kernel);
+			recibir_mensaje(socket_kernel, LOGGER_MEMORIA);
 			break;
 		case PAQUETE:
 			lista = recibir_paquete(socket_kernel);
@@ -31,7 +31,6 @@ int main(int argc, char** argv) {
 
     return 0;
 }
-
 
 
 
@@ -67,4 +66,8 @@ void inicializar_config(char *arg)
     LOG_LEVEL = config_get_string_value(CONFIG_MEMORIA,"LOG_LEVEL");
 
 	IP_MEMORIA = config_get_string_value(CONFIG_MEMORIA,"IP_MEMORIA");
+}
+
+void iterator(char* value) {
+	log_info(LOGGER_MEMORIA,"%s", value);
 }

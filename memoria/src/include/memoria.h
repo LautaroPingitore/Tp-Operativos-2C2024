@@ -18,6 +18,7 @@ t_log* LOGGER_MEMORIA;
 t_config* CONFIG_MEMORIA;
 
 void inicializar_config(char*);
+void iterator(char*);
 
 char* IP_MEMORIA;
 
