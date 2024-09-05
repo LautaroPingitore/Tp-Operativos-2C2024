@@ -14,10 +14,14 @@ char* ALGORITMO_BUSQUEDA;
 char** PARTICIONES;
 char* LOG_LEVEL; 
 
+int socket_memoria;
+int socket_kernel;
+
 t_log* LOGGER_MEMORIA;
 t_config* CONFIG_MEMORIA;
 
 void inicializar_config(char*);
+int gestionarConexionConKernel();
 void iterator(char*);
 
 char* IP_MEMORIA;

@@ -4,30 +4,10 @@ int main() {
     
     inicializar_config("memoria");
 
-	int socket_memoria = iniciar_servidor(PUERTO_ESCUCHA, LOGGER_MEMORIA, IP_MEMORIA, "MEMORIA");
-	int socket_kernel = esperar_cliente(socket_memoria, LOGGER_MEMORIA);
-
-	t_list* lista;
-	while (1) {
-		int cod_op = recibir_operacion(socket_kernel);
-		switch (cod_op) {
-		case MENSAJE:
-			recibir_mensaje(socket_kernel, LOGGER_MEMORIA);
-			break;
-		case PAQUETE:
-			lista = recibir_paquete(socket_kernel);
-			log_info(LOGGER_MEMORIA, "Me llegaron los siguientes valores:\n");
-			list_iterate(lista, (void*) iterator);
-			break;
-		case -1:
-			log_error(LOGGER_MEMORIA, "El cliente se desconecto. Terminando servidor");
-			return EXIT_FAILURE;
-		default:
-			log_warning(LOGGER_MEMORIA,"Operacion desconocida. No quieras meter la pata");
-			break;
-		}
-	}
-	return EXIT_SUCCESS;
+	socket_memoria = iniciar_servidor(PUERTO_ESCUCHA, LOGGER_MEMORIA, IP_MEMORIA, "MEMORIA");
+	socket_kernel = esperar_cliente(socket_memoria, LOGGER_MEMORIA);
+	
+	gestionarConexionConKernel();
 
     return 0;
 }
@@ -72,6 +52,31 @@ void inicializar_config(char *arg)
     LOG_LEVEL = config_get_string_value(CONFIG_MEMORIA,"LOG_LEVEL");
 
 	IP_MEMORIA = config_get_string_value(CONFIG_MEMORIA,"IP_MEMORIA");
+}
+
+
+int gestionarConexionConKernel(){
+	t_list* lista;
+	while (1) {
+		int cod_op = recibir_operacion(socket_kernel);
+		switch (cod_op) {
+		case MENSAJE:
+			recibir_mensaje(socket_kernel, LOGGER_MEMORIA);
+			break;
+		case PAQUETE:
+			lista = recibir_paquete(socket_kernel);
+			log_info(LOGGER_MEMORIA, "Me llegaron los siguientes valores:\n");
+			list_iterate(lista, (void*) iterator);
+			break;
+		case -1:
+			log_error(LOGGER_MEMORIA, "El cliente se desconecto. Terminando servidor");
+			return EXIT_FAILURE;
+		default:
+			log_warning(LOGGER_MEMORIA,"Operacion desconocida. No quieras meter la pata");
+			break;
+		}
+	}
+	return EXIT_SUCCESS;
 }
 
 void iterator(char* value) {
