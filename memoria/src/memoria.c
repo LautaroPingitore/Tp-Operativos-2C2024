@@ -2,7 +2,7 @@
 
 int main() {
     
-    inicializar_config("HOLAAAA");
+    inicializar_config("memoria");
 
 	int socket_memoria = iniciar_servidor(PUERTO_ESCUCHA, LOGGER_MEMORIA, IP_MEMORIA, "MEMORIA");
 	int socket_kernel = esperar_cliente(socket_memoria, LOGGER_MEMORIA);
@@ -45,10 +45,16 @@ int main() {
 
 void inicializar_config(char *arg)
 {
+	/*
 	char config_path[256];
 	strcpy(config_path, "./config/");
 	strcat(config_path, arg);
 	strcat(config_path, ".config");
+*/
+	char config_path[256];
+    strcpy(config_path, "../");
+    strcat(config_path, arg);
+    strcat(config_path, ".config");
 
 	LOGGER_MEMORIA = iniciar_logger("memoria.log", "Servidor Memoria");
 	CONFIG_MEMORIA = iniciar_config(config_path, "MEMORIA");

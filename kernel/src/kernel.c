@@ -2,7 +2,7 @@
 
 int main() {
 
-    inicializar_config("CHAAUUUU");    
+    inicializar_config("kernel");    
     log_info(LOGGER_KERNEL, "Iniciando KERNEL\n");
 
     int socket_kernel_memoria = crear_conexion(IP_MEMORIA, PUERTO_MEMORIA);
@@ -13,10 +13,16 @@ int main() {
     return 0;
 }
 
-void inicializar_config(char* arg){
 
+void inicializar_config(char* arg){
+    /*
     char config_path[256];
     strcpy(config_path, arg);
+    strcat(config_path, ".config");
+    */
+    char config_path[256];
+    strcpy(config_path, "../");
+    strcat(config_path, arg);
     strcat(config_path, ".config");
 
     LOGGER_KERNEL = iniciar_logger("kernel.log", "KERNEL");
@@ -29,6 +35,6 @@ void inicializar_config(char* arg){
     PUERTO_CPU_INTERRUPT = config_get_string_value(CONFIG_KERNEL, "PUERTO_CPU_INTERRUPT");
     ALGORITMO_PLANIFICACION = config_get_string_value(CONFIG_KERNEL, "ALGORITMO_PLANIFICACION");
     QUANTUM = config_get_string_value(CONFIG_KERNEL, "QUANTUM");
-    LOG_LEVEL = config_get_string_value(CONFIG_KERNEL, "lOG_LEVEL");
+    LOG_LEVEL = config_get_string_value(CONFIG_KERNEL, "LOG_LEVEL");
 }
 

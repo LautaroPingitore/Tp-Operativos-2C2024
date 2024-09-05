@@ -152,6 +152,20 @@ t_config* iniciar_config(char* file_name, char* config_name)
 	return nuevo_config;
 }
 
+/*
+t_config* iniciar_config(void)
+{
+	t_config* nuevo_config = config_create("cliente.config");
+
+	if (nuevo_config == NULL) {
+		perror("HUBO UN PROBLEMA EN LA CREACION DEL CONFIG");
+		exit(EXIT_FAILURE);
+	}
+
+	return nuevo_config;
+}
+*/
+
 //funciones tp0
 
 int crear_conexion(char *ip, char* puerto)
