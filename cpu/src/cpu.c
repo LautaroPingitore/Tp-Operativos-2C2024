@@ -1,17 +1,50 @@
 #include <include/cpu.h>
 
-int main(int argc, char** argv) {
+int main() {
 
-    inicializar_config(argv[1]);    
+    inicializar_config("cpu"); 
+    int socket_cpu = iniciar_servidor(PUERTO_ESCUCHA_DISPATCH, LOGGER_CPU, IP_CPU, "MEMORIA");
+	int socket_kernel = esperar_cliente(socket_cpu, LOGGER_CPU);
+
+	t_list* lista;
+	while (1) {
+		int cod_op = recibir_operacion(socket_kernel);
+		switch (cod_op) {
+		case MENSAJE:
+			recibir_mensaje(socket_kernel, LOGGER_CPU);
+			break;
+		case PAQUETE:
+			lista = recibir_paquete(socket_kernel);
+			log_info(LOGGER_CPU, "Me llegaron los siguientes valores:\n");
+			list_iterate(lista, (void*) iterator);
+			break;
+		case -1:
+			log_error(LOGGER_CPU, "El cliente se desconecto. Terminando servidor");
+			return EXIT_FAILURE;
+		default:
+			log_warning(LOGGER_CPU,"Operacion desconocida. No quieras meter la pata");
+			break;
+		}
+	}
+	return EXIT_SUCCESS;
+   
     
     return 0;
 }
 
 void inicializar_config(char* arg){
-
+    
+    /*
     char config_path[256];
     strcpy(config_path, arg);
     strcat(config_path, ".config");
+    */
+
+    char config_path[256];
+    strcpy(config_path, "../");
+    strcat(config_path, arg);
+    strcat(config_path, ".config");
+
 
     LOGGER_CPU = iniciar_logger("cpu.log", "CPU");
     CONFIG_CPU = iniciar_config(config_path, "CPU");

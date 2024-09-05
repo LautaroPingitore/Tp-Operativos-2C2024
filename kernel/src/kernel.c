@@ -9,6 +9,14 @@ int main() {
     enviar_mensaje("Hola MEMORIA, soy Kernel", socket_kernel_memoria);
     paquete(socket_kernel_memoria, LOGGER_KERNEL);
 
+    int socket_kernel_cpu_dispatch = crear_conexion(IP_CPU,PUERTO_CPU_DISPATCH);
+    enviar_mensaje("Hola CPU DISPATCH, soy KERNEL" , socket_kernel_cpu_dispatch);
+    paquete(socket_kernel_cpu_dispatch , LOGGER_KERNEL);
+
+    int socket_kernel_cpu_interrupt = crear_conexion(IP_CPU,PUERTO_CPU_INTERRUPT);
+    enviar_mensaje("Hola CPU INTERRUPT, soy KERNEL" , socket_kernel_cpu_interrupt);
+    paquete(socket_kernel_cpu_interrupt , LOGGER_KERNEL);
+    
 
     return 0;
 }
