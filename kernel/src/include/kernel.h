@@ -15,6 +15,10 @@ char* ALGORITMO_PLANIFICACION;
 char* QUANTUM;
 char* LOG_LEVEL;
 
+int socket_kernel_memoria;
+int socket_kernel_cpu_dispatch;
+int socket_kernel_cpu_interrupt;
+
 void inicializar_config(char*);
 
 

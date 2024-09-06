@@ -12,11 +12,12 @@ char* LOG_LEVEL;
 t_log *LOGGER_CPU;
 t_config *CONFIG_CPU;
 
-int socket_cpu;
 int socket_cpu_dispatch;
 int socket_cpu_dispatch_kernel;
 int socket_cpu_interrupt;
 int socket_cpu_interrupt_kernel;
+int socket_cpu_dispatch_memoria;
+int socket_cpu_interrupt_memoria;
 
 char* IP_CPU;
 

@@ -17,9 +17,15 @@ int main() {
     gestionarConexionConKernelInterrupt();
 
 	//Nos conectamos a memoria desde dispatch
-    int socket_cpu_dispatch_memoria = crear_conexion(IP_MEMORIA, PUERTO_MEMORIA);
+    socket_cpu_dispatch_memoria = crear_conexion(IP_MEMORIA, PUERTO_MEMORIA);
     enviar_mensaje("Hola MEMORIA, soy CPU DISPATCH", socket_cpu_dispatch_memoria);
     paquete(socket_cpu_dispatch_memoria, LOGGER_CPU);
+
+	//Nos conectamos a memoria desde dispatch
+    socket_cpu_interrupt_memoria = crear_conexion(IP_MEMORIA, PUERTO_MEMORIA);
+    enviar_mensaje("Hola MEMORIA, soy CPU INTERRUPT", socket_cpu_interrupt_memoria);
+    paquete(socket_cpu_interrupt_memoria, LOGGER_CPU);
+
 
     return 0;
 }
