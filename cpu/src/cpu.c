@@ -3,16 +3,20 @@
 int main() {
 
     inicializar_config("cpu"); 
-    socket_cpu = iniciar_servidor(PUERTO_ESCUCHA_DISPATCH, LOGGER_CPU, IP_CPU, "CPU_DISPATCH");
-	socket_cpu_dispatch_kernel = esperar_cliente(socket_cpu, LOGGER_CPU);
 
+	//Inicializamos los servidores
+    socket_cpu_dispatch = iniciar_servidor(PUERTO_ESCUCHA_DISPATCH, LOGGER_CPU, IP_CPU, "CPU_DISPATCH");
+    socket_cpu_interrupt = iniciar_servidor(PUERTO_ESCUCHA_INTERRUPT, LOGGER_CPU, IP_CPU, "CPU_INTERRUPT");
+	
+	//Conexion de dispatch con kernel
+	socket_cpu_dispatch_kernel = esperar_cliente(socket_cpu_dispatch, LOGGER_CPU);
     gestionarConexionConKernelDispatch();
 
-    socket_cpu = iniciar_servidor(PUERTO_ESCUCHA_INTERRUPT, LOGGER_CPU, IP_CPU, "CPU_INTERRUPT");
-    socket_cpu_interrupt_kernel = esperar_cliente(socket_cpu, LOGGER_CPU);
-
+	//Conexion de interrupt con kernel
+    socket_cpu_interrupt_kernel = esperar_cliente(socket_cpu_interrupt, LOGGER_CPU);
     gestionarConexionConKernelInterrupt();
 
+	//Nos conectamos a memoria desde dispatch
     int socket_cpu_dispatch_memoria = crear_conexion(IP_MEMORIA, PUERTO_MEMORIA);
     enviar_mensaje("Hola MEMORIA, soy CPU DISPATCH", socket_cpu_dispatch_memoria);
     paquete(socket_cpu_dispatch_memoria, LOGGER_CPU);

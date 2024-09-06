@@ -10,17 +10,14 @@ int main() {
 
 	//Esperar cpu disp y gestionar conexion
 	socket_memoria_cpu_dispatch = esperar_cliente(socket_memoria, LOGGER_MEMORIA);
-
 	gestionarConexionConCPUDispatch();
 	
 	//Esperar cpu int y gestionar conexion
 	socket_memoria_cpu_interrupt = esperar_cliente(socket_memoria, LOGGER_MEMORIA);
-
 	gestionarConexionConCPUInterrupt();	
 
 	//Esperar memoria y gestionar conexion
 	socket_memoria_kernel = esperar_cliente(socket_memoria, LOGGER_MEMORIA);
-	
 	gestionarConexionConKernel();
 
 	return 0;

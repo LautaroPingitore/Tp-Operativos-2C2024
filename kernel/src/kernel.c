@@ -5,16 +5,20 @@ int main() {
     inicializar_config("kernel");    
     log_info(LOGGER_KERNEL, "Iniciando KERNEL\n");
 
+
+    //Conectamos con memoria
     int socket_kernel_memoria = crear_conexion(IP_MEMORIA, PUERTO_MEMORIA);
     log_info(LOGGER_KERNEL, "IP_MEMORIA: %s \nPUERTO_MEMORIA %s", IP_MEMORIA, PUERTO_MEMORIA);
     enviar_mensaje("Hola MEMORIA, soy Kernel", socket_kernel_memoria);
     paquete(socket_kernel_memoria, LOGGER_KERNEL);
 
+    //Conectamos con dispatch
     int socket_kernel_cpu_dispatch = crear_conexion(IP_CPU,PUERTO_CPU_DISPATCH);
     log_info(LOGGER_KERNEL, "IP_CPU: %s \nPUERTO_CPU_DISPATCH %s", IP_CPU, PUERTO_CPU_DISPATCH);
     enviar_mensaje("Hola CPU DISPATCH, soy KERNEL" , socket_kernel_cpu_dispatch);
     paquete(socket_kernel_cpu_dispatch , LOGGER_KERNEL);
 
+    //Conectamos con interrupt
     int socket_kernel_cpu_interrupt = crear_conexion(IP_CPU,PUERTO_CPU_INTERRUPT);
     log_info(LOGGER_KERNEL, "IP_CPU: %s \nPUERTO_CPU_INTERRUPT %s", IP_CPU, PUERTO_CPU_INTERRUPT);
     enviar_mensaje("Hola CPU INTERRUPT, soy KERNEL" , socket_kernel_cpu_interrupt);
