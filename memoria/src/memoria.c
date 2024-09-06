@@ -4,28 +4,27 @@ int main() {
     
     inicializar_config("memoria");
 
+
+	//Iniciar Servidor
 	socket_memoria = iniciar_servidor(PUERTO_ESCUCHA, LOGGER_MEMORIA, IP_MEMORIA, "MEMORIA");
-	socket_memoria_kernel = esperar_cliente(socket_memoria, LOGGER_MEMORIA);
-	
-	gestionarConexionConKernel();
-	
+
+	//Esperar cpu disp y gestionar conexion
 	socket_memoria_cpu_dispatch = esperar_cliente(socket_memoria, LOGGER_MEMORIA);
 
 	gestionarConexionConCPUDispatch();
 	
-    return 0;
+	//Esperar cpu int y gestionar conexion
+	socket_memoria_cpu_interrupt = esperar_cliente(socket_memoria, LOGGER_MEMORIA);
+
+	gestionarConexionConCPUInterrupt();	
+
+	//Esperar memoria y gestionar conexion
+	socket_memoria_kernel = esperar_cliente(socket_memoria, LOGGER_MEMORIA);
+	
+	gestionarConexionConKernel();
+
+	return 0;
 }
-
-
-
-
-
-
-
-
-
-
-
 
 void inicializar_config(char *arg)
 {
@@ -105,6 +104,31 @@ int gestionarConexionConCPUDispatch(){
 		}
 	}
 	return EXIT_SUCCESS;
+}
+
+int gestionarConexionConCPUInterrupt(){
+	t_list* lista;
+	while (1) {
+		int cod_op = recibir_operacion(socket_memoria_cpu_interrupt);
+		switch (cod_op) {
+		case MENSAJE:
+			recibir_mensaje(socket_memoria_cpu_interrupt, LOGGER_MEMORIA);
+			break;
+		case PAQUETE:
+			lista = recibir_paquete(socket_memoria_cpu_interrupt);
+			log_info(LOGGER_MEMORIA, "Me llegaron los siguientes valores:\n");
+			list_iterate(lista, (void*) iterator);
+			break;
+		case -1:
+			log_error(LOGGER_MEMORIA, "El cliente se desconecto. Terminando servidor");
+			return EXIT_FAILURE;
+		default:
+			log_warning(LOGGER_MEMORIA,"Operacion desconocida. No quieras meter la pata");
+			break;
+		}
+	}
+	return EXIT_SUCCESS;
+
 }
 
 void iterator(char* value) {

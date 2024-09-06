@@ -13,12 +13,16 @@ t_log *LOGGER_CPU;
 t_config *CONFIG_CPU;
 
 int socket_cpu;
-int socket_cpu_kernel;
+int socket_cpu_dispatch;
+int socket_cpu_dispatch_kernel;
+int socket_cpu_interrupt;
+int socket_cpu_interrupt_kernel;
 
 char* IP_CPU;
 
 void inicializar_config(char*);
 void iterator(char*);
-int gestionarConexionConKernel();
+int gestionarConexionConKernelDispatch();
+int gestionarConexionConKernelInterrupt();
 
 #endif /* CPU_H_ */
