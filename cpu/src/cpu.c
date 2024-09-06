@@ -4,9 +4,13 @@ int main() {
 
     inicializar_config("cpu"); 
     socket_cpu = iniciar_servidor(PUERTO_ESCUCHA_DISPATCH, LOGGER_CPU, IP_CPU, "MEMORIA");
-	socket_kernel = esperar_cliente(socket_cpu, LOGGER_CPU);
+	socket_cpu_kernel = esperar_cliente(socket_cpu, LOGGER_CPU);
 
     gestionarConexionConKernel();
+
+    int socket_cpu_dispatch_memoria = crear_conexion(IP_MEMORIA, PUERTO_MEMORIA);
+    enviar_mensaje("Hola MEMORIA, soy CPU DISPATCH", socket_cpu_dispatch_memoria);
+    paquete(socket_cpu_dispatch_memoria, LOGGER_CPU);
 
     return 0;
 }
@@ -45,13 +49,13 @@ void iterator(char* value) {
 int gestionarConexionConKernel(){
     t_list* lista;
 	while (1) {
-		int cod_op = recibir_operacion(socket_kernel);
+		int cod_op = recibir_operacion(socket_cpu_kernel);
 		switch (cod_op) {
 		case MENSAJE:
-			recibir_mensaje(socket_kernel, LOGGER_CPU);
+			recibir_mensaje(socket_cpu_kernel, LOGGER_CPU);
 			break;
 		case PAQUETE:
-			lista = recibir_paquete(socket_kernel);
+			lista = recibir_paquete(socket_cpu_kernel);
 			log_info(LOGGER_CPU, "Me llegaron los siguientes valores:\n");
 			list_iterate(lista, (void*) iterator);
 			break;

@@ -15,7 +15,8 @@ char** PARTICIONES;
 char* LOG_LEVEL; 
 
 int socket_memoria;
-int socket_kernel;
+int socket_memoria_kernel;
+int socket_memoria_cpu_dispatch;
 
 t_log* LOGGER_MEMORIA;
 t_config* CONFIG_MEMORIA;
@@ -23,6 +24,7 @@ t_config* CONFIG_MEMORIA;
 void inicializar_config(char*);
 int gestionarConexionConKernel();
 void iterator(char*);
+int gestionarConexionConCPUDispatch();
 
 char* IP_MEMORIA;
 

@@ -13,7 +13,7 @@ t_log *LOGGER_CPU;
 t_config *CONFIG_CPU;
 
 int socket_cpu;
-int socket_kernel;
+int socket_cpu_kernel;
 
 char* IP_CPU;
 
