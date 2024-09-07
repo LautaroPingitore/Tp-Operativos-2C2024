@@ -278,9 +278,9 @@ void eliminar_paquete(t_paquete* paquete)
 	free(paquete);
 }
 
-void liberar_conexion(int socket_cliente)
+void liberar_socket(int socket)
 {
-	close(socket_cliente);
+	close(socket);
 }
 
 void paquete(int conexion, t_log* logger)

@@ -29,7 +29,9 @@ int main() {
 	enviar_mensaje("Hola FILESYSTEM, soy Memoria", socket_memoria_filesystem);
 	paquete(socket_memoria_filesystem, LOGGER_MEMORIA);
 
-	terminar_programa()
+	int sockets[] = {socket_memoria, socket_memoria_cpu_dispatch, socket_memoria_cpu_interrupt, socket_memoria_kernel, socket_memoria_filesystem,-1};
+	terminar_programa(CONFIG_MEMORIA, LOGGER_MEMORIA, sockets);
+
 
 	return 0;
 }
@@ -141,4 +143,15 @@ int gestionarConexionConCPUInterrupt(){
 
 void iterator(char* value) {
 	log_info(LOGGER_MEMORIA,"%s", value);
+}
+
+void terminar_programa(t_config* config, t_log* logger, int sockets[]){
+	log_destroy(logger);
+	config_destroy(config);
+	int n = 0;
+//	int longitud = sizeof(sockets) / sizeof(sockets[0]);
+	while(sockets[n] != -1){
+		liberar_socket(n);
+		n ++;
+	}
 }

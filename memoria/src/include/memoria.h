@@ -28,6 +28,7 @@ int gestionarConexionConKernel();
 void iterator(char*);
 int gestionarConexionConCPUDispatch();
 int gestionarConexionConCPUInterrupt();
+void terminar_programa(t_config*, t_log*, int []);
 
 char* IP_MEMORIA;
 
