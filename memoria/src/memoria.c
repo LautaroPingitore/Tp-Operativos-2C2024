@@ -5,6 +5,10 @@ int main() {
     inicializar_config("memoria");
 
 
+
+	log_info(LOGGER_MEMORIA, "la ip de filesys es: %s", IP_FILESYSTEM);
+	log_info(LOGGER_MEMORIA, "el puerto de filesys es: %s", PUERTO_FILESYSTEM);
+
 	//Iniciar Servidor
 	socket_memoria = iniciar_servidor(PUERTO_ESCUCHA, LOGGER_MEMORIA, IP_MEMORIA, "MEMORIA");
 
@@ -24,6 +28,8 @@ int main() {
 	socket_memoria_filesystem = crear_conexion(IP_FILESYSTEM, PUERTO_FILESYSTEM);
 	enviar_mensaje("Hola FILESYSTEM, soy Memoria", socket_memoria_filesystem);
 	paquete(socket_memoria_filesystem, LOGGER_MEMORIA);
+
+	terminar_programa()
 
 	return 0;
 }
@@ -46,7 +52,7 @@ void inicializar_config(char *arg)
 
 	PUERTO_ESCUCHA = config_get_string_value(CONFIG_MEMORIA, "PUERTO_ESCUCHA");
     IP_FILESYSTEM = config_get_string_value(CONFIG_MEMORIA,"IP_FILESYSTEM");
-    PUERTO_FILESYSTEM = config_get_string_value(CONFIG_MEMORIA,"PUERTO_FYLESYSTEM");
+    PUERTO_FILESYSTEM = config_get_string_value(CONFIG_MEMORIA,"PUERTO_FILESYSTEM");
 	TAM_MEMORIA = config_get_string_value(CONFIG_MEMORIA, "TAM_MEMORIA");
 	PATH_INSTRUCCIONES = config_get_string_value(CONFIG_MEMORIA, "PATH_INSTRUCCIONES");
 	RETARDO_RESPUESTA = config_get_string_value(CONFIG_MEMORIA, "RETARDO_RESPUESTA");
