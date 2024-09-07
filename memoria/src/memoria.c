@@ -43,7 +43,8 @@ void inicializar_config(char *arg)
 	strcpy(config_path, "./config/");
 	strcat(config_path, arg);
 	strcat(config_path, ".config");
-*/
+	*/
+	
 	char config_path[256];
     strcpy(config_path, "../");
     strcat(config_path, arg);
@@ -145,13 +146,3 @@ void iterator(char* value) {
 	log_info(LOGGER_MEMORIA,"%s", value);
 }
 
-void terminar_programa(t_config* config, t_log* logger, int sockets[]){
-	log_destroy(logger);
-	config_destroy(config);
-	int n = 0;
-//	int longitud = sizeof(sockets) / sizeof(sockets[0]);
-	while(sockets[n] != -1){
-		liberar_socket(n);
-		n ++;
-	}
-}

@@ -24,6 +24,8 @@ int main() {
     enviar_mensaje("Hola CPU INTERRUPT, soy KERNEL" , socket_kernel_cpu_interrupt);
     paquete(socket_kernel_cpu_interrupt , LOGGER_KERNEL);
     
+    int sockets[] = {socket_kernel_memoria, socket_kernel_cpu_dispatch, socket_kernel_cpu_interrupt, -1};
+    terminar_programa(CONFIG_KERNEL, LOGGER_KERNEL, sockets);
 
     return 0;
 }

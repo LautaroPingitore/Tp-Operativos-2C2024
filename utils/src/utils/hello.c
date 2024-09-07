@@ -311,6 +311,18 @@ void paquete(int conexion, t_log* logger)
 }
 
 
+void terminar_programa(t_config* config, t_log* logger, int sockets[]){
+	log_destroy(logger);
+	config_destroy(config);
+	int n = 0;
+//	int longitud = sizeof(sockets) / sizeof(sockets[0]);
+	while(sockets[n] != -1){
+		liberar_socket(n);
+		n ++;
+	}
+}
+
+
 /*
 void terminar_programa(int conexion, t_log* logger, t_config* config)
 {

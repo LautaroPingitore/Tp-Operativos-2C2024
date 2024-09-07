@@ -58,7 +58,7 @@ void liberar_socket(int socket_cliente);
 void eliminar_paquete(t_paquete* paquete);
 t_list* recibir_paquete(int);
 void paquete(int, t_log*);
-//void terminar_programa(int, t_log*, t_config*);
+void terminar_programa(t_config*, t_log*, int []);
 
 
 

@@ -26,6 +26,8 @@ int main() {
     enviar_mensaje("Hola MEMORIA, soy CPU INTERRUPT", socket_cpu_interrupt_memoria);
     paquete(socket_cpu_interrupt_memoria, LOGGER_CPU);
 
+	int sockets[] = {socket_cpu_dispatch, socket_cpu_interrupt, socket_cpu_dispatch_kernel, socket_cpu_interrupt_kernel, socket_cpu_dispatch_memoria, socket_cpu_interrupt_memoria, -1};
+	terminar_programa(CONFIG_CPU, LOGGER_CPU, sockets);
 
     return 0;
 }

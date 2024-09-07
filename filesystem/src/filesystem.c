@@ -11,6 +11,9 @@ int main() {
     socket_filesystem_memoria = esperar_cliente(socket_filesystem, LOGGER_FILESYSTEM);
     gestionarConexionConMemoria();
 
+    int sockets[] = {socket_filesystem, socket_filesystem_memoria, -1};
+    terminar_programa(CONFIG_FILESYSTEM, LOGGER_FILESYSTEM, sockets);
+
     return 0;
 }
 
