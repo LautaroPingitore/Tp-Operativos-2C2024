@@ -18,6 +18,7 @@ int socket_memoria;
 int socket_memoria_kernel;
 int socket_memoria_cpu_dispatch;
 int socket_memoria_cpu_interrupt;
+int socket_memoria_filesystem;
 
 t_log* LOGGER_MEMORIA;
 t_config* CONFIG_MEMORIA;

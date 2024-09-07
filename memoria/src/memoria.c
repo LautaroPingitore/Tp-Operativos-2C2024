@@ -20,6 +20,11 @@ int main() {
 	socket_memoria_kernel = esperar_cliente(socket_memoria, LOGGER_MEMORIA);
 	gestionarConexionConKernel();
 
+	//Conectar memoria con filesysten
+	socket_memoria_filesystem = crear_conexion(IP_FILESYSTEM, PUERTO_FILESYSTEM);
+	enviar_mensaje("Hola FILESYSTEM, soy Memoria", socket_memoria_filesystem);
+	paquete(socket_memoria_filesystem, LOGGER_MEMORIA);
+
 	return 0;
 }
 

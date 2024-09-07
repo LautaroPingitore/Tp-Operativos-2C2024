@@ -13,8 +13,12 @@ char* LOG_LEVEL;
 t_log *LOGGER_FILESYSTEM;
 t_config *CONFIG_FILESYSTEM;
 
+int socket_filesystem;
+int socket_filesystem_memoria;
+
 void inicializar_config(char*);
 void iterator(char*);
+int gestionarConexionConMemoria();
 
 char* IP_FILESYSTEM;
 

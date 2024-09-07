@@ -1,9 +1,16 @@
 #include <include/filesystem.h>
 
-int main(int argc, char** argv) {
+int main() {
 
-    inicializar_config(argv[1]);
-    
+    inicializar_config("filesystem");
+
+    //Iniciar servidor
+    socket_filesystem = iniciar_servidor(PUERTO_ESCUCHA,LOGGER_FILESYSTEM,IP_FILESYSTEM,"FILESYSTEM");
+
+    //Esperar a memoria y gestionar conexion
+    socket_filesystem_memoria = esperar_cliente(socket_filesystem, LOGGER_FILESYSTEM);
+    gestionarConexionConMemoria();
+
     return 0;
 }
 
@@ -24,6 +31,19 @@ void inicializar_config(char* arg){
     LOG_LEVEL = config_get_string_value(CONFIG_FILESYSTEM, "LOG_LEVEL");
 
     IP_FILESYSTEM = config_get_string_value(CONFIG_FILESYSTEM,"IP_FILESYSTEM");
+}
+
+int gestionarConexionConMemoria(){
+
+//DESARROLLAR
+//DESARROLLAR
+//DESARROLLAR
+//DESARROLLAR
+//DESARROLLAR
+//DESARROLLAR
+//DESARROLLAR
+
+return 0;
 }
 
 void iterator(char* value) {
