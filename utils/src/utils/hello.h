@@ -13,6 +13,8 @@
 #include<netdb.h>
 #include<commons/collections/list.h>
 #include<assert.h>
+#include <pthread.h>
+#include <semaphore.h>
 
 /**
 * @brief Imprime un saludo por consola
@@ -60,6 +62,33 @@ t_list* recibir_paquete(int);
 void paquete(int, t_log*);
 void terminar_programa(t_config*, t_log*, int []);
 
+int gestionarConexiones(int, t_log*);
 
+struct PCB {
+	int PID;
+	int* TIDS;
+	t_mutex* MUTEXS;
+	t_estado ESTADO;
+}t_pcb;
+
+struct TCB {
+	int TID;
+	int PRIORIDAD;
+	//t_estado estado;
+}t_tcb;
+
+struct MUTEX{
+	int id;
+	int contador;
+}t_mutex;
+
+typedef enum
+{
+    NEW,
+    READY,
+    EXECUTE,
+    BLOCK,
+    EXIT
+} t_estado;
 
 #endif

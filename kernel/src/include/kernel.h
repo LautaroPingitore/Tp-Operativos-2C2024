@@ -22,6 +22,4 @@ int socket_kernel_cpu_interrupt;
 void inicializar_config(char*);
 
 
-
-
 #endif /* KERNEL_H_ */

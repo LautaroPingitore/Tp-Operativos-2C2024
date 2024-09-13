@@ -310,7 +310,6 @@ void paquete(int conexion, t_log* logger)
 	
 }
 
-
 void terminar_programa(t_config* config, t_log* logger, int sockets[]){
 	log_destroy(logger);
 	config_destroy(config);
@@ -322,7 +321,6 @@ void terminar_programa(t_config* config, t_log* logger, int sockets[]){
 	}
 }
 
-
 /*
 void terminar_programa(int conexion, t_log* logger, t_config* config)
 {
@@ -333,46 +331,4 @@ void terminar_programa(int conexion, t_log* logger, t_config* config)
 	config_destroy(config);
 	liberar_conexion(conexion);
 }
-*/
-
-
-
-/*
-POSIBLE SOLUCION A LA GENERALIZACION DE GESTIONAR CONEXIONES
-
-
-// Función original 'iterator', que ahora sólo recibe el valor
-void iterator(char* value, t_log* LOG_SERVIDOR) {
-    log_info(LOG_SERVIDOR, "%s", value);
-}
-
-// Función auxiliar que envuelve la lógica del logger
-void iterator_aux(void* value) {
-    // Cast del value a char* (elemento de la lista)
-    char* str_value = (char*) value;
-
-    // Aquí accedemos al logger usando una variable estática
-    extern t_log* LOG_SERVIDOR_GLOBAL;
-    iterator(str_value, LOG_SERVIDOR_GLOBAL);
-}
-
-// Variable estática para almacenar el logger
-t_log* LOG_SERVIDOR_GLOBAL;
-
-int gestionarConexiones(int socket_cliente, t_log* LOG_SERVIDOR) 
-{
-    t_list* lista;
-
-    // Guardamos el logger en la variable global antes de la iteración
-    LOG_SERVIDOR_GLOBAL = LOG_SERVIDOR;
-
-        case PAQUETE:
-            lista = recibir_paquete(socket_cliente);
-            log_info(LOG_SERVIDOR, "Me llegaron los siguientes valores:\n");
-
-            // Usamos la función auxiliar para iterar sobre la lista
-            list_iterate(lista, iterator_aux);
-
-            break;
-
 */
