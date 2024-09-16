@@ -11,27 +11,16 @@
 //ESTOS STRUCTS VAN EN EL UTILS.
 
 //LOS IMPLEMENTAMOS ACA PARA PODER LABURAR, PERO ES TRABAJO DE LOS DE KERNEL
-
-
-
 typedef enum {
-    SUM,
-    JNZ,
     SET,
-    SUB,
     READ_MEM,
     WRITE_MEM,
-    LOG
+    SUM,
+    SUB,
+    JNZ,
+    LOG,
+    SEGMENTATION_FAULT
 } nombre_instruccion;
-
-typedef struct {
-    nombre_instruccion nombre;  // Tipo de instrucción (SET, SUM, etc.)
-    char *parametro1;
-    char *parametro2;
-    char *parametro3;
-    char *parametro4; // Los parametros usados van a depender de la instruccion 
-    char *parametro5;
-} t_instruccion;
 
 typedef enum {
     EJECUTANDO,
@@ -51,16 +40,12 @@ typedef enum {
     ERROR
 } finalizacion_proceso;
 
-void ejecutar_ciclo_instruccion(int);
-t_instruccion *fetch(uint32_t, uint32_t);
-void execute(t_instruccion *, int);
-void loguear_y_sumar_pc(t_instruccion*);
-void pedir_instruccion_memoria(uint32_t, uint32_t, int);
-t_instruccion *deserializar_instruccion(int);
-void log_instruccion_ejecutada(nombre_instruccion , char*, char*, char*, char*, char*);
-void iniciar_semaforos_etc();
-void liberar_instruccion(t_instruccion*);
-
+typedef struct {
+    nombre_instruccion nombre;  // Tipo de instrucción (SET, SUM, etc.)
+    char *parametro1;
+    char *parametro2;
+    char *parametro3; // ELIMINE LOS OTROS PARAMETROS YA QUE LAS INSTRUCCIONES QUE TENEMOS SOLO USAN HASTA 2 PARAMETROS
+} t_instruccion;
 
 typedef struct {
     uint32_t tid;
@@ -69,8 +54,14 @@ typedef struct {
 
 typedef struct {
     uint32_t program_counter;  // Contador de programa (PC)
-    uint32_t AX, BX, CX, DX, EX, FX, GX, HX;  // Registros de propósito general
+    uint32_t  AX, BX, CX, DX ,EX, FX, GX, HX; // PUEDE REMPLAZARCE CON UN registros[8]
 } t_registros;
+
+typedef struct {
+    uint32_t direccion_fisica;
+    uint32_t tamanio;
+} t_direcciones_fisicas;
+
 
 typedef struct {
     t_registros *registros;
@@ -85,5 +76,14 @@ typedef struct {
     estado_proceso estado;
 } t_pcb;
 
+void ejecutar_ciclo_instruccion(int);
+t_instruccion *fetch(uint32_t, uint32_t);
+void execute(t_instruccion *, int);
+void loguear_y_sumar_pc(t_instruccion*);
+void pedir_instruccion_memoria(uint32_t, uint32_t, int);
+t_instruccion *deserializar_instruccion(int);
+void log_instruccion_ejecutada(nombre_instruccion , char*, char*, char*, char*, char*);
+void iniciar_semaforos_etc();
+void liberar_instruccion(t_instruccion*);
 
 #endif //CICLO_INSTRUCCION_H_

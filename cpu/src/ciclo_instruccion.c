@@ -22,6 +22,7 @@ void ejecutar_ciclo_instruccion(int socket)
     liberar_instruccion(instruccion);
 }
 
+// RECIBE LA PROXIMA EJECUCION A REALIZAR OBTENIDA DEL MODULO MEMORIA
 t_instruccion *fetch(uint32_t pid, uint32_t pc)
 {
     pedir_instruccion_memoria(pid, pc, fd_cpu_memoria);
@@ -44,7 +45,66 @@ t_instruccion *fetch(uint32_t pid, uint32_t pc)
     return instruccion;
 }
 
-// BORRAR INSTRUCCIONES QUE NO USAMOS Y AGREGAR LAS NUESTRAS
+// EJECUTA LA INSTRUCCION OBTENIDA, Y TAMBIEN HACE EL DECODE EN CASO DE NECESITARLO
+void execute(t_instruccion *instruccion, int socket)
+{
+    switch (instruccion->nombre)
+    {
+    case SUM:
+        loguear_y_sumar_pc(instruccion);
+        _sum(instruccion->parametro1, instruccion->parametro2);
+        break;
+    case READ_MEM:
+        loguear_y_sumar_pc(instruccion);
+        _mov_in(instruccion->parametro1, instruccion->parametro2, fd_cpu_memoria); // cambiar nombre _mov_in
+        break;
+    case WRITE_MEM:
+        loguear_y_sumar_pc(instruccion);
+        _mov_out(instruccion->parametro1, instruccion->parametro2, fd_cpu_memoria); // cambiar nombre _mov_out
+    case JNZ:
+        loguear_y_sumar_pc(instruccion);
+        _jnz(instruccion->parametro1, instruccion->parametro2);
+        break;
+    case SET:
+        loguear_y_sumar_pc(instruccion);
+        _set(instruccion->parametro1, instruccion->parametro2);
+        break;
+    case SUB:
+        loguear_y_sumar_pc(instruccion);
+        _sub(instruccion->parametro1, instruccion->parametro2);
+        break;
+        break;
+    case LOG:
+        loguear_y_sumar_pc(instruccion);
+        _log(instruccion->parametro1,instruccion->parametro2)
+        break;
+    }
+}
+
+// VERIFICA SI SE RECIBIO UNA INTERRUPCION POR PARTE DE KERNEL
+void check_interrupt() {
+    if (recibir_interrupcion(fd_cpu_interrupt)) {
+        log_info(LOGGER_CPU, "Interrupción recibida. Actualizando contexto y devolviendo control al Kernel.");
+        actualizar_contexto_memoria();
+        devolver_control_al_kernel();
+    }
+}
+
+// MUESTRA EN CONSOLA LA INSTRUCCION EJECUTADA Y LE SUMA 1 AL PC
+void loguear_y_sumar_pc(t_instruccion *instruccion)
+{
+    log_instruccion_ejecutada(instruccion->nombre, instruccion->parametro1, instruccion->parametro2, instruccion->parametro3);
+    pcb_actual->contexto_ejecucion->registros->program_counter++;
+}
+
+// MUESTRA EN EL LOGGER LA INSTRUCCION EJECUTADA
+void log_instruccion_ejecutada(nombre_instruccion nombre, char *param1, char *param2, char *param3)
+{
+    char *nombre_instruccion = instruccion_to_string(nombre);
+    log_info(LOGGER_CPU, "PID: %d - Ejecutando: %s - Parametros: %s %s %s %s %s", pcb_actual->pid, nombre_instruccion, param1, param2, param3);
+}
+
+// LO QUE HACE ES CONVERTIR UNA INSTRUCCION RECIBIDA A FORMATO STRING PARA QUE PUEDA ESCRIBIRSE EN LA CONSOLA
 char *instruccion_to_string(nombre_instruccion nombre) 
 {
     switch (nombre)
@@ -58,60 +118,14 @@ char *instruccion_to_string(nombre_instruccion nombre)
     case JNZ:
         return "JNZ";
     case READ_MEM:
-        return "MOV_IN";
+        return "READ_MEM";
     case WRITE_MEM:
-        return "MOV_OUT";
+        return "WRITE_MEM";
+    case LOG:
+        return "LOG":
     default:
         return "DESCONOCIDA";
     }
-}
-
-void execute(t_instruccion *instruccion, int socket)
-{
-    switch (instruccion->nombre)
-    {
-    case JNZ:
-        loguear_y_sumar_pc(instruccion);
-        _jnz(instruccion->parametro1, instruccion->parametro2);
-        break;
-    case SUM:
-        loguear_y_sumar_pc(instruccion);
-        _sum(instruccion->parametro1, instruccion->parametro2);
-        break;
-    case SET:
-        loguear_y_sumar_pc(instruccion);
-        _set(instruccion->parametro1, instruccion->parametro2);
-        break;
-    case SUB:
-        loguear_y_sumar_pc(instruccion);
-        _sub(instruccion->parametro1, instruccion->parametro2);
-        break;
-    case READ_MEM:
-        loguear_y_sumar_pc(instruccion);
-        _mov_in(instruccion->parametro1, instruccion->parametro2, fd_cpu_memoria); // cambiar nombre _mov_in
-        break;
-    case WRITE_MEM:
-        loguear_y_sumar_pc(instruccion);
-        _mov_out(instruccion->parametro1, instruccion->parametro2, fd_cpu_memoria); // cambiar nombre _mov_out
-        break;
-    case LOG:
-        break;
-    }
-}
-
-void check_interrupt() {
-    if (recibir_interrupcion(fd_cpu_interrupt)) {
-        log_info(LOGGER_CPU, "Interrupción recibida. Actualizando contexto y devolviendo control al Kernel.");
-        actualizar_contexto_memoria();
-        devolver_control_al_kernel();
-    }
-}
-
-
-void loguear_y_sumar_pc(t_instruccion *instruccion)
-{
-    log_instruccion_ejecutada(instruccion->nombre, instruccion->parametro1, instruccion->parametro2, instruccion->parametro3, instruccion->parametro4, instruccion->parametro5);
-    pcb_actual->contexto_ejecucion->registros->program_counter++;
 }
 
 void pedir_instruccion_memoria(uint32_t pid, uint32_t pc, int socket)
@@ -148,14 +162,6 @@ t_instruccion *deserializar_instruccion(int socket)
     memcpy(&(tamanio_parametro3), stream + desplazamiento, sizeof(uint32_t));
     desplazamiento += sizeof(uint32_t);
 
-    uint32_t tamanio_parametro4;
-    memcpy(&(tamanio_parametro4), stream + desplazamiento, sizeof(uint32_t));
-    desplazamiento += sizeof(uint32_t);
-
-    uint32_t tamanio_parametro5;
-    memcpy(&(tamanio_parametro5), stream + desplazamiento, sizeof(uint32_t));
-    desplazamiento += sizeof(uint32_t);
-
     instruccion->parametro1 = malloc(tamanio_parametro1);
     memcpy(instruccion->parametro1, stream + desplazamiento, tamanio_parametro1);
     desplazamiento += tamanio_parametro1;
@@ -168,30 +174,14 @@ t_instruccion *deserializar_instruccion(int socket)
     memcpy(instruccion->parametro3, stream + desplazamiento, tamanio_parametro3);
     desplazamiento += tamanio_parametro3;
 
-    instruccion->parametro4 = malloc(tamanio_parametro4);
-    memcpy(instruccion->parametro4, stream + desplazamiento, tamanio_parametro4);
-    desplazamiento += tamanio_parametro4;
-
-    instruccion->parametro5 = malloc(tamanio_parametro5);
-    memcpy(instruccion->parametro5, stream + desplazamiento, tamanio_parametro5);
-
     eliminar_paquete(paquete);
 
     return instruccion;
 }
 
-void log_instruccion_ejecutada(nombre_instruccion nombre, char *param1, char *param2, char *param3, char *param4, char *param5)
-{
-    char *nombre_instruccion = instruccion_to_string(nombre);
-    log_info(LOGGER_CPU, "PID: %d - Ejecutando: %s - Parametros: %s %s %s %s %s", pcb_actual->pid, nombre_instruccion, param1, param2, param3, param4, param5);
-}
-
-
 void liberar_instruccion(t_instruccion *instruccion) {
     free(instruccion->parametro1);
     free(instruccion->parametro2);
     free(instruccion->parametro3);
-    free(instruccion->parametro4);
-    free(instruccion->parametro5);
     free(instruccion);
 }
