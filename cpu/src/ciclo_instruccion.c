@@ -1,11 +1,13 @@
 #include <include/ciclo_instruccion.h>
 
 /*
+// FALTA DECLARAR BIEN TODOS LOS STRUCTS Y TODOS LOS ENUMS
+
 void ciclo_instruccion(){
-    fetch();
-    decode();
-    excecute();
-    check_interrupt();
+    fetch(); ===== FALTA VERIFICAR SI ESTA OK
+    decode(); ====== VERIFICAR QUE ESTE BIEN LAS TRADUCCINES Y METERLO EN EL EXCECUTE
+    excecute(); ======= SOLO HAY QUE DESARROLLAR CADA FUNCION EN UN ARCHVIO NUEVO 
+    check_interrupt(); ======== HACER LAS 2 FUNCIONES DE ACTUALIZAR CONTEXTO Y DEVOLVER CONTROL KERNEL
 }
 */
 
@@ -33,13 +35,35 @@ t_instruccion *fetch(uint32_t pid, uint32_t pc)
     }
     else
     {
-        log_warning(LOGGER_CPU, "Operación desconocida. No se pudo recibir la instruccion de memoria.");
+        log_warning(LOGGER_CPU, "Operacion desconocida. No se pudo recibir la instruccion de memoria.");
         exit(EXIT_FAILURE);
     }
 
     log_info(LOGGER_CPU, "PID: %d - FETCH - Program Counter: %d", pid, pc);
 
     return instruccion;
+}
+
+// BORRAR INSTRUCCIONES QUE NO USAMOS Y AGREGAR LAS NUESTRAS
+char *instruccion_to_string(nombre_instruccion nombre) 
+{
+    switch (nombre)
+    {
+    case SET:
+        return "SET";
+    case SUM:
+        return "SUM";
+    case SUB:
+        return "SUB";
+    case JNZ:
+        return "JNZ";
+    case READ_MEM:
+        return "MOV_IN";
+    case WRITE_MEM:
+        return "MOV_OUT";
+    default:
+        return "DESCONOCIDA";
+    }
 }
 
 void execute(t_instruccion *instruccion, int socket)
@@ -74,6 +98,15 @@ void execute(t_instruccion *instruccion, int socket)
         break;
     }
 }
+
+void check_interrupt() {
+    if (recibir_interrupcion(fd_cpu_interrupt)) {
+        log_info(LOGGER_CPU, "Interrupción recibida. Actualizando contexto y devolviendo control al Kernel.");
+        actualizar_contexto_memoria();
+        devolver_control_al_kernel();
+    }
+}
+
 
 void loguear_y_sumar_pc(t_instruccion *instruccion)
 {
@@ -152,6 +185,7 @@ void log_instruccion_ejecutada(nombre_instruccion nombre, char *param1, char *pa
     char *nombre_instruccion = instruccion_to_string(nombre);
     log_info(LOGGER_CPU, "PID: %d - Ejecutando: %s - Parametros: %s %s %s %s %s", pcb_actual->pid, nombre_instruccion, param1, param2, param3, param4, param5);
 }
+
 
 void liberar_instruccion(t_instruccion *instruccion) {
     free(instruccion->parametro1);

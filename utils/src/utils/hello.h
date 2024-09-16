@@ -26,8 +26,10 @@
 typedef enum
 {
 	MENSAJE,
-	PAQUETE
-}op_code;
+	PAQUETE,
+	INSTRUCCION,
+	PEDIDO_INSTRUCCION
+} op_code;
 
 typedef struct
 {
