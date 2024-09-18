@@ -1,4 +1,7 @@
 #include <include/cpu.h>
+#include <include/ciclo_instruccion.h>
+
+t_pcb* pcb_actual;
 
 int main() {
 
