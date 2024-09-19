@@ -82,7 +82,7 @@ void execute(t_instruccion *, int);
 void loguear_y_sumar_pc(t_instruccion*);
 void pedir_instruccion_memoria(uint32_t, uint32_t, int);
 t_instruccion *deserializar_instruccion(int);
-void log_instruccion_ejecutada(nombre_instruccion , char*, char*, char*, char*, char*);
+void log_instruccion_ejecutada(nombre_instruccion , char*, char*, char*);
 void iniciar_semaforos_etc();
 void liberar_instruccion(t_instruccion*);
 

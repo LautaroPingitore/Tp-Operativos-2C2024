@@ -1,7 +1,7 @@
 #ifndef MMU_H_
 #define MMU_H_
 
-#include <utils/hello.h>
+#include <include/cpu.h>
 
 typedef struct {
     uint32_t pid;      // Identificador del proceso
@@ -16,6 +16,6 @@ typedef struct {
 
 uint32_t consultar_base_particion(uint32_t);
 uint32_t consultar_limite_particion(uint32_t);
-uint32_t traducir_direccion(uint32_t, uint32_t, uint32_t);
+uint32_t traducir_direccion(uint32_t, uint32_t);
 
 #endif /* MMU_H_ */

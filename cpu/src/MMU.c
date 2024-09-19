@@ -1,25 +1,25 @@
 #include <include/ciclo_instruccion.h>
 #include <include/MMU.h>
+#define SEGMENTATION_FAULT ((uint32_t)-1)
 
-
-// MMU: Traducir dirección lógica a física con Asignación Contigua
-uint32_t traducir_direccion(uint32_t logicalAddress, uint32_t pid, uint32_t tid) {
+// MMU: Traducir direccion logica a fisica con Asignacion Contigua
+uint32_t traducir_direccion(uint32_t logicalAddress, uint32_t pid) {
     uint32_t base = consultar_base_particion(pid);
     uint32_t limite = consultar_limite_particion(pid);
 
     if (logicalAddress > limite) {
-        log_error(LOGGER_CPU, "Segmentation Fault: PID: %d, TID: %d, Dirección lógica: %d", pid, tid, logicalAddress);
+        log_error(LOGGER_CPU, "Segmentation Fault: PID: %d, Direccion logica: %d", pid, logicalAddress);
         return SEGMENTATION_FAULT;
     }
 
     uint32_t direccion_fisica = base + logicalAddress;
-    log_info(LOGGER_CPU, "TID: %d - Traducción Dirección Lógica: %d a Física: %d", tid, logicalAddress, direccion_fisica);
+    log_info(LOGGER_CPU, "Traduccion Direccion Logica: %d a Fisica: %d", logicalAddress, direccion_fisica);
     return direccion_fisica;
 }
 
 // A la hora de ejecutar instrucciones que requieran interactuar directamente con la Memoria,
-//tendrá que traducir las direcciones lógicas (propias del proceso) a direcciones físicas (propias de la memoria).
-//Para ello simulará la existencia de una MMU
+//tendra que traducir las direcciones logicas (propias del proceso) a direcciones fisicas (propias de la memoria).
+//Para ello simulara la existencia de una MMU
 
 // DEBIDO A ESO ES PROBABLE QUE LA BASE Y LIMITE DE LA PARTICION SE DEBA CONSULTAR AL MODULO MEMORIA
 uint32_t consultar_base_particion(uint32_t pid) {
@@ -27,12 +27,12 @@ uint32_t consultar_base_particion(uint32_t pid) {
 
     uint32_t base_particion = recibir_base_memoria();
 
-    if (base_particion == (uint32_t)-1) { // Usa (uint32_t)-1 en lugar de -1 para asegurar la comparación con uint32_t
-        log_error(LOGGER_CPU, "Error: No se encontró la partición para el PID: %d", pid);
+    if (base_particion == (uint32_t)-1) { // Usa (uint32_t)-1 en lugar de -1 para asegurar la comparacion con uint32_t
+        log_error(LOGGER_CPU, "Error: No se encontro la particion para el PID: %d", pid);
         return (uint32_t)-1; // Usa (uint32_t)-1 para indicar error
     }
 
-    log_info(LOGGER_CPU, "Base de la partición obtenida para PID: %d - Base: %d", pid, base_particion);
+    log_info(LOGGER_CPU, "Base de la particion obtenida para PID: %d - Base: %d", pid, base_particion);
     return base_particion;
 }
 
@@ -41,12 +41,12 @@ uint32_t consultar_limite_particion(uint32_t pid) {
 
     uint32_t limite_particion = recibir_limite_memoria();
 
-    if (limite_particion == (uint32_t)-1) { // Usa (uint32_t)-1 en lugar de -1 para asegurar la comparación con uint32_t
-        log_error(LOGGER_CPU, "Error: No se encontró la partición para el PID: %d", pid);
+    if (limite_particion == (uint32_t)-1) { // Usa (uint32_t)-1 en lugar de -1 para asegurar la comparacion con uint32_t
+        log_error(LOGGER_CPU, "Error: No se encontro la particion para el PID: %d", pid);
         return (uint32_t)-1; // Usa (uint32_t)-1 para indicar error
     }
 
-    log_info(LOGGER_CPU, "Límite de la partición obtenida para PID: %d - Límite: %d", pid, limite_particion);
+    log_info(LOGGER_CPU, "Limite de la particion obtenida para PID: %d - Limite: %d", pid, limite_particion);
     return limite_particion;
 }
 

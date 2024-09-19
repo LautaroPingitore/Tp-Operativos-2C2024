@@ -52,43 +52,43 @@ void execute(t_instruccion *instruccion, int socket)
     {
     case SUM:
         loguear_y_sumar_pc(instruccion);
-        _sum(instruccion->parametro1, instruccion->parametro2);
+        sum_registros(instruccion->parametro1, instruccion->parametro2);
         break;
     case READ_MEM:
         loguear_y_sumar_pc(instruccion);
-        _mov_in(instruccion->parametro1, instruccion->parametro2, fd_cpu_memoria); // cambiar nombre _mov_in
+        read_mem(instruccion->parametro1, instruccion->parametro2, fd_cpu_memoria); // cambiar nombre _mov_in
         break;
     case WRITE_MEM:
         loguear_y_sumar_pc(instruccion);
-        _mov_out(instruccion->parametro1, instruccion->parametro2, fd_cpu_memoria); // cambiar nombre _mov_out
+        write_mem(instruccion->parametro1, instruccion->parametro2, fd_cpu_memoria); // cambiar nombre _mov_out
     case JNZ:
         loguear_y_sumar_pc(instruccion);
-        _jnz(instruccion->parametro1, instruccion->parametro2);
+        jnz_pc(instruccion->parametro1, instruccion->parametro2);
         break;
     case SET:
         loguear_y_sumar_pc(instruccion);
-        _set(instruccion->parametro1, instruccion->parametro2);
+        set_registro(instruccion->parametro1, instruccion->parametro2);
         break;
     case SUB:
         loguear_y_sumar_pc(instruccion);
-        _sub(instruccion->parametro1, instruccion->parametro2);
+        sub_registros(instruccion->parametro1, instruccion->parametro2);
         break;
         break;
     case LOG:
         loguear_y_sumar_pc(instruccion);
-        _log(instruccion->parametro1,instruccion->parametro2)
+        log_registro(instruccion->parametro1,instruccion->parametro2);
         break;
     }
 }
 
 // VERIFICA SI SE RECIBIO UNA INTERRUPCION POR PARTE DE KERNEL
-void check_interrupt() {
-    if (recibir_interrupcion(fd_cpu_interrupt)) {
-        log_info(LOGGER_CPU, "Interrupción recibida. Actualizando contexto y devolviendo control al Kernel.");
-        actualizar_contexto_memoria();
-        devolver_control_al_kernel();
-    }
-}
+// void check_interrupt() {
+//     if (recibir_interrupcion(fd_cpu_interrupt)) {
+//         log_info(LOGGER_CPU, "Interrupción recibida. Actualizando contexto y devolviendo control al Kernel.");
+//         actualizar_contexto_memoria();
+//         devolver_control_al_kernel();
+//     }
+// }
 
 // MUESTRA EN CONSOLA LA INSTRUCCION EJECUTADA Y LE SUMA 1 AL PC
 void loguear_y_sumar_pc(t_instruccion *instruccion)
@@ -122,7 +122,7 @@ char *instruccion_to_string(nombre_instruccion nombre)
     case WRITE_MEM:
         return "WRITE_MEM";
     case LOG:
-        return "LOG":
+        return "LOG";
     default:
         return "DESCONOCIDA";
     }
