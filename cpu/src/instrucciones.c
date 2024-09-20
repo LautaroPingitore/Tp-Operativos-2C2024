@@ -29,7 +29,7 @@ void read_mem(char* reg_datos, char* reg_direccion, int socket) {
 
     // Validar que los registros sean validos
     if (registro_datos_ptr == NULL || registro_direccion_ptr == NULL) {
-        log_warning(LOGGER_CPU, "Error: Registro invalido en read_mem.")
+        log_warning(LOGGER_CPU, "Error: Registro invalido en read_mem.");
         return;
     }
 
