@@ -24,6 +24,10 @@ int main() {
     enviar_mensaje("Hola CPU INTERRUPT, soy KERNEL" , socket_kernel_cpu_interrupt);
     paquete(socket_kernel_cpu_interrupt , LOGGER_KERNEL);
     
+    
+    crear_primer_proceso();
+
+
     int sockets[] = {socket_kernel_memoria, socket_kernel_cpu_dispatch, socket_kernel_cpu_interrupt, -1};
     terminar_programa(CONFIG_KERNEL, LOGGER_KERNEL, sockets);
 
@@ -53,4 +57,25 @@ void inicializar_config(char* arg){
     ALGORITMO_PLANIFICACION = config_get_string_value(CONFIG_KERNEL, "ALGORITMO_PLANIFICACION");
     QUANTUM = config_get_string_value(CONFIG_KERNEL, "QUANTUM");
     LOG_LEVEL = config_get_string_value(CONFIG_KERNEL, "LOG_LEVEL");
+}
+
+
+t_pcb crear_proceso(char*);
+
+t_pcb crear_proceso(char* path_proceso){
+    
+    int pid = asignar_pid();
+    int* tids = asignar_tids();
+    pthread_mutex_t* mutexs = asignar_mutexs();
+    int prioridad = asignar_prioridad();
+    t_pcb* pcb = crearPcb(pid, tids, NEW, mutexs, prioridad);
+
+    pthread_mutex_lock(&pcbs_de_procesos_en_sistema_mutex);
+    list_add(pcbs_de_procesos_en_sistema, pcb);
+    pthread_mutex_unlock(&pcbs_de_procesos_en_sistema_mutex);
+
+    log_info(LOGGER_KERNEL, "Proceso %d creado en NEW", pcb->PID);
+
+    enviar_proceso_a_memoria(pcb->pid, path_proceso);
+
 }
