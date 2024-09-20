@@ -73,10 +73,10 @@ void execute(t_instruccion *instruccion, int socket)
         loguear_y_sumar_pc(instruccion);
         sub_registros(instruccion->parametro1, instruccion->parametro2);
         break;
-        break;
     case LOG:
         loguear_y_sumar_pc(instruccion);
-        log_registro(instruccion->parametro1,instruccion->parametro2);
+        //log_registro(instruccion->parametro1,instruccion->parametro2); COMENTADO POR ERROR, PROBLABLEMENTE ESTE MAL DESARROLLADA log_registro
+        log_registro(instruccion->parametro1);
         break;
     }
 }
@@ -101,7 +101,8 @@ void loguear_y_sumar_pc(t_instruccion *instruccion)
 void log_instruccion_ejecutada(nombre_instruccion nombre, char *param1, char *param2, char *param3)
 {
     char *nombre_instruccion = instruccion_to_string(nombre);
-    log_info(LOGGER_CPU, "PID: %d - Ejecutando: %s - Parametros: %s %s %s %s %s", pcb_actual->pid, nombre_instruccion, param1, param2, param3);
+    // log_info(LOGGER_CPU, "PID: %d - Ejecutando: %s - Parametros: %s %s %s %s %s", pcb_actual->pid, nombre_instruccion, param1, param2, param3);
+    log_info(LOGGER_CPU, "PID: %d - Ejecutando: %s - Parametros: %s %s %s", pcb_actual->pid, nombre_instruccion, param1, param2, param3);
 }
 
 // LO QUE HACE ES CONVERTIR UNA INSTRUCCION RECIBIDA A FORMATO STRING PARA QUE PUEDA ESCRIBIRSE EN LA CONSOLA
@@ -141,7 +142,7 @@ void pedir_instruccion_memoria(uint32_t pid, uint32_t pc, int socket)
 
 t_instruccion *deserializar_instruccion(int socket)
 {
-    t_paquete *paquete = recibir_paquete(socket);
+    t_paquete *paquete = recibir_paquete(socket); // error debido a que recibir_paquete retorna t_list
     t_instruccion *instruccion = malloc(sizeof(t_instruccion));
 
     void *stream = paquete->buffer->stream;

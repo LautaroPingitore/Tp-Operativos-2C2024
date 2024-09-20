@@ -18,4 +18,9 @@ uint32_t consultar_base_particion(uint32_t);
 uint32_t consultar_limite_particion(uint32_t);
 uint32_t traducir_direccion(uint32_t, uint32_t);
 
+void enviar_solicitud_base_memoria(uint32_t);
+uint32_t recibir_base_memoria();
+uint32_t recibir_limite_memoria();
+void enviar_solicitud_limite_memoria(uint32_t);
+
 #endif /* MMU_H_ */

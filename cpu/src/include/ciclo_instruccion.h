@@ -2,6 +2,8 @@
 #define CICLO_INSTRUCCION_H_
 
 #include <include/cpu.h>
+#include <include/MMU.h>
+#include <include/instrucciones.h>
 
 
 //ESTOS STRUCTS VAN EN EL UTILS.
@@ -19,7 +21,7 @@ typedef enum {
     SUB,
     JNZ,
     LOG,
-    SEGMENTATION_FAULT
+    SEGMENTATION_FAULT //QUE ESTO ESTE ACA DA ERROR EN EL SWITH DE execute PERO SACARLO HABILITA OTROS ERRORES DE que esta undeclared
 } nombre_instruccion;
 
 typedef enum {
@@ -85,5 +87,6 @@ t_instruccion *deserializar_instruccion(int);
 void log_instruccion_ejecutada(nombre_instruccion , char*, char*, char*);
 void iniciar_semaforos_etc();
 void liberar_instruccion(t_instruccion*);
+char *instruccion_to_string(nombre_instruccion);
 
 #endif //CICLO_INSTRUCCION_H_

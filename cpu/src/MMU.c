@@ -50,7 +50,24 @@ uint32_t consultar_limite_particion(uint32_t pid) {
     return limite_particion;
 }
 
+//FUNCIONES DECLARADAS A DESARROLLAR
 
+void enviar_solicitud_base_memoria(uint32_t pid){
+
+}
+
+uint32_t recibir_base_memoria(){
+
+return 1;
+}
+
+void enviar_solicitud_limite_memoria(uint32_t pid){
+
+}
+uint32_t recibir_limite_memoria(){
+
+return 1;
+}
 
 
 
