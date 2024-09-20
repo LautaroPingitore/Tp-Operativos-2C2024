@@ -1,6 +1,11 @@
-#include <include/ciclo_instruccion.h>
-#include <include/MMU.h>
-#include <include/cpu.h>
+#include <include/instrucciones.h>
+
+
+
+//esto problabemente termine declarado en otro arhivo pero lo hago para descartar errores
+t_pcb* pcb_actual;
+
+
 
 //Asigna al registro el valor pasado como parametro.
 void set_registro(char* registro, char *valor)
@@ -8,9 +13,9 @@ void set_registro(char* registro, char *valor)
     uint32_t *reg = obtener_registro(registro);
 
     if (reg) {
-        *reg = atoi(valor) // SOLO ACEPTA VALORES NUMERICOS
+        *reg = atoi(valor); // SOLO ACEPTA VALORES NUMERICOS
     } else {
-        log_warning(LOGGER_CPU, "Error: Registro invalido en set_registros.")
+        log_warning(LOGGER_CPU, "Error: Registro invalido en set_registros.");
     }
 }
 
@@ -194,7 +199,7 @@ void log_registro(char* registro)
     }
 }
 
-uint32* obtener_registro(char* registro){
+uint32_t* obtener_registro(char* registro){
 
     if(strcmp(registro,"AX")==0)
         return &(pcb_actual->contexto_ejecucion->registros->AX);
