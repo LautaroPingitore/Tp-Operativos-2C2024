@@ -1,24 +1,39 @@
 #include <include/ciclo_instruccion.h>
 
-/*
-// FALTA DECLARAR BIEN TODOS LOS STRUCTS Y TODOS LOS ENUMS
-
-void ciclo_instruccion(){
-    fetch(); ===== FALTA VERIFICAR SI ESTA OK
-    decode(); ====== VERIFICAR QUE ESTE BIEN LAS TRADUCCINES Y METERLO EN EL EXCECUTE
-    excecute(); ======= SOLO HAY QUE DESARROLLAR CADA FUNCION EN UN ARCHVIO NUEVO 
-    check_interrupt(); ======== HACER LAS 2 FUNCIONES DE ACTUALIZAR CONTEXTO Y DEVOLVER CONTROL KERNEL
-}
-*/
-
 t_pcb *pcb_actual;
 int fd_cpu_memoria;
+
+void ciclo_instruccion() {
+    while (1) {
+        // Asegúrate de que pcb_actual esté inicializado antes de comenzar el ciclo
+        if (pcb_actual == NULL) {
+            log_error(LOGGER_CPU, "No hay PCB actual. Terminando ciclo de instrucción.");
+            break;
+        }
+
+        t_instruccion *instruccion = fetch(pcb_actual->pid, pcb_actual->contexto_ejecucion->registros->program_counter);
+        
+        if (instruccion == NULL) {
+            log_error(LOGGER_CPU, "Error al obtener la instrucción. Terminando ciclo.");
+            break;
+        }
+
+        // Aquí se llama a decode, pero por simplicidad se omite en este ejemplo
+        execute(instruccion, fd_cpu_memoria);
+        
+        // Verifica si se necesita realizar un check_interrupt
+        check_interrupt();
+
+        liberar_instruccion(instruccion);
+    }
+}
 
 void ejecutar_ciclo_instruccion(int socket)
 {
     t_instruccion *instruccion = fetch(pcb_actual->pid, pcb_actual->contexto_ejecucion->registros->program_counter);
     // TODO decode: manejo de TLB y MMU
     execute(instruccion, socket);
+    check_interrupt();
     liberar_instruccion(instruccion);
 }
 
@@ -86,13 +101,13 @@ void execute(t_instruccion *instruccion, int socket)
 }
 
 // VERIFICA SI SE RECIBIO UNA INTERRUPCION POR PARTE DE KERNEL
-// void check_interrupt() {
-//     if (recibir_interrupcion(fd_cpu_interrupt)) {
-//         log_info(LOGGER_CPU, "Interrupción recibida. Actualizando contexto y devolviendo control al Kernel.");
-//         actualizar_contexto_memoria();
-//         devolver_control_al_kernel();
-//     }
-// }
+void check_interrupt() {
+    if (recibir_interrupcion(socket_cpu_interrupt_kernel)) {
+        log_info(LOGGER_CPU, "Interrupción recibida. Actualizando contexto y devolviendo control al Kernel.");
+        actualizar_contexto_memoria();
+        devolver_control_al_kernel();
+    }
+}
 
 // MUESTRA EN CONSOLA LA INSTRUCCION EJECUTADA Y LE SUMA 1 AL PC
 void loguear_y_sumar_pc(t_instruccion *instruccion)
@@ -146,7 +161,7 @@ void pedir_instruccion_memoria(uint32_t pid, uint32_t pc, int socket)
 
 t_instruccion *deserializar_instruccion(int socket)
 {
-    t_paquete* paquete = recibir_paquete(socket); // error debido a que recibir_paquete retorna t_list
+    t_paquete* paquete = recibir_paquete_entero(socket); // error debido a que recibir_paquete retorna t_list
     t_instruccion* instruccion = malloc(sizeof(t_instruccion));
 
     void *stream = paquete->buffer->stream;
@@ -191,3 +206,49 @@ void liberar_instruccion(t_instruccion *instruccion) {
     free(instruccion);
 }
 
+bool recibir_interrupcion(int fd_cpu_memoria) {
+    int interrupcion = 0;
+
+    if (recv(fd_cpu_memoria, &interrupcion, sizeof(int), 0) <= 0) {
+        log_error(LOGGER_CPU, "Error al recibir interrupción del Kernel.");
+        return false;
+    }
+
+    return interrupcion == 1;
+}
+
+void actualizar_contexto_memoria() {
+    // Se puede suponer que la actualización del contexto implica actualizar los registros y el PC
+    log_info(LOGGER_CPU, "Actualizando el contexto de la CPU en memoria...");
+
+    // Enviar los registros y el program counter a memoria
+    // A través de la memoria se actualizaría el PCB
+    enviar_contexto_memoria(pcb_actual->pid, pcb_actual->contexto_ejecucion->registros, pcb_actual->contexto_ejecucion->registros->program_counter, fd_cpu_memoria);
+
+    log_info(LOGGER_CPU, "Contexto de la CPU actualizado en memoria.");
+}
+
+void enviar_contexto_memoria(uint32_t pid, t_registros* registros, uint32_t program_counter, int socket_memoria) {
+    t_paquete *paquete = crear_paquete_con_codigo_de_operacion(ACTUALIZAR_CONTEXTO);
+
+    agregar_a_paquete(paquete, &pid, sizeof(uint32_t));
+    agregar_a_paquete(paquete, registros, sizeof(t_registros));
+    agregar_a_paquete(paquete, &program_counter, sizeof(uint32_t));
+
+    enviar_paquete(paquete, socket_memoria);
+    eliminar_paquete(paquete);
+}
+
+void devolver_control_al_kernel() {
+    log_info(LOGGER_CPU, "Devolviendo control al Kernel...");
+
+    // Crear un paquete para notificar al Kernel
+    t_paquete *paquete = crear_paquete_con_codigo_de_operacion(DEVOLVER_CONTROL_KERNEL);
+
+    // Enviar el paquete indicando que el control se devuelve al Kernel
+    enviar_paquete(paquete, socket_cpu_interrupt_kernel);  // Asegúrate de tener el socket correspondiente para el Kernel (socket_cpu_interrupt_kernel)
+
+    eliminar_paquete(paquete);
+
+    log_info(LOGGER_CPU, "Control devuelto al Kernel.");
+}

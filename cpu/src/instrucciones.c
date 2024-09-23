@@ -168,25 +168,6 @@ uint32_t* obtener_registro(char* registro){
 }
 
 //FUNCIONES DE ABAJO A REVISAR:
-void* recibir_dato_de_memoria(int socket, t_log* logger, t_list* lista_direcciones_fisicas, uint32_t tamanio) {
-    // Solicitar a la memoria el valor en las direcciones fisicas (en este caso simplificamos)
-    // Enviar la solicitud de lectura a la memoria a traves del socket
-    enviar_solicitud_memoria(socket, lista_direcciones_fisicas, tamanio);
-
-    // Reservar memoria para recibir el dato
-    void* buffer = malloc(tamanio);
-    
-    // Recibir el valor de memoria (asumimos que el socket esta preparado para esto)
-    if (recv(socket, buffer, tamanio, 0) <= 0) {
-        log_error(logger, "Error al recibir datos de memoria.");
-        free(buffer);
-        return NULL;
-    }
-    
-    // Devolver el buffer con los datos recibidos
-    return buffer;
-}
-
 void enviar_interrupcion_segfault(uint32_t pid, int socket) {
     // Crear el paquete de interrupcion
     t_paquete* paquete = crear_paquete_con_codigo_de_operacion(SEGF_FAULT);
@@ -202,11 +183,8 @@ void enviar_interrupcion_segfault(uint32_t pid, int socket) {
 }
 
 uint32_t recibir_valor_de_memoria(int socket_cliente, uint32_t direccion_fisica) { // REVISAR SI EL SOCKET SERIA ESE
-    t_paquete *paquete = crear_paquete();
-
+    t_paquete *paquete = crear_paquete_con_codigo_de_operacion(PEDIR_VALOR_MEMORIA);
     agregar_a_paquete(paquete, &direccion_fisica, sizeof(uint32_t));
-
-    paquete->codigo_operacion = PEDIR_VALOR_MEMORIA;
 
     enviar_paquete(paquete, socket_cliente);
 
@@ -226,12 +204,90 @@ uint32_t recibir_valor_de_memoria(int socket_cliente, uint32_t direccion_fisica)
 }
 
 void enviar_valor_a_memoria(int socket_cliente, uint32_t dire_fisica, uint32_t reg_datos) {
+    t_paquete *paquete = crear_paquete_con_codigo_de_operacion(ESCRIBIR_VALOR_MEMORIA);
 
+    // Agregar la dirección física y el valor del registro de datos al paquete
+    agregar_a_paquete(paquete, &dire_fisica, sizeof(uint32_t));
+    agregar_a_paquete(paquete, &reg_datos, sizeof(uint32_t));
+
+    // Enviar el paquete al cliente
+    enviar_paquete(paquete, socket_cliente); //FALTA COMPROBAR SI LOGRA ENVIAR EL PAQUETE CORRECTAMENTE
+    
+
+    // Eliminar el paquete para liberar memoria
+    eliminar_paquete(paquete);
 }
 
-void enviar_solicitud_memoria(int socket_cliente, t_list* lista_direcciones_fisicas, uint32_t tamanio) {
 
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// void enviar_solicitud_memoria(int socket, t_list* lista_direcciones_fisicas, uint32_t tamanio) {
+//     // Crear el paquete con el código de operación adecuado (por ejemplo, LECTURA_MEMORIA)
+//     t_paquete *paquete = crear_paquete_con_codigo_de_operacion(LECTURA_MEMORIA);
+
+//     // Agregar el tamaño de la lectura al paquete
+//     agregar_a_paquete(paquete, &tamanio, sizeof(uint32_t));
+
+//     // Iterar sobre la lista de direcciones físicas y agregarlas al paquete
+//     for (int i = 0; i < list_size(lista_direcciones_fisicas); i++) {
+//         uint32_t* direccion = (uint32_t*) list_get(lista_direcciones_fisicas, i);
+//         agregar_a_paquete(paquete, direccion, sizeof(uint32_t));
+//     }
+
+//     // Enviar el paquete al servidor de memoria a través del socket
+//     if (enviar_paquete(paquete, socket) == -1) {
+//         printf("Error: no se pudo enviar la solicitud de lectura a la memoria\n");
+//     }
+
+//     // Liberar el paquete después de enviarlo
+//     eliminar_paquete(paquete);
+// }
+
+// void* recibir_dato_de_memoria(int socket, t_log* logger, t_list* lista_direcciones_fisicas, uint32_t tamanio) {
+//     // Solicitar a la memoria el valor en las direcciones fisicas (en este caso simplificamos)
+//     // Enviar la solicitud de lectura a la memoria a traves del socket
+//     enviar_solicitud_memoria(socket, lista_direcciones_fisicas, tamanio);
+
+//     // Reservar memoria para recibir el dato
+//     void* buffer = malloc(tamanio);
+    
+//     // Recibir el valor de memoria (asumimos que el socket esta preparado para esto)
+//     if (recv(socket, buffer, tamanio, 0) <= 0) {
+//         log_error(logger, "Error al recibir datos de memoria.");
+//         free(buffer);
+//         return NULL;
+//     }
+    
+//     // Devolver el buffer con los datos recibidos
+//     return buffer;
+// }
+ 
+
 
 
 

@@ -32,7 +32,11 @@ typedef enum
 	SOLICITUD_BASE_MEMORIA,
 	SOLICITUD_LIMITE_MEMORIA,
 	PEDIR_VALOR_MEMORIA,
-	SEGF_FAULT
+	SEGF_FAULT,
+	ESCRIBIR_VALOR_MEMORIA,
+	LECTURA_MEMORIA,
+	ACTUALIZAR_CONTEXTO,
+	DEVOLVER_CONTROL_KERNEL
 } op_code;
 
 typedef struct
@@ -69,5 +73,6 @@ void paquete(int, t_log*);
 void terminar_programa(t_config*, t_log*, int []);
 
 t_paquete* crear_paquete_con_codigo_de_operacion(op_code);
+t_paquete* recibir_paquete_entero(int);
 
 #endif

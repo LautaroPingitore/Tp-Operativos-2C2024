@@ -88,5 +88,10 @@ void log_instruccion_ejecutada(nombre_instruccion , char*, char*, char*);
 void iniciar_semaforos_etc();
 void liberar_instruccion(t_instruccion*);
 char *instruccion_to_string(nombre_instruccion);
+void check_interrupt();
+bool recibir_interrupcion(int);
+void actualizar_contexto_memoria();
+void enviar_contexto_memoria(uint32_t, t_registros*, uint32_t, int);
+void devolver_control_al_kernel();
 
 #endif //CICLO_INSTRUCCION_H_

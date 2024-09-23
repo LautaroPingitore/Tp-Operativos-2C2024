@@ -110,5 +110,4 @@ int gestionarConexionConKernelInterrupt(){
 		}
 	}
 	return EXIT_SUCCESS;
-   
 }

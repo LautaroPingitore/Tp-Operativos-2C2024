@@ -124,8 +124,8 @@ t_list* recibir_paquete(int socket_cliente)
 	return valores;
 }
 
-/*
-t_paquete* recibir_paquete(int socket_cliente) {
+
+t_paquete* recibir_paquete_entero(int socket_cliente) {
     int size;
     int desplazamiento = 0;
     void *buffer;
@@ -150,7 +150,7 @@ t_paquete* recibir_paquete(int socket_cliente) {
     free(buffer);
     return paquete;  // Retorna el puntero a t_paquete
 }
-*/
+
 
 
 t_log* iniciar_logger(char* file_name, char* logger_name)
@@ -270,7 +270,7 @@ void crear_buffer(t_paquete* paquete)
 	paquete->buffer->stream = NULL;
 }
 
-t_paquete* crear_paquete(void)
+t_paquete* crear_paquete(void) // PUEDE SER REMPLAZADA POR LA FUNCION CREAR_PAQUETE_CON_CODIGO_DE_OPERACION
 {
 	t_paquete* paquete = malloc(sizeof(t_paquete));
 	paquete->codigo_operacion = PAQUETE;
