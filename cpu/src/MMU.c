@@ -150,6 +150,7 @@ uint32_t recibir_limite_memoria(){
 //         }
 //     }
 
+
 //     // Si no se encuentra la particion, registramos un error y salimos
 //     log_error(LOGGER_CPU, "PID: %d - No se encontro la particion asignada.", pid);
 //     exit(EXIT_FAILURE);  // Podrias manejar esto de forma mas robusta

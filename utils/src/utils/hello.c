@@ -124,6 +124,33 @@ t_list* recibir_paquete(int socket_cliente)
 	return valores;
 }
 
+/*
+t_paquete* recibir_paquete(int socket_cliente) {
+    int size;
+    int desplazamiento = 0;
+    void *buffer;
+    t_paquete *paquete = malloc(sizeof(t_paquete));  // Reservar memoria para el paquete
+    buffer = recibir_buffer(&size, socket_cliente);
+    
+    // Leer el código de operación
+    memcpy(&paquete->codigo_operacion, buffer + desplazamiento, sizeof(op_code));
+    desplazamiento += sizeof(op_code);
+    
+    // Leer el tamaño del buffer
+    int tamanio_buffer;
+    memcpy(&tamanio_buffer, buffer + desplazamiento, sizeof(int));
+    desplazamiento += sizeof(int);
+    
+    // Reservar memoria para el buffer y copiar los datos
+    paquete->buffer = malloc(sizeof(t_buffer));  // Asegúrate de definir t_buffer correctamente
+    paquete->buffer->size = tamanio_buffer;      // Asigna el tamaño al buffer
+    paquete->buffer->stream = malloc(tamanio_buffer);  // Reserva memoria para el stream
+    memcpy(paquete->buffer->stream, buffer + desplazamiento, tamanio_buffer);
+    
+    free(buffer);
+    return paquete;  // Retorna el puntero a t_paquete
+}
+*/
 
 
 t_log* iniciar_logger(char* file_name, char* logger_name)

@@ -61,6 +61,7 @@ void execute(t_instruccion *instruccion, int socket)
     case WRITE_MEM:
         loguear_y_sumar_pc(instruccion);
         write_mem(instruccion->parametro1, instruccion->parametro2, fd_cpu_memoria); // cambiar nombre _mov_out
+        break;
     case JNZ:
         loguear_y_sumar_pc(instruccion);
         jnz_pc(instruccion->parametro1, instruccion->parametro2);
