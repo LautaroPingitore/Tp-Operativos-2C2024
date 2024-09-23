@@ -28,7 +28,11 @@ typedef enum
 	MENSAJE,
 	PAQUETE,
 	INSTRUCCION,
-	PEDIDO_INSTRUCCION
+	PEDIDO_INSTRUCCION,
+	SOLICITUD_BASE_MEMORIA,
+	SOLICITUD_LIMITE_MEMORIA,
+	PEDIR_VALOR_MEMORIA,
+	SEGF_FAULT
 } op_code;
 
 typedef struct
@@ -64,6 +68,6 @@ t_list* recibir_paquete(int);
 void paquete(int, t_log*);
 void terminar_programa(t_config*, t_log*, int []);
 
-
+t_paquete* crear_paquete_con_codigo_de_operacion(op_code);
 
 #endif

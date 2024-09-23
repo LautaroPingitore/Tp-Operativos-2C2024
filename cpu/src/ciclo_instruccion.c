@@ -78,6 +78,9 @@ void execute(t_instruccion *instruccion, int socket)
         //log_registro(instruccion->parametro1,instruccion->parametro2); COMENTADO POR ERROR, PROBLABLEMENTE ESTE MAL DESARROLLADA log_registro
         log_registro(instruccion->parametro1);
         break;
+    case SEGMENTATION_FAULT:
+        // NO SE BIEN QUE PONER ACA PORQUE EL SWITCH ME TIRA UN WARNING DE QUE NO LO USABA
+        break;
     }
 }
 
@@ -142,8 +145,8 @@ void pedir_instruccion_memoria(uint32_t pid, uint32_t pc, int socket)
 
 t_instruccion *deserializar_instruccion(int socket)
 {
-    t_paquete *paquete = recibir_paquete(socket); // error debido a que recibir_paquete retorna t_list
-    t_instruccion *instruccion = malloc(sizeof(t_instruccion));
+    t_paquete* paquete = recibir_paquete(socket); // error debido a que recibir_paquete retorna t_list
+    t_instruccion* instruccion = malloc(sizeof(t_instruccion));
 
     void *stream = paquete->buffer->stream;
     int desplazamiento = 0;
@@ -186,3 +189,4 @@ void liberar_instruccion(t_instruccion *instruccion) {
     free(instruccion->parametro3);
     free(instruccion);
 }
+

@@ -51,22 +51,54 @@ uint32_t consultar_limite_particion(uint32_t pid) {
 }
 
 //FUNCIONES DECLARADAS A DESARROLLAR
-
 void enviar_solicitud_base_memoria(uint32_t pid){
+    t_paquete* paquete = crear_paquete_con_codigo_de_operacion(SOLICITUD_BASE_MEMORIA);
 
+    // paquete->codigo_operacion = SOLUCITUD_BASE_MEMORIA;
+
+    agregar_a_paquete(paquete, &pid, sizeof(uint32_t));
+
+    enviar_paquete(paquete, socket_cpu_dispatch_memoria);
+
+    eliminar_paquete(paquete);
 }
 
 uint32_t recibir_base_memoria(){
+    uint32_t base_particion;
 
-return 1;
+    ssize_t bytes_recibidos = recv(socket_cpu_dispatch_memoria, &base_particion, sizeof(uint32_t), MSG_WAITALL);
+
+    if (bytes_recibidos <= 0) {
+        log_error(LOGGER_CPU, "Error al recibir la base de la particion desde memoria.");
+        return (uint32_t) -1;
+    }
+
+    return base_particion;
 }
 
 void enviar_solicitud_limite_memoria(uint32_t pid){
+    t_paquete* paquete = crear_paquete_con_codigo_de_operacion(SOLICITUD_LIMITE_MEMORIA);
 
+    //paquete->codigo_operacion = SOLICITUD_LIMITE_MEMORIA;
+
+    agregar_a_paquete(paquete, &pid, sizeof(uint32_t));
+
+    enviar_paquete(paquete, socket_cpu_dispatch_memoria);
+
+    eliminar_paquete(paquete);
 }
-uint32_t recibir_limite_memoria(){
 
-return 1;
+uint32_t recibir_limite_memoria(){
+    uint32_t base_particion;
+
+    ssize_t bytes_recibidos = recv(socket_cpu_dispatch_memoria, &base_particion, sizeof(uint32_t), MSG_WAITALL);
+
+    if (bytes_recibidos <= 0) {
+        log_error(LOGGER_CPU, "Error al recibir la base de la particion desde memoria.");
+        return (uint32_t) -1;
+    }
+
+    return base_particion;
 }
 
 

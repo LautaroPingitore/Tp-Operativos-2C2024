@@ -20,4 +20,8 @@ uint32_t* obtener_registro(char*);
 void* recibir_dato_de_memoria(int,t_log*,t_list*,uint32_t);
 void enviar_interrupcion_segfault(uint32_t, int);
 
+uint32_t recibir_valor_de_memoria(int, uint32_t);
+void enviar_valor_a_memoria(int, uint32_t, uint32_t);
+void enviar_solicitud_memoria(int, t_list*, uint32_t);
+
 #endif

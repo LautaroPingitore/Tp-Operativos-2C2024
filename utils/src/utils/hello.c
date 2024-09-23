@@ -376,3 +376,11 @@ int gestionarConexiones(int socket_cliente, t_log* LOG_SERVIDOR)
             break;
 
 */
+
+t_paquete* crear_paquete_con_codigo_de_operacion(op_code operacion)
+{
+	t_paquete* paquete = malloc(sizeof(t_paquete));
+	paquete->codigo_operacion = operacion;
+	crear_buffer(paquete);
+	return paquete;
+}
