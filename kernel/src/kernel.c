@@ -60,22 +60,3 @@ void inicializar_config(char* arg){
 }
 
 
-t_pcb crear_proceso(char*);
-
-t_pcb crear_proceso(char* path_proceso){
-    
-    int pid = asignar_pid();
-    int* tids = asignar_tids();
-    pthread_mutex_t* mutexs = asignar_mutexs();
-    int prioridad = asignar_prioridad();
-    t_pcb* pcb = crearPcb(pid, tids, NEW, mutexs, prioridad);
-
-    pthread_mutex_lock(&pcbs_de_procesos_en_sistema_mutex);
-    list_add(pcbs_de_procesos_en_sistema, pcb);
-    pthread_mutex_unlock(&pcbs_de_procesos_en_sistema_mutex);
-
-    log_info(LOGGER_KERNEL, "Proceso %d creado en NEW", pcb->PID);
-
-    enviar_proceso_a_memoria(pcb->pid, path_proceso);
-
-}

@@ -23,3 +23,4 @@ void inicializar_config(char*);
 
 
 #endif /* KERNEL_H_ */
+
