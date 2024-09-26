@@ -1,4 +1,4 @@
-#include <utils/planificador.h>
+#include <include/planificador.h>
 
 /*
 Tipos de planificacion:
@@ -35,30 +35,46 @@ IO(cantidad de milisegundos que el hilo va a permanecer haciendo la operación d
 
 //PLANIFICADOR LARGO PLAZO
 
-int pid = 0;
+uint32_t pid = 0;
 pthread_mutex_t mutex_pid;
 
-t_pcb* crearPcb(int pid, int* tids, t_estado estado, int*  mutexs){
+t_pcb* crearPcb(uint32_t pid, uint32_t* tids, t_contexto_ejecucion* contexto_ejecucion, t_estado estado, t_mutex* mutexs){
 
     t_pcb* pcb = malloc(sizeof(t_pcb));
+    if(pcb == NULL) {
+        perror("Error al asignar memoria para el PCB");
+        exit(EXIT_FAILURE);
+    }
 
+    pcb->pid = pid;
+    pcb->tid = tids;
+    pcb->contexto_ejecucion = contexto_ejecucion;
+    pcb->estado = estado;
+    pcb->MUTEXS = mutexs;   
     return pcb;
-    //preguntar en consultas    
+
 }
 
-t_tcb* crearTcb(){
+t_tcb* crearTcb(uint32_t tid, uint32_t prioridad, t_estado estado){
     t_tcb* tcb = malloc(sizeof(t_tcb));
+    if (tcb == NULL) {
+        perror("Error al asignar memoria para el TCB");
+        exit(EXIT_FAILURE);
+    }
 
+    tcb->tid = tid;
+    tcb->prioridad = prioridad;
+    tcb->estado = estado;
 
-
+    return tcb;
 }
 
-t_pcb crear_proceso(char* path_proceso){
+t_pcb crear_proceso(char* path_proceso, int tamanio_proceso){
     
-    int pid = asignar_pid();
+    uint32_t pid = asignar_pid();
     pthread_mutex_t* mutexs = asignar_mutexs();
     int prioridad = asignar_prioridad();
-    t_pcb* pcb = crearPcb(pid, tids, NEW, mutexs, prioridad);
+    t_pcb* pcb = crearPcb(pid, tids, contexto, NEW, mutexs);
 
     pthread_mutex_lock(&pcbs_de_procesos_en_sistema_mutex);
     list_add(pcbs_de_procesos_en_sistema, pcb);
