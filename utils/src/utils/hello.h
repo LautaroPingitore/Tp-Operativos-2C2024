@@ -3,16 +3,16 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-#include<commons/log.h>
-#include<commons/string.h>
-#include<commons/config.h>
-#include<readline/readline.h>
-#include<signal.h>
-#include<unistd.h>
-#include<sys/socket.h>
-#include<netdb.h>
-#include<commons/collections/list.h>
-#include<assert.h>
+#include <commons/log.h>
+#include <commons/string.h>
+#include <commons/config.h>
+#include <readline/readline.h>
+#include <signal.h>
+#include <unistd.h>
+#include <sys/socket.h>
+#include <netdb.h>
+#include <commons/collections/list.h>
+#include <assert.h>
 #include <pthread.h>
 #include <semaphore.h>
 
@@ -64,31 +64,56 @@ void terminar_programa(t_config*, t_log*, int []);
 
 int gestionarConexiones(int, t_log*);
 
-struct PCB {
-	int PID;
-	int* TIDS;
-	t_mutex* MUTEXS;
-	t_estado ESTADO;
-}t_pcb;
+// NO SE SI ESTO IRIA ACA PERO LO PONGO PARA QUE NO TIRE ERRORES
+typedef struct {
+    uint32_t program_counter;  // Contador de programa (PC)
+    uint32_t  AX, BX, CX, DX ,EX, FX, GX, HX; // PUEDE REMPLAZARCE CON UN registros[8]
+} t_registros;
 
-struct TCB {
-	int TID;
+typedef enum {
+    INTERRUPCION_SYSCALL,
+    INTERRUPCION_BLOQUEO,
+    FINALIZACION
+} motivo_desalojo;
+
+typedef enum {
+    SUCCES,
+    ERROR
+} finalizacion_proceso;
+
+// ===========================
+
+typedef struct {
+	uint32_t TID;
 	int PRIORIDAD;
 	//t_estado estado;
 }t_tcb;
 
-struct MUTEX{
+typedef struct {
 	int id;
 	int contador;
 }t_mutex;
 
-typedef enum
-{
+typedef enum {
     NEW,
     READY,
     EXECUTE,
     BLOCK,
     EXIT
 } t_estado;
+
+typedef struct {
+    t_registros *registros;
+    motivo_desalojo motivo_desalojo;
+    finalizacion_proceso motivo_finalizacion;
+} t_contexto_ejecucion;
+
+typedef struct {
+	uint32_t PID;
+	uint32_t* TIDS;
+	t_contexto_ejecucion* CONTEXTO;
+	t_estado ESTADO;
+	t_mutex* MUTEXS;
+} t_pcb;
 
 #endif
