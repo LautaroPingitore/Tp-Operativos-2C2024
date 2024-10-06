@@ -82,17 +82,10 @@ typedef enum {
 } finalizacion_proceso;
 
 // ===========================
-
-typedef struct {
-	uint32_t TID;
-	int PRIORIDAD;
-	//t_estado estado;
-}t_tcb;
-
 typedef struct {
 	int id;
 	int contador;
-}t_mutex;
+} t_mutex;
 
 typedef enum {
     NEW,
@@ -101,6 +94,12 @@ typedef enum {
     BLOCK,
     EXIT
 } t_estado;
+
+typedef struct {
+	uint32_t TID;
+	int PRIORIDAD;
+	t_estado ESTADO;
+}t_tcb;
 
 typedef struct {
     t_registros *registros;
