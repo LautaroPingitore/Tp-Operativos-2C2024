@@ -11,7 +11,7 @@ static void procesar_conexion_memoria(void *void_args)
     op_code cop;
     while (cliente_socket != -1)
     {
-        if (recv(cliente_socket, &cop, sizeof(op_cod), 0) != sizeof(op_cod))
+        if (recv(cliente_socket, &cop, sizeof(op_code), 0) != sizeof(op_code))
         {
             log_debug(logger, "Cliente desconectado.\n");
             return;
@@ -29,17 +29,19 @@ static void procesar_conexion_memoria(void *void_args)
 
         case INICIALIZAR_PROCESO:
             // Aquí se inicializa el proceso y se crea su contexto de ejecución
-            uint32_t pid, base, limite;
-            recibir_inicializar_proceso(&pid, &base, &limite, cliente_socket);
-            crear_proceso(pid, base, limite); // Crear proceso y su contexto
-            log_info(logger, "Proceso inicializado con PID: %d", pid);
+            // uint32_t pid, base, limite;
+            // recibir_inicializar_proceso(&pid, &base, &limite, cliente_socket);
+            // crear_proceso(pid, base, limite); // Crear proceso y su contexto
+            // log_info(logger, "Proceso inicializado con PID: %d", pid);
+            log_info(logger, "No implementado. Respondiendo OK.");
             break;
 
         case FINALIZAR_PROCESO:
-            uint32_t pid_a_finalizar;
-            recibir_finalizar_proceso(&pid_a_finalizar, cliente_socket);
-            liberar_proceso(pid_a_finalizar);
-            log_info(logger, "Proceso con PID: %d finalizado", pid_a_finalizar);
+            // uint32_t pid_a_finalizar;
+            // recibir_finalizar_proceso(&pid_a_finalizar, cliente_socket);
+            // liberar_proceso(pid_a_finalizar);
+            // log_info(logger, "Proceso con PID: %d finalizado", pid_a_finalizar);
+            log_info(logger, "No implementado. Respondiendo OK.");
             break;
 
         // -------------------
@@ -66,38 +68,38 @@ static void procesar_conexion_memoria(void *void_args)
             break;
 
         // Peticiones stub (sin hacer nada)
-        case PEDIDO_RESIZE:
-            log_info(logger, "Peticiones de resize no implementadas. Respondiendo OK.");
+        case PEDIDO_SET:
+            log_info(logger, "Peticiones de SET no implementadas. Respondiendo OK.");
             enviar_respuesta(cliente_socket, OK);
             break;
 
-        case PEDIDO_MOV_IN:
-            log_info(logger, "Peticiones de MOV IN no implementadas. Respondiendo OK.");
+        case PEDIDO_READ_MEM:
+            log_info(logger, "Peticiones de READ MEM no implementadas. Respondiendo OK.");
             enviar_respuesta(cliente_socket, OK);
             break;
 
-        case PEDIDO_MOV_OUT:
-            log_info(logger, "Peticiones de MOV OUT no implementadas. Respondiendo OK.");
+        case PEDIDO_WRITE_MEM:
+            log_info(logger, "Peticiones de WRITE MEM no implementadas. Respondiendo OK.");
             enviar_respuesta(cliente_socket, OK);
             break;
 
-        case PEDIDO_COPY_STRING:
-            log_info(logger, "Peticiones de COPY STRING no implementadas. Respondiendo OK.");
+        case PEDIDO_SUB:
+            log_info(logger, "Peticiones de SUB no implementadas. Respondiendo OK.");
             enviar_respuesta(cliente_socket, OK);
             break;
 
-        case PEDIDO_ESCRIBIR_DATO_STDIN:
-            log_info(logger, "Peticiones de escritura de STDIN no implementadas. Respondiendo OK.");
+        case PEDIDO_SUM:
+            log_info(logger, "Peticiones de escritura de SUM no implementadas. Respondiendo OK.");
             enviar_respuesta(cliente_socket, OK);
             break;
 
-        case PEDIDO_A_LEER_DATO_STDOUT:
-            log_info(logger, "Peticiones de lectura de STDOUT no implementadas. Respondiendo OK.");
+        case PEDIDO_JNZ:
+            log_info(logger, "Peticiones de lectura de JNZ no implementadas. Respondiendo OK.");
             enviar_respuesta(cliente_socket, OK);
             break;
 
-        case PEDIDO_MARCO:
-            log_info(logger, "Peticiones de marco no implementadas. Respondiendo OK.");
+        case PEDIDO_LOG:
+            log_info(logger, "Peticiones de LOG no implementadas. Respondiendo OK.");
             enviar_respuesta(cliente_socket, OK);
             break;
 
@@ -131,9 +133,4 @@ int server_escuchar(t_log *logger, char *server_name, int server_socket)
         return 1;
     }
     return 0;
-}
-
-void enviar_respuesta(int cliente_socket, op_cod response)
-{
-    send(cliente_socket, &response, sizeof(op_cod), 0);
 }

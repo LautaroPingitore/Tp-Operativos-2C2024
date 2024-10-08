@@ -1,8 +1,9 @@
 #ifndef COMUNICACIONES_H_
 #define COMUNICACIONES_H_
 
-#include "./gestor.h"
-#include "./utils_memoria.h"
+#include <include/memoria.h>
+#include <include/utils_memoria.h>
+#include <include/gestor.h>
 
 // Definición del tipo para los argumentos de la conexión
 typedef struct
@@ -14,13 +15,7 @@ typedef struct
 
 // Funciones para manejar el servidor y la comunicación con otros módulos
 int server_escuchar(t_log *logger, char *server_name, int server_socket);
-void enviar_respuesta(int cliente_socket, op_code response);
-
-// Funciones para manejar las operaciones relacionadas con procesos
-void recibir_inicializar_proceso(uint32_t *pid, uint32_t *base, uint32_t *limite, int cliente_socket);
-void recibir_finalizar_proceso(uint32_t *pid_a_finalizar, int cliente_socket);
-void recibir_pedido_instruccion(uint32_t *pid, uint32_t *pc, int cliente_socket);
-t_instruccion* obtener_instruccion(uint32_t pid, uint32_t pc);
-void liberar_proceso(uint32_t pid);
+void enviar_respuesta(int cliente_socket, op_code response); 
+static void procesar_conexion_memoria(void *void_args);
 
 #endif // COMUNICACIONES_H_
