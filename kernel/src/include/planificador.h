@@ -16,8 +16,9 @@ void inicializar_colas_y_mutexs();
 t_pcb* crear_pcb(uint32_t, uint32_t*, t_contexto_ejecucion*, t_estado, t_mutex*);
 t_tcb* crear_tcb(uint32_t, int, t_estado);
 void crear_proceso(char*, int);
+t_contexto_ejecucion* inicializar_contexto();
 void inicializar_proceso(t_pcb*, char*);
-void enviar_proceso_a_memoria(int, char*);
+int enviar_proceso_a_memoria(int, char*);
 void mover_a_ready(t_pcb*);
 void mover_a_exit(t_pcb*);
 void intentar_inicializar_proceso_de_new();
@@ -38,5 +39,13 @@ void thread_cancel(t_pcb*, uint32_t);
 void liberar_recursos_hilo(t_tcb*);
 void thread_exit(t_pcb*, uint32_t);
 void intentar_mover_a_execute();
+
+// PLANIFICADOR CORTO PLAZO
+t_tcb* obtener_hilo_fifo();
+t_tcb* obtener_hilo_x_prioridad();
+t_tcb* seleccionar_hilo_multinivel();
+
+// ENTRADA SALIDA
+void io(t_pcb*, uint32_t, int);
 
 #endif /* KERNEL_H_ */
