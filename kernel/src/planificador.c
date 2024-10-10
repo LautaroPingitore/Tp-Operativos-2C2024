@@ -43,6 +43,8 @@ IO(cantidad de milisegundos que el hilo va a permanecer haciendo la operación d
 t_list* cola_new;
 t_list* cola_ready;
 t_list* cola_exit;
+int CANTIDAD_HILOS = 3; // DE MOMENTO PUSIMOS QUE UN PROCESO TIENE 3 HILOS, CUIDADO CON ESTO
+int CANTIDAD_MUTEX = 3; // LO MISMO QUE LOS HILOS 
 
 // SEMAFOFOS QUE PROTEGEN EL ACCESO A CADA COLA
 pthread_mutex_t mutex_cola_new;
@@ -50,9 +52,9 @@ pthread_mutex_t mutex_cola_ready;
 pthread_mutex_t mutex_cola_exit;
 
 uint32_t pid = 0;
-pthread_mutex_t mutex_pid;
+uint32_t contador_tid = 0;
+pthread_mutex_t mutex_pid = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutex_tid = PTHREAD_MUTEX_INITIALIZER;
-uint32_t contador_tid = 0; // PUEDE USARSE EL STATIC DENTRO DE LA FUNCION CREATE
 
 bool cpu_libre = true;
 
@@ -105,7 +107,7 @@ void crear_proceso(char* path_proceso, int tamanio_proceso){
     uint32_t pid = asignar_pid();
     uint32_t* tids = asignar_tids();
     t_contexto_ejecucion* contexto = inicializar_contexto();
-    //t_mutex* mutexs = asignar_mutexs();
+    t_mutex* mutexs = asignar_mutexs();
     t_pcb* pcb = crear_pcb(pid, tids, contexto, NEW, mutexs);
 
     pthread_mutex_lock(&mutex_cola_new);
@@ -124,7 +126,7 @@ void crear_proceso(char* path_proceso, int tamanio_proceso){
 }
 
 uint32_t asignar_pid() {
-    pthread_mutex_lock(&mutex_pid)
+    pthread_mutex_lock(&mutex_pid);
     uint32_t pidNuevo = pid;
     pid++;
     pthread_mutex_unlock(&mutex_pid);
@@ -166,11 +168,11 @@ t_contexto_ejecucion* inicializar_contexto() {
     contexto->registros->FX = 0;
     contexto->registros->GX = 0;
     contexto->registros->HX = 0;
-    contexto->registros->IP = 0;
     contexto->registros->program_counter = 0;
     
-    contexto->motivo_desalojo = NULL;
-    contexto->motivo_finalizacion = NULL;
+    // CUIDADO ACA
+    contexto->motivo_desalojo = ESTADO_INICIAL;
+    contexto->motivo_finalizacion = INCIAL;
 
     return contexto;
 }
@@ -544,7 +546,7 @@ t_tcb* seleccionar_hilo_multinivel() {
     return siguiente_hilo;  // Este hilo sera movido a EXECUTE
 }
 
-// ENTRADA Y SALIDA ===============
+// ENTRADA Y SALIDA ====================
 
 void io(t_pcb* pcb, uint32_t tid, int milisegundos) {
     t_tcb* tcb = buscar_hilo_por_tid(pcb, tid);

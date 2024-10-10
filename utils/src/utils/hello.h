@@ -71,12 +71,14 @@ typedef struct {
 } t_registros;
 
 typedef enum {
+	ESTADO_INICIAL,
     INTERRUPCION_SYSCALL,
     INTERRUPCION_BLOQUEO,
     FINALIZACION
 } motivo_desalojo;
 
 typedef enum {
+	INCIAL,
     SUCCES,
     ERROR
 } finalizacion_proceso;
