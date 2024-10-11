@@ -18,7 +18,7 @@
 
 /**
 * @brief Imprime un saludo por consola
-* @param quien Modulo desde donde se llama a la función
+* @param quien Modulo desde donde se llama a la funcion
 * @return No devuelve nada
 */
 

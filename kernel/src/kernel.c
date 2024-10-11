@@ -49,6 +49,48 @@ int main(int argc, char* argv[]) {
     inicializar_config("kernel");
     log_info(LOGGER_KERNEL, "Iniciando KERNEL \n");
 
+    // INICIAR CONEXIONES
+    iniciar_comunicaciones();
+
+    // INICIAR LOS SEMAFOROS Y COLAS
+    inicializar_colas_y_mutexs();
+
+    // CREAR PROCESOS INICIAL
+    crear_proceso(archivo_pseudocodigo, tamanio_proceso, 0);
+
+    // LOGICA PARA LA CREACION DE MAS PROCESOS Y USO DE LOS PLANIIFICADORES
+
+    terminar_programa(CONFIG_KERNEL, LOGGER_KERNEL, sockets);
+
+    return 0;
+
+}
+
+void inicializar_config(char* arg){
+    /*
+    char config_path[256];
+    strcpy(config_path, arg);
+    strcat(config_path, ".config");
+    */
+    char config_path[256];
+    strcpy(config_path, "../");
+    strcat(config_path, arg);
+    strcat(config_path, ".config");
+
+    LOGGER_KERNEL = iniciar_logger("kernel.log", "KERNEL");
+    CONFIG_KERNEL = iniciar_config(config_path, "KERNEL");
+    
+    IP_MEMORIA = config_get_string_value(CONFIG_KERNEL, "IP_MEMORIA");
+    PUERTO_MEMORIA = config_get_string_value(CONFIG_KERNEL, "PUERTO_MEMORIA");
+    IP_CPU = config_get_string_value(CONFIG_KERNEL, "IP_CPU");
+    PUERTO_CPU_DISPATCH = config_get_string_value(CONFIG_KERNEL, "PUERTO_CPU_DISPATCH");
+    PUERTO_CPU_INTERRUPT = config_get_string_value(CONFIG_KERNEL, "PUERTO_CPU_INTERRUPT");
+    ALGORITMO_PLANIFICACION = config_get_string_value(CONFIG_KERNEL, "ALGORITMO_PLANIFICACION");
+    QUANTUM = config_get_string_value(CONFIG_KERNEL, "QUANTUM");
+    LOG_LEVEL = config_get_string_value(CONFIG_KERNEL, "LOG_LEVEL");
+}
+
+void iniciar_comunicaciones() {
     int sockets[] = {socket_kernel_memoria, socket_kernel_cpu_dispatch, socket_kernel_cpu_interrupt, -1};
 
     // CONECTAR CON MEMORIA
@@ -84,40 +126,6 @@ int main(int argc, char* argv[]) {
         return -1;
     }
         
-    log_info(LOGGER_KERNEL, "Conexión con CPU Interrupt establecida.");
+    log_info(LOGGER_KERNEL, "Conexion con CPU Interrupt establecida.");
     log_info(LOGGER_KERNEL, "IP_CPU: %s \nPUERTO_CPU_INTERRUPT %s", IP_CPU, PUERTO_CPU_INTERRUPT);
-
-    // CREAR PROCESOS INICIAL
-    crear_proceso(archivo_pseudocodigo, tamanio_proceso);    
-
-    // LOGICA PARA LA CREACION DE MAS PROCESOS Y USO DE LOS PLANIIFICADORES
-
-    terminar_programa(CONFIG_KERNEL, LOGGER_KERNEL, sockets);
-
-    return 0;
-
-}
-
-void inicializar_config(char* arg){
-    /*
-    char config_path[256];
-    strcpy(config_path, arg);
-    strcat(config_path, ".config");
-    */
-    char config_path[256];
-    strcpy(config_path, "../");
-    strcat(config_path, arg);
-    strcat(config_path, ".config");
-
-    LOGGER_KERNEL = iniciar_logger("kernel.log", "KERNEL");
-    CONFIG_KERNEL = iniciar_config(config_path, "KERNEL");
-    
-    IP_MEMORIA = config_get_string_value(CONFIG_KERNEL, "IP_MEMORIA");
-    PUERTO_MEMORIA = config_get_string_value(CONFIG_KERNEL, "PUERTO_MEMORIA");
-    IP_CPU = config_get_string_value(CONFIG_KERNEL, "IP_CPU");
-    PUERTO_CPU_DISPATCH = config_get_string_value(CONFIG_KERNEL, "PUERTO_CPU_DISPATCH");
-    PUERTO_CPU_INTERRUPT = config_get_string_value(CONFIG_KERNEL, "PUERTO_CPU_INTERRUPT");
-    ALGORITMO_PLANIFICACION = config_get_string_value(CONFIG_KERNEL, "ALGORITMO_PLANIFICACION");
-    QUANTUM = config_get_string_value(CONFIG_KERNEL, "QUANTUM");
-    LOG_LEVEL = config_get_string_value(CONFIG_KERNEL, "LOG_LEVEL");
 }

@@ -136,41 +136,27 @@ uint32_t asignar_pid() {
 }
 
 uint32_t asignar_tids() {
-    // Asignamos memoria para los TIDs
-    uint32_t tids = malloc(sizeof(uint32_t));
-    if (tids == NULL) {
-        perror("Error al asignar memoria para los TIDs");
-        exit(EXIT_FAILURE);  // Si hay un error al asignar memoria, salimos
-    }
-
     // Asignamos TIDs unicos para cada hilo del proceso
     pthread_mutex_lock(&mutex_tid);  // Protegemos el acceso a contador_tid con un mutex    
-    tids = contador_tid;
+    uint32_t nuevo_tid = contador_tid;
     contador_tid++;
     pthread_mutex_unlock(&mutex_tid);
 
-    return tids;  // Devolvemos el array con los TIDs asignados
-} //Arreglar
+    return nuevo_tid;
+} 
 
 t_contexto_ejecucion* inicializar_contexto() {
     t_contexto_ejecucion* contexto = malloc(sizeof(t_contexto_ejecucion));
     if (contexto == NULL) {
-        perror("Error al asignar memoria para el contexto de ejecución");
+        perror("Error al asignar memoria para el contexto de ejecucion");
         exit(EXIT_FAILURE);
     }
     
     // Inicializacion de registros y estado del proceso
-    contexto->registros->AX= 0;
-    contexto->registros->BX = 0;
-    contexto->registros->CX = 0;
-    contexto->registros->DX = 0;
-    contexto->registros->EX = 0;
-    contexto->registros->FX = 0;
-    contexto->registros->GX = 0;
-    contexto->registros->HX = 0;
+    contexto->registros = malloc(sizeof(t_registros));
+    memset(contexto->registros, 0, sizeof(t_registros));
     contexto->registros->program_counter = 0;
     
-    // CUIDADO ACA
     contexto->motivo_desalojo = ESTADO_INICIAL;
     contexto->motivo_finalizacion = INCIAL;
 
@@ -212,8 +198,8 @@ int enviar_proceso_a_memoria(int pid_nuevo, char *path_proceso){
 
     t_paquete* paquete_para_memoria = crear_paquete_codop();//(codigo_operacion)
     serializar_paquete_para_memoria(paquete_para_memoria, pid_nuevo, path_proceso);
+
     int resultado = enviar_paquete(paquete_para_memoria, socket_kernel_memoria); //Poner el socket en el gestor.h
-    
     if(resultado == -1){
         eliminar_paquete(paquete_para_memoria);
         return resultado;    
@@ -223,6 +209,15 @@ int enviar_proceso_a_memoria(int pid_nuevo, char *path_proceso){
     eliminar_paquete(paquete_para_memoria);
     
     return resultado;
+}
+
+void serializar_paquete_para_memoria(t_paquete* paquete, int pid, char* path_proceso) {
+    int size_pid = sizeof(int);
+    agregar_a_paquete(paquete, &pid_nuevo, size_pid);
+
+    int length_path = strlen(path_proceso) + 1;
+    agregar_a_paquete(paquete, &length_path, sizeof(int));
+    agregar_a_paquete(paquete, path_proceso, length_path);
 }
 
 void mover_a_ready(t_pcb* pcb) {
@@ -295,11 +290,6 @@ void liberar_recursos_proceso(t_pcb* pcb) {
 
 // CREA UN NUEVO TCB ASOSICADO AL PROCESO Y LO CONFIGURA CON EL PSEUDOCODIGO A EJECUTAR
 void thread_create(t_pcb *pcb, char* archivo_pseudocodigo, int prioridad) {
-
-    if (list_size(pcb->TIDS) == NULL) {
-        log_error(LOGGER_KERNEL, "Error: No hay TIDs disponibles para el proceso %d", pcb->PID);
-        return;
-    }
 
     uint32_t nuevo_tid = asigar_tid();
 
@@ -536,25 +526,21 @@ t_list* cola_nivel_3;  // Menor prioridad
 
 t_tcb* seleccionar_hilo_multinivel() {
     pthread_mutex_lock(&mutex_cola_ready);
-    
     t_tcb* siguiente_hilo = NULL;
 
     // Revisamos la cola de mayor prioridad primero
     if (!list_is_empty(cola_nivel_1)) {
         siguiente_hilo = list_remove(cola_nivel_1, 0);  // Removemos el primer hilo de la cola 1
-        list_add(cola_nivel_1, siguiente_hilo);         // Lo volvemos a colocar al final de la cola 1 (Round Robin)
     } else if (!list_is_empty(cola_nivel_2)) {
         siguiente_hilo = list_remove(cola_nivel_2, 0);  // Removemos el primer hilo de la cola 2
-        list_add(cola_nivel_2, siguiente_hilo);         // Lo volvemos a colocar al final de la cola 2 (Round Robin)
     } else if (!list_is_empty(cola_nivel_3)) {
         siguiente_hilo = list_remove(cola_nivel_3, 0);  // Removemos el primer hilo de la cola 3
-        list_add(cola_nivel_3, siguiente_hilo);         // Lo volvemos a colocar al final de la cola 3 (Round Robin)
     }
 
     pthread_mutex_unlock(&mutex_cola_ready);
 
     return siguiente_hilo;  // Este hilo sera movido a EXECUTE
-} // Esta funcion casi seguro que esta mal, habria que sacar las lineas list_add
+}
 
 // ENTRADA Y SALIDA ====================
 
@@ -577,3 +563,4 @@ void io(t_pcb* pcb, uint32_t tid, int milisegundos) {
 
     log_info(LOGGER_KERNEL, "Hilo %d en proceso %d ha terminado IO y esta en READY", tid, pcb->PID);
 }
+
