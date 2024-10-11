@@ -38,7 +38,7 @@ IO(cantidad de milisegundos que el hilo va a permanecer haciendo la operación d
 
 
 //PLANIFICADOR LARGO PLAZO ==============================
-
+    
 // COLAS QUE EN LAS CUALES SE GUARDARAN LOS PROCESOS
 t_list* cola_new;
 t_list* cola_ready;
@@ -103,12 +103,13 @@ t_tcb* crear_tcb(uint32_t tid, int prioridad, t_estado estado){
 }
 
 // FUNCION QUE CREA UN PROCESO Y LO METE A LA COLA DE NEW
-void crear_proceso(char* path_proceso, int tamanio_proceso){
+void crear_proceso(char* path_proceso, int tamanio_proceso, int prioridad){
     uint32_t pid = asignar_pid();
-    uint32_t* tids = asignar_tids();
     t_contexto_ejecucion* contexto = inicializar_contexto();
     t_mutex* mutexs = asignar_mutexs();
-    t_pcb* pcb = crear_pcb(pid, tids, contexto, NEW, mutexs);
+    t_pcb* pcb = crear_pcb(pid, [], contexto, NEW, mutexs);
+
+    thread_create(pcb, path_proceso, prioridad);
 
     pthread_mutex_lock(&mutex_cola_new);
     list_add(cola_new, pcb);
@@ -134,19 +135,18 @@ uint32_t asignar_pid() {
     return pidNuevo;
 }
 
-uint32_t* asignar_tids() {
+uint32_t asignar_tids() {
     // Asignamos memoria para los TIDs
-    uint32_t* tids = malloc(sizeof(uint32_t) * CANTIDAD_HILOS);
+    uint32_t tids = malloc(sizeof(uint32_t));
     if (tids == NULL) {
         perror("Error al asignar memoria para los TIDs");
         exit(EXIT_FAILURE);  // Si hay un error al asignar memoria, salimos
     }
 
     // Asignamos TIDs unicos para cada hilo del proceso
-    pthread_mutex_lock(&mutex_tid);  // Protegemos el acceso a contador_tid con un mutex
-    for (int i = 0; i < CANTIDAD_HILOS; i++) {
-        tids[i] = ++contador_tid;  // Asignamos un TID unico y lo incrementamos
-    }
+    pthread_mutex_lock(&mutex_tid);  // Protegemos el acceso a contador_tid con un mutex    
+    tids = contador_tid;
+    contador_tid++;
     pthread_mutex_unlock(&mutex_tid);
 
     return tids;  // Devolvemos el array con los TIDs asignados
@@ -294,17 +294,18 @@ void liberar_recursos_proceso(t_pcb* pcb) {
 // MANEJO DE HILOS ==============================
 
 // CREA UN NUEVO TCB ASOSICADO AL PROCESO Y LO CONFIGURA CON EL PSEUDOCODIGO A EJECUTAR
-void thread_create(t_pcb *pcb, char* archivo_pseudocodigo, int prioridad, int posicionEnArray) {
+void thread_create(t_pcb *pcb, char* archivo_pseudocodigo, int prioridad) {
 
-    if (list_size(pcb->TIDS) == 0) {
-        log_error(LOGGER_KERNEL, "Error: No hay mas TIDs disponibles para el proceso %d", pcb->PID);
+    if (list_size(pcb->TIDS) == NULL) {
+        log_error(LOGGER_KERNEL, "Error: No hay TIDs disponibles para el proceso %d", pcb->PID);
         return;
     }
 
-    uint32_t nuevo_tid = (uint32_t) list_get(pcb->TIDS, posicionEnArray);  // Extrae el primer TID asignado
+    uint32_t nuevo_tid = asigar_tid();
 
     // CREA EL NUEVO HILO
     t_tcb* nuevo_tcb = crear_tcb(nuevo_tid, prioridad, NEW);
+    list_add(pcb->TIDS, nuevo_tid);
 
     // CARGA PSEUDOGODIO A EJECUTAR
     cargar_archivo_pseudocodigo(nuevo_tcb, archivo_pseudocodigo);
@@ -436,7 +437,7 @@ void thread_exit(t_pcb* pcb, uint32_t tid) {
 
 // A CHEQUEAR
 void intentar_mover_a_execute() {
-    // Verificar si hay algún proceso en READY y si la CPU está libre
+    // Verificar si hay algun proceso en READY y si la CPU esta libre
     pthread_mutex_lock(&mutex_cola_ready);
     if (list_is_empty(cola_ready)) {
         log_info(logger, "No hay procesos en READY para mover a EXECUTE");
@@ -464,10 +465,10 @@ void intentar_mover_a_execute() {
 
     cpu_libre = false;
 
-    // Loggear la operación
+    // Loggear la operacion
     log_info(logger, "Proceso %d movido a EXECUTE", proceso_seleccionado->PID);
 
-    // Enviar el proceso a la CPU para su ejecución
+    // Enviar el proceso a la CPU para su ejecucion
 
     int resultado = enviar_proceso_a_cpu(proceso_seleccionado);
 

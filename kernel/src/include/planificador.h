@@ -25,13 +25,13 @@ void intentar_inicializar_proceso_de_new();
 void process_exit(t_pcb);
 void liberar_recursos_proceso(t_pcb*);
 uint32_t asignar_pid();
-uint32_t* asignar_tids();
+uint32_t asignar_tids();
 t_contexto_ejecucion* asignar_contexto();
 t_mutex* asignar_mutexs();
 int asignar_prioridad();
 
 // MANEJO HILOS
-void thread_create(t_pcb*, char*, int, int);
+void thread_create(t_pcb*, char*, int);
 void cargar_archivo_pseudocodigo(t_tcb*, char*);
 void thread_join(t_pcb*, uint32_t, uint32_t);
 t_tcb* buscar_hilo_por_tid(t_pcb*, uint32_t);
