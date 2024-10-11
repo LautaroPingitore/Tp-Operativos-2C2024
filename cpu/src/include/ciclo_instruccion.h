@@ -13,16 +13,6 @@
 //ESTOS STRUCTS VAN EN EL UTILS.
 
 //LOS IMPLEMENTAMOS ACA PARA PODER LABURAR, PERO ES TRABAJO DE LOS DE KERNEL
-typedef enum {
-    SET,
-    READ_MEM,
-    WRITE_MEM,
-    SUM,
-    SUB,
-    JNZ,
-    LOG,
-    SEGMENTATION_FAULT //QUE ESTO ESTE ACA DA ERROR EN EL SWITH DE execute PERO SACARLO HABILITA OTROS ERRORES DE que esta undeclared
-} nombre_instruccion;
 
 typedef enum {
     EJECUTANDO,
@@ -31,23 +21,7 @@ typedef enum {
     FINALIZADO
 } estado_proceso;
 
-typedef enum {
-    INTERRUPCION_SYSCALL,
-    INTERRUPCION_BLOQUEO,
-    FINALIZACION
-} motivo_desalojo;
 
-typedef enum {
-    SUCCES,
-    ERROR
-} finalizacion_proceso;
-
-typedef struct {
-    nombre_instruccion nombre;  // Tipo de instrucción (SET, SUM, etc.)
-    char *parametro1;
-    char *parametro2;
-    char *parametro3; // ELIMINE LOS OTROS PARAMETROS YA QUE LAS INSTRUCCIONES QUE TENEMOS SOLO USAN HASTA 2 PARAMETROS
-} t_instruccion;
 
 typedef struct {
     uint32_t tid;
@@ -55,21 +29,10 @@ typedef struct {
 } t_tcb;
 
 typedef struct {
-    uint32_t program_counter;  // Contador de programa (PC)
-    uint32_t  AX, BX, CX, DX ,EX, FX, GX, HX; // PUEDE REMPLAZARCE CON UN registros[8]
-} t_registros;
-
-typedef struct {
     uint32_t direccion_fisica;
     uint32_t tamanio;
 } t_direcciones_fisicas;
 
-
-typedef struct {
-    t_registros *registros;
-    motivo_desalojo motivo_desalojo;
-    finalizacion_proceso motivo_finalizacion;
-} t_contexto_ejecucion;
 
 typedef struct {
     uint32_t pid;  //Identificador Proceso

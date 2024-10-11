@@ -2,8 +2,6 @@
 #define COMUNICACIONES_H_
 
 #include <include/memoria.h>
-#include <include/utils_memoria.h>
-#include <include/gestor.h>
 
 // Definición del tipo para los argumentos de la conexión
 typedef struct
@@ -14,8 +12,14 @@ typedef struct
 } t_procesar_conexion_args;
 
 // Funciones para manejar el servidor y la comunicación con otros módulos
-int server_escuchar(t_log *logger, char *server_name, int server_socket);
-void enviar_respuesta(int cliente_socket, op_code response); 
-static void procesar_conexion_memoria(void *void_args);
+int server_escuchar(t_log *, char *, int );
+void enviar_respuesta(int, char*); 
+static void procesar_conexion_memoria(void *);
 
-#endif // COMUNICACIONES_H_
+void recibir_pedido_instruccion(uint32_t*, uint32_t*, int);
+t_instruccion* obtener_instruccion(uint32_t, uint32_t);
+void enviar_instruccion(int, t_instruccion*);
+void recibir_set(uint32_t*, uint32_t*, uint32_t*, int);
+t_contexto_ejecucion*  obtener_contexto(uint32_t);
+
+#endif //COMUNICACIONES_H_

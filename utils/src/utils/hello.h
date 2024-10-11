@@ -13,6 +13,7 @@
 #include <netdb.h>
 #include <commons/collections/list.h>
 #include <assert.h>
+#include <stdint.h>
 
 #include <pthread.h>
 
@@ -22,28 +23,123 @@
 * @return No devuelve nada
 */
 
+typedef enum{
 
-typedef enum
-{
-	MENSAJE,
-	PAQUETE,
-	INSTRUCCION,
-	PEDIDO_INSTRUCCION,
+ HANDSHAKE_consola,
+    HANDSHAKE_kernel,
+    HANDSHAKE_memoria,
+    HANDSHAKE_cpu,
+    HANDSHAKE_interrupt,
+    HANDSHAKE_dispatch,
+    HANDSHAKE_in_out,
+    HANDSHAKE_ok_continue,
+    ERROROPCODE,
+	PEDIR_VALOR_MEMORIA,
+	ESCRIBIR_VALOR_MEMORIA,
+	ACTUALIZAR_CONTEXTO,
+	DEVOLVER_CONTROL_KERNEL,
+	LECTURA_MEMORIA,
+	SEGF_FAULT,
+    MENSAJE,
+    PAQUETE,
+    PCB,
+    INICIALIZAR_PROCESO,
+    FINALIZAR_PROCESO,
+    INTERRUPCION,
+    CONTEXTO,
+    PEDIDO_RESIZE,
+    INSTRUCCION,
+    PEDIDO_INSTRUCCION,
+    PEDIDO_WAIT,
+    PEDIDO_SIGNAL,
+    ENVIAR_INTERFAZ,
+    CONEXION_INTERFAZ,
+    DESCONEXION_INTERFAZ,
+    FINALIZACION_INTERFAZ,
+    PEDIDO_SET,
+    PEDIDO_READ_MEM,
+    PEDIDO_WRITE_MEM,
+    PEDIDO_SUB,
+    PEDIDO_SUM,
+    PEDIDO_JNZ,
+    PEDIDO_LOG,
+    ENVIAR_PAGINA,
+    ENVIAR_DIRECCION_FISICA,
+    ENVIAR_INTERFAZ_STDIN,
+    ENVIAR_INTERFAZ_STDOUT,
+    ENVIAR_INTERFAZ_FS,
+    RECIBIR_DATO_STDIN,
+    FINALIZACION_INTERFAZ_STDIN,
+    FINALIZACION_INTERFAZ_STDOUT,
+    PEDIDO_ESCRIBIR_DATO_STDIN,
+    PEDIDO_A_LEER_DATO_STDOUT,
+    RESPUESTA_STDIN,
+    RESPUESTA_DATO_STDOUT,
+    PEDIDO_COPY_STRING,
+    RESPUESTA_DATO_MOVIN,
 	SOLICITUD_BASE_MEMORIA,
 	SOLICITUD_LIMITE_MEMORIA,
-	PEDIR_VALOR_MEMORIA,
-	SEGF_FAULT,
-	ESCRIBIR_VALOR_MEMORIA,
-	LECTURA_MEMORIA,
-	ACTUALIZAR_CONTEXTO,
-	DEVOLVER_CONTROL_KERNEL
+    MISMO_TAMANIO,
+    RESIZE_OK,
+    FS_CREATE_DELETE,
+    FINALIZACION_INTERFAZ_DIALFS,
+    FS_TRUNCATE,
+    FS_WRITE_READ
+
 } op_code;
+
+
+typedef enum {
+    INTERRUPCION_SYSCALL,
+    INTERRUPCION_BLOQUEO,
+    FINALIZACION
+} motivo_desalojo;
+
+typedef enum {
+    SUCCES,
+    ERROR
+} finalizacion_proceso;
+
+typedef struct {
+    uint32_t program_counter; // Contador de programa (PC)
+    uint32_t AX;
+    uint32_t BX;
+    uint32_t CX;
+    uint32_t DX;
+    uint32_t EX;
+    uint32_t FX;
+    uint32_t GX;
+    uint32_t HX;
+} t_registros;
+typedef struct {
+    t_registros *registros;
+    motivo_desalojo motivo_desalojo;
+    finalizacion_proceso motivo_finalizacion;
+} t_contexto_ejecucion;
 
 typedef struct
 {
 	int size;
 	void* stream;
 } t_buffer;
+
+typedef enum {
+    SET,
+    READ_MEM,
+    WRITE_MEM,
+    SUM,
+    SUB,
+    JNZ,
+    LOG,
+    SEGMENTATION_FAULT //QUE ESTO ESTE ACA DA ERROR EN EL SWITH DE execute PERO SACARLO HABILITA OTROS ERRORES DE que esta undeclared
+} nombre_instruccion;
+
+typedef struct {
+    nombre_instruccion nombre;  // Tipo de instrucción (SET, SUM, etc.)
+    char *parametro1;
+    char *parametro2;
+    char *parametro3; // ELIMINE LOS OTROS PARAMETROS YA QUE LAS INSTRUCCIONES QUE TENEMOS SOLO USAN HASTA 2 PARAMETROS
+} t_instruccion;
 
 typedef struct
 {

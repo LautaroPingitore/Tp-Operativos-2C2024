@@ -2,7 +2,6 @@
 #define MEMORIA_H_
 
 #include <utils/hello.h>
-#include <include/gestor.h>
 
 char* PUERTO_ESCUCHA;
 char* IP_FILESYSTEM;
