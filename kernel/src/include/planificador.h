@@ -13,7 +13,7 @@ extern pthread_mutex_t mutex_cola_exit;
 
 // PLANIFICADOR LARGO PLAZO
 void inicializar_colas_y_mutexs();
-t_pcb* crear_pcb(uint32_t, uint32_t*, t_contexto_ejecucion*, t_estado, t_mutex*);
+t_pcb* crear_pcb(uint32_t, uint32_t*, t_contexto_ejecucion*, t_estado, pthread_mutex_t*);
 t_tcb* crear_tcb(uint32_t, int, t_estado);
 void crear_proceso(char*, int);
 t_contexto_ejecucion* inicializar_contexto();
@@ -27,7 +27,7 @@ void liberar_recursos_proceso(t_pcb*);
 uint32_t asignar_pid();
 uint32_t asignar_tids();
 t_contexto_ejecucion* asignar_contexto();
-t_mutex* asignar_mutexs();
+pthread_mutex_t* asignar_mutexs();
 int asignar_prioridad();
 
 // MANEJO HILOS

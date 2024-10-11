@@ -84,10 +84,10 @@ typedef enum {
 } finalizacion_proceso;
 
 // ===========================
-typedef struct {
-	int id;
-	int contador;
-} t_mutex;
+// typedef struct {
+// 	int id;
+// 	int contador;
+// } t_mutex;
 
 typedef enum {
     NEW,
@@ -114,7 +114,7 @@ typedef struct {
 	uint32_t* TIDS;
 	t_contexto_ejecucion* CONTEXTO;
 	t_estado ESTADO;
-	t_mutex* MUTEXS;
+	pthread_mutex_t* MUTEXS;
 } t_pcb;
 
 #endif

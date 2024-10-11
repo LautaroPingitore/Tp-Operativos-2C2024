@@ -58,7 +58,9 @@ int main(int argc, char* argv[]) {
     // CREAR PROCESOS INICIAL
     crear_proceso(archivo_pseudocodigo, tamanio_proceso, 0);
 
-    // LOGICA PARA LA CREACION DE MAS PROCESOS Y USO DE LOS PLANIIFICADORES
+    while(1) {
+        // LOGICA PARA LA CREACION DE MAS PROCESOS Y USO DE LOS PLANIIFICADORES
+    }
 
     terminar_programa(CONFIG_KERNEL, LOGGER_KERNEL, sockets);
 

@@ -71,7 +71,7 @@ void inicializar_colas_y_mutexs() {
 
 }
 
-t_pcb* crear_pcb(uint32_t pid, uint32_t* tids, t_contexto_ejecucion* contexto_ejecucion, t_estado estado, t_mutex* mutexs){
+t_pcb* crear_pcb(uint32_t pid, uint32_t* tids, t_contexto_ejecucion* contexto_ejecucion, t_estado estado, pthread_mutex_t* mutexs){
 
     t_pcb* pcb = malloc(sizeof(t_pcb));
     if(pcb == NULL) {
@@ -106,7 +106,7 @@ t_tcb* crear_tcb(uint32_t tid, int prioridad, t_estado estado){
 void crear_proceso(char* path_proceso, int tamanio_proceso, int prioridad){
     uint32_t pid = asignar_pid();
     t_contexto_ejecucion* contexto = inicializar_contexto();
-    t_mutex* mutexs = asignar_mutexs();
+    pthread_mutex_t* mutexs = asignar_mutexs();
     t_pcb* pcb = crear_pcb(pid, [], contexto, NEW, mutexs);
 
     thread_create(pcb, path_proceso, prioridad);
@@ -122,7 +122,7 @@ void crear_proceso(char* path_proceso, int tamanio_proceso, int prioridad){
         inicializar_proceso(pcb, path_proceso);
     }
 
-    //enviar_proceso_a_memoria(pcb->pid, path_proceso);
+    enviar_proceso_a_memoria(pcb->pid, path_proceso);
 
 }
 
@@ -165,8 +165,8 @@ t_contexto_ejecucion* inicializar_contexto() {
 
 // CUIDADO, EXISTE UN STRUCT DE MUTEX EN LA BIBLIOTECA
 // pthread_mutex_t 
-t_mutex* asignar_mutexs() {
-   t_mutex* mutexs = malloc(sizeof(t_mutex) * CANTIDAD_MUTEX);
+pthread_mutex_t* asignar_mutexs() {
+   pthread_mutex_t* mutexs = malloc(sizeof(pthread_mutex_t) * CANTIDAD_MUTEX);
     if (mutexs == NULL) {
         perror("Error al asignar memoria para los mutex");
         exit(EXIT_FAILURE);
