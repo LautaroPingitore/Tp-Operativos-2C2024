@@ -31,7 +31,7 @@ t_mutex* asignar_mutexs();
 int asignar_prioridad();
 
 // MANEJO HILOS
-void thread_create(t_pcb*, char*, int);
+void thread_create(t_pcb*, char*, int, int);
 void cargar_archivo_pseudocodigo(t_tcb*, char*);
 void thread_join(t_pcb*, uint32_t, uint32_t);
 t_tcb* buscar_hilo_por_tid(t_pcb*, uint32_t);

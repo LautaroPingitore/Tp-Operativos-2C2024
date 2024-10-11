@@ -150,7 +150,7 @@ uint32_t* asignar_tids() {
     pthread_mutex_unlock(&mutex_tid);
 
     return tids;  // Devolvemos el array con los TIDs asignados
-}
+} //Arreglar
 
 t_contexto_ejecucion* inicializar_contexto() {
     t_contexto_ejecucion* contexto = malloc(sizeof(t_contexto_ejecucion));
@@ -213,7 +213,13 @@ int enviar_proceso_a_memoria(int pid_nuevo, char *path_proceso){
     t_paquete* paquete_para_memoria = crear_paquete_codop();//(codigo_operacion)
     serializar_paquete_para_memoria(paquete_para_memoria, pid_nuevo, path_proceso);
     int resultado = enviar_paquete(paquete_para_memoria, socket_kernel_memoria); //Poner el socket en el gestor.h
-    log_debug(LOGGER_KERNEL, "El PID %d se envio a MEMORIA", pid_nuevo); //Poner el LOGGER en el gestor.h
+    
+    if(resultado == -1){
+        eliminar_paquete(paquete_para_memoria);
+        return resultado;    
+    }
+    
+    log_info(LOGGER_KERNEL, "El PID %d se envio a MEMORIA", pid_nuevo); //Poner el LOGGER en el gestor.h
     eliminar_paquete(paquete_para_memoria);
     
     return resultado;
@@ -254,7 +260,7 @@ void mover_a_exit(t_pcb* pcb) {
 void intentar_inicializar_proceso_de_new() {
     pthread_mutex_lock(&mutex_cola_new);
     if (!list_is_empty(cola_new)) {
-        t_pcb* pcb = list_remove(cola_new, 0);
+        t_pcb* pcb = list_remove(cola_new, 0); // Guarda con lo que retorna list_remove
         inicializar_proceso(pcb);
     }
     pthread_mutex_unlock(&mutex_cola_new);
@@ -288,14 +294,14 @@ void liberar_recursos_proceso(t_pcb* pcb) {
 // MANEJO DE HILOS ==============================
 
 // CREA UN NUEVO TCB ASOSICADO AL PROCESO Y LO CONFIGURA CON EL PSEUDOCODIGO A EJECUTAR
-void thread_create(t_pcb *pcb, char* archivo_pseudocodigo, int prioridad) {
+void thread_create(t_pcb *pcb, char* archivo_pseudocodigo, int prioridad, int posicionEnArray) {
 
     if (list_size(pcb->TIDS) == 0) {
         log_error(LOGGER_KERNEL, "Error: No hay mas TIDs disponibles para el proceso %d", pcb->PID);
         return;
     }
 
-    uint32_t nuevo_tid = (uint32_t) list_get(pcb->TIDS, 0);  // Extrae el primer TID asignado
+    uint32_t nuevo_tid = (uint32_t) list_get(pcb->TIDS, posicionEnArray);  // Extrae el primer TID asignado
 
     // CREA EL NUEVO HILO
     t_tcb* nuevo_tcb = crear_tcb(nuevo_tid, prioridad, NEW);
@@ -338,31 +344,31 @@ void thread_join(t_pcb* pcb, uint32_t tid_actual, uint32_t tid_esperado) {
         log_info(LOGGER_KERNEL, "El hilo %d ya terminado, no es necesario hacer el join", tid_esperado);
     } else {
         log_info(LOGGER_KERNEL, "EL hilo %d esperara al hilo %d", tid_actual, tid_esperado);
-        esperar_a_que_termine(t_tcb* tcb_esperado, tcb_actual);
+        esperar_a_que_termine(tcb_esperado, tcb_actual);
     }
 }
 
 void esperar_a_que_termine(t_tcb* esperado,  t_tcb* actual) {
-    bloquear_hilo_actual(tid_actual);
+    bloquear_hilo_actual(actual);
 
     while(tcb_esperado->ESTADO != EXIT) {
         usleep(100);
     }
 
-    desbloquear_hilo_actual(tid_actual);
+    desbloquear_hilo_actual(actual);
 }
 
-void bloquear_hilo_actual(uint32_t tid_actual) {
+void bloquear_hilo_actual(t_tcb* tcb_actual) {
 
     // Cambiar el estado del hilo a BLOCK
     tcb_actual->ESTADO = BLOCK;
 
-    log_info(LOGGER_KERNEL, "Hilo %d bloqueado.", tid_actual);
+    log_info(LOGGER_KERNEL, "Hilo %d bloqueado.", tcb_actual->TID);
 
     pthread_yield();  // Permite que otros hilos se ejecuten
 }
 
-void desbloquear_hilo_actual(uint32_t tid_actual) {
+void desbloquear_hilo_actual(t_tcb* tcb_actual) {
 
     // Cambiar el estado del hilo a READY
     tcb_actual->ESTADO = READY;
@@ -372,7 +378,7 @@ void desbloquear_hilo_actual(uint32_t tid_actual) {
     list_add(cola_ready, tcb_actual);  // Mover el hilo a la cola de READY
     pthread_mutex_unlock(&mutex_cola_ready);
 
-    log_info(LOGGER_KERNEL, "Hilo %d desbloqueado y movido a READY.", tid_actual);
+    log_info(LOGGER_KERNEL, "Hilo %d desbloqueado y movido a READY.", tcb_actual->TID);
 }
 
 t_tcb* buscar_hilo_por_tid(t_pcb* pcb, uint32_t tid) {
@@ -425,18 +431,18 @@ void thread_exit(t_pcb* pcb, uint32_t tid) {
     liberar_recursos_hilo(tcb);
     log_info(LOGGER_KERNEL, "Hilo %d ha finalizado en el proceso %d", tid, pcb->PID);
 
-    intentar_mover_a_execute();
+    intentar_mover_a_execute(); //Intenta a mover a execute el proximo hilo, no el que finalizo
 }
 
 // A CHEQUEAR
 void intentar_mover_a_execute() {
     // Verificar si hay algún proceso en READY y si la CPU está libre
-    pthread_mutex_lock(&mutex_cola_new);
+    pthread_mutex_lock(&mutex_cola_ready);
     if (list_is_empty(cola_ready)) {
         log_info(logger, "No hay procesos en READY para mover a EXECUTE");
         return;
     }
-    pthread_mutex_unlock(&mutex_cola_new);
+    pthread_mutex_unlock(&mutex_cola_ready);
 
     if (!cpu_libre) {
         log_info(logger, "CPU ocupada, no se puede mover un proceso a EXECUTE");
@@ -444,9 +450,9 @@ void intentar_mover_a_execute() {
     }
 
     // Obtener el primer proceso de la cola de READY
-    pthread_mutex_lock(&mutex_cola_new);
+    pthread_mutex_lock(&mutex_cola_ready);
     t_pcb* proceso_seleccionado = list_remove(cola_ready, 0);
-    pthread_mutex_lock(&mutex_cola_new);
+    pthread_mutex_lock(&mutex_cola_ready);
 
     if (proceso_seleccionado == NULL) {
         log_warning(logger, "Error al obtener un proceso de la cola READY");
@@ -462,7 +468,10 @@ void intentar_mover_a_execute() {
     log_info(logger, "Proceso %d movido a EXECUTE", proceso_seleccionado->PID);
 
     // Enviar el proceso a la CPU para su ejecución
-    if (enviar_proceso_a_cpu(proceso_seleccionado) == 0) {
+
+    int resultado = enviar_proceso_a_cpu(proceso_seleccionado);
+
+    if (resultado == 0) {
         log_info(logger, "El proceso %d ha sido enviado a la CPU", proceso_seleccionado->PID);
     } else {
         log_error(logger, "Error al enviar el proceso %d a la CPU", proceso_seleccionado->PID);
@@ -544,7 +553,7 @@ t_tcb* seleccionar_hilo_multinivel() {
     pthread_mutex_unlock(&mutex_cola_ready);
 
     return siguiente_hilo;  // Este hilo sera movido a EXECUTE
-}
+} // Esta funcion casi seguro que esta mal, habria que sacar las lineas list_add
 
 // ENTRADA Y SALIDA ====================
 

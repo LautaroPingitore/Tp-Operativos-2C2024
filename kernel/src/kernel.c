@@ -46,7 +46,7 @@ int main(int argc, char* argv[]) {
     int tamanio_proceso = atoi(argv[2]);
 
     // INICIAR CONFIGURACION DE KERNEL
-    inicializar_config("kernek");
+    inicializar_config("kernel");
     log_info(LOGGER_KERNEL, "Iniciando KERNEL \n");
 
     int sockets[] = {socket_kernel_memoria, socket_kernel_cpu_dispatch, socket_kernel_cpu_interrupt, -1};
