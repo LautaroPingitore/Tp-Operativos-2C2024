@@ -60,7 +60,7 @@ void inicializar_config(char *arg)
 	PATH_INSTRUCCIONES = config_get_string_value(CONFIG_MEMORIA, "PATH_INSTRUCCIONES");
 	RETARDO_RESPUESTA = config_get_string_value(CONFIG_MEMORIA, "RETARDO_RESPUESTA");
 
-    ESQUEMA = config_get_string_value(CONFIG_MEMORIA,"ESQUMA");
+    ESQUEMA = config_get_string_value(CONFIG_MEMORIA,"ESQUEMA");
 	ALGORITMO_BUSQUEDA = config_get_string_value(CONFIG_MEMORIA, "ALGORITMO_BUSQUEDA");
 	PARTICIONES = config_get_array_value(CONFIG_MEMORIA, "PARTICIONES");
     LOG_LEVEL = config_get_string_value(CONFIG_MEMORIA,"LOG_LEVEL");
