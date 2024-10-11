@@ -1,5 +1,6 @@
 #include "include/comunicaciones.h"
 
+
 static void procesar_conexion_memoria(void *void_args)
 {
     t_procesar_conexion_args *args = (t_procesar_conexion_args *)void_args;
@@ -8,16 +9,17 @@ static void procesar_conexion_memoria(void *void_args)
     char *server_name = args->server_name;
     free(args);
 
-    op_code cop;
+    op_code cod_op;
     while (cliente_socket != -1)
     {
-        if (recv(cliente_socket, &cop, sizeof(op_code), 0) != sizeof(op_code))
+
+        if (recv(cliente_socket, &cod_op, sizeof(op_code), 0) != sizeof(op_code))
         {
             log_debug(logger, "Cliente desconectado.\n");
             return;
         }
 
-        switch (cop)
+        switch (cod_op)
         {
         // ----------------------
         // -- KERNEL - MEMORIA --
@@ -68,47 +70,168 @@ static void procesar_conexion_memoria(void *void_args)
             break;
 
         // Peticiones stub (sin hacer nada)
-        case PEDIDO_SET:
-            log_info(logger, "Peticiones de SET no implementadas. Respondiendo OK.");
+        case PEDIDO_SET:{
+            uint32_t pid, registro, valor;
+            recibir_set(&pid, &registro, &valor, cliente_socket);
+            t_contexto_ejecucion *contexto = obtener_contexto(pid);
+            switch (registro) {
+                case REG_AX: contexto->AX = valor; break;
+                case REG_BX: contexto->BX = valor; break;
+                case REG_CX: contexto->CX = valor; break;
+                case REG_DX: contexto->DX = valor; break;
+                case REG_EX: contexto->EX = valor; break;
+                case REG_FX: contexto->FX = valor; break;
+                case REG_GX: contexto->GX = valor; break;
+                case REG_HX: contexto->HX = valor; break;
+                default: enviar_respuesta(cliente_socket, "ERROR: Registro no válido"); continue;
+                }
             enviar_respuesta(cliente_socket, OK);
+            log_info(logger, "Seteado registro %d a valor %d para PID %d", registro, valor, pid);
             break;
+        }
+        case PEDIDO_READ_MEM: {
+                uint32_t pid, direccion_logica;
+                recibir_read_mem(&pid, &direccion_logica, cliente_socket);
+                t_contexto_ejecucion *contexto = obtener_contexto(pid);
+                uint32_t valor = *(uint32_t *)((char *)memoriaUsuario + direccion_logica);
+                enviar_respuesta(cliente_socket, (char *)&valor); // Enviamos el valor leído
+                log_info(logger, "Se leyó memoria en dirección %d para PID %d", direccion_logica, pid);
+            break;
+        }
+        case PEDIDO_WRITE_MEM: {
+                uint32_t pid, direccion_logica, valor;
+                recibir_write_mem(&pid, &direccion_logica, &valor, cliente_socket);
+                *(uint32_t *)((char *)memoriaUsuario + direccion_logica) = valor;
+                enviar_respuesta(cliente_socket, OK);
+                log_info(logger, "Se escribió valor %d en dirección %d para PID %d", valor, direccion_logica, pid);
+                break;
+        }
 
-        case PEDIDO_READ_MEM:
-            log_info(logger, "Peticiones de READ MEM no implementadas. Respondiendo OK.");
-            enviar_respuesta(cliente_socket, OK);
-            break;
+        case PEDIDO_SUB: {
+                uint32_t pid, registro1, registro2;
+                recibir_sub(&pid, &registro1, &registro2, cliente_socket);
+                t_contexto_ejecucion *contexto = obtener_contexto(pid);
+                uint32_t valor1 = 0, valor2 = 0;
 
-        case PEDIDO_WRITE_MEM:
-            log_info(logger, "Peticiones de WRITE MEM no implementadas. Respondiendo OK.");
-            enviar_respuesta(cliente_socket, OK);
-            break;
+                // Obtener valores de los registros
+                switch (registro1) {
+                    case REG_AX: valor1 = contexto->AX; break;
+                    case REG_BX: valor1 = contexto->BX; break;
+                    case REG_CX: valor1 = contexto->CX; break;
+                    case REG_DX: valor1 = contexto->DX; break;
+                    case REG_EX: valor1 = contexto->EX; break;
+                    case REG_FX: valor1 = contexto->FX; break;
+                    case REG_GX: valor1 = contexto->GX; break;
+                    case REG_HX: valor1 = contexto->HX; break;
+                    default: enviar_respuesta(cliente_socket, "ERROR: Registro no válido"); continue;
+                }
 
-        case PEDIDO_SUB:
-            log_info(logger, "Peticiones de SUB no implementadas. Respondiendo OK.");
-            enviar_respuesta(cliente_socket, OK);
-            break;
+                switch (registro2) {
+                    case REG_AX: valor2 = contexto->AX; break;
+                    case REG_BX: valor2 = contexto->BX; break;
+                    case REG_CX: valor2 = contexto->CX; break;
+                    case REG_DX: valor2 = contexto->DX; break;
+                    case REG_EX: valor2 = contexto->EX; break;
+                    case REG_FX: valor2 = contexto->FX; break;
+                    case REG_GX: valor2 = contexto->GX; break;
+                    case REG_HX: valor2 = contexto->HX; break;
+                    default: enviar_respuesta(cliente_socket, "ERROR: Registro no válido"); continue;
+                }
 
-        case PEDIDO_SUM:
-            log_info(logger, "Peticiones de escritura de SUM no implementadas. Respondiendo OK.");
-            enviar_respuesta(cliente_socket, OK);
-            break;
+                uint32_t resultado = valor1 - valor2; // Realizar la resta
+                switch (registro1) {
+                    case REG_AX: contexto->AX = resultado; break;
+                    case REG_BX: contexto->BX = resultado; break;
+                    case REG_CX: contexto->CX = resultado; break;
+                    case REG_DX: contexto->DX = resultado; break;
+                    case REG_EX: contexto->EX = resultado; break;
+                    case REG_FX: contexto->FX = resultado; break;
+                    case REG_GX: contexto->GX = resultado; break;
+                    case REG_HX: contexto->HX = resultado; break;
+                    default: enviar_respuesta(cliente_socket, "ERROR: Registro no válido"); continue;
+                }
+                enviar_respuesta(cliente_socket, OK);
+                log_info(logger, "Se restó el valor de registro %d de %d para PID %d", registro2, registro1, pid);
+                break;
+            }
 
-        case PEDIDO_JNZ:
-            log_info(logger, "Peticiones de lectura de JNZ no implementadas. Respondiendo OK.");
-            enviar_respuesta(cliente_socket, OK);
-            break;
+        case PEDIDO_SUM: {
+                uint32_t pid, registro1, registro2;
+                recibir_sum(&pid, &registro1, &registro2, cliente_socket);
+                t_contexto_ejecucion *contexto = obtener_contexto(pid);
+                uint32_t valor1 = 0, valor2 = 0;
 
-        case PEDIDO_LOG:
-            log_info(logger, "Peticiones de LOG no implementadas. Respondiendo OK.");
-            enviar_respuesta(cliente_socket, OK);
-            break;
+                // Obtener valores de los registros
+                switch (registro1) {
+                    case REG_AX: valor1 = contexto->AX; break;
+                    case REG_BX: valor1 = contexto->BX; break;
+                    case REG_CX: valor1 = contexto->CX; break;
+                    case REG_DX: valor1 = contexto->DX; break;
+                    case REG_EX: valor1 = contexto->EX; break;
+                    case REG_FX: valor1 = contexto->FX; break;
+                    case REG_GX: valor1 = contexto->GX; break;
+                    case REG_HX: valor1 = contexto->HX; break;
+                    default: enviar_respuesta(cliente_socket, "ERROR: Registro no válido"); continue;
+                }
+
+                switch (registro2) {
+                    case REG_AX: valor2 = contexto->AX; break;
+                    case REG_BX: valor2 = contexto->BX; break;
+                    case REG_CX: valor2 = contexto->CX; break;
+                    case REG_DX: valor2 = contexto->DX; break;
+                    case REG_EX: valor2 = contexto->EX; break;
+                    case REG_FX: valor2 = contexto->FX; break;
+                    case REG_GX: valor2 = contexto->GX; break;
+                    case REG_HX: valor2 = contexto->HX; break;
+                    default: enviar_respuesta(cliente_socket, "ERROR: Registro no válido"); continue;
+                }
+
+                uint32_t resultado = valor1 + valor2; // Realizar la suma
+                switch (registro1) {
+                    case REG_AX: contexto->AX = resultado; break;
+                    case REG_BX: contexto->BX = resultado; break;
+                    case REG_CX: contexto->CX = resultado; break;
+                    case REG_DX: contexto->DX = resultado; break;
+                    case REG_EX: contexto->EX = resultado; break;
+                    case REG_FX: contexto->FX = resultado; break;
+                    case REG_GX: contexto->GX = resultado; break;
+                    case REG_HX: contexto->HX = resultado; break;
+                    default: enviar_respuesta(cliente_socket, "ERROR: Registro no válido"); continue;
+                }
+                enviar_respuesta(cliente_socket, OK);
+                log_info(logger, "Se sumó el valor de registro %d y %d para PID %d", registro1, registro2, pid);
+                break;
+            }
+
+        case PEDIDO_JNZ: {
+                uint32_t pid, pc_actual, valor_condicion;
+                recibir_jnz(&pid, &pc_actual, &valor_condicion, cliente_socket);
+                if (valor_condicion != 0) {
+                    // Cambiar el PC si la condición se cumple
+                    cambiar_pc(pid, pc_actual);
+                    enviar_respuesta(cliente_socket, OK);
+                    log_info(logger, "JNZ: Se cambió el PC para PID %d", pid);
+                } else {
+                    enviar_respuesta(cliente_socket, OK);
+                    log_info(logger, "JNZ: La condición no se cumplió para PID %d", pid);
+                }
+                break;
+            }
+
+        case PEDIDO_LOG: {
+                char mensaje[256];
+                recibir_log(mensaje, cliente_socket);
+                log_info(logger, "Log recibido: %s", mensaje);
+                enviar_respuesta(cliente_socket, OK);
+                break;
+            }
 
         case ERROROPCODE:
-            log_error(logger, "Cliente desconectado de %s... con cop -1", server_name);
+            log_error(logger, "Cliente desconectado de %s... con cod_op -1", server_name);
             break;
 
         default:
-            log_error(logger, "Algo anduvo mal en el servidor de %s, Cod OP: %d", server_name, cop);
+            log_error(logger, "Algo anduvo mal en el servidor de %s, Cod OP: %d", server_name, cod_op);
             break;
         }
     }
@@ -133,4 +256,10 @@ int server_escuchar(t_log *logger, char *server_name, int server_socket)
         return 1;
     }
     return 0;
+}
+
+// Enviar respuesta a la CPU
+void enviar_respuesta(int socket_cpu, const char *mensaje) {
+    // Enviar el mensaje a través del socket de la CPU
+    send(socket_cpu, mensaje, strlen(mensaje) + 1, 0); // +1 para incluir el terminador nulo
 }
