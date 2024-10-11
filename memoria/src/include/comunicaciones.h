@@ -3,6 +3,8 @@
 
 #include <include/memoria.h>
 
+void *memoriaUsuario;
+
 // Definición del tipo para los argumentos de la conexión
 typedef struct
 {
@@ -21,5 +23,13 @@ t_instruccion* obtener_instruccion(uint32_t, uint32_t);
 void enviar_instruccion(int, t_instruccion*);
 void recibir_set(uint32_t*, uint32_t*, uint32_t*, int);
 t_contexto_ejecucion*  obtener_contexto(uint32_t);
+
+void recibir_read_mem(uint32_t* , uint32_t*, int);
+void recibir_write_mem(uint32_t*, uint32_t*, uint32_t*, int);
+void recibir_sub(uint32_t*, uint32_t*, uint32_t*, int);
+void recibir_sum(uint32_t*, uint32_t*, uint32_t*, int);
+void recibir_jnz(uint32_t*, uint32_t* , uint32_t* , int);
+void cambiar_pc(uint32_t, uint32_t);
+void recibir_log(char [256], int);
 
 #endif //COMUNICACIONES_H_

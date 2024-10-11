@@ -74,6 +74,8 @@ static void procesar_conexion_memoria(void *void_args)
             uint32_t pid, registro, valor;
             recibir_set(&pid, &registro, &valor, cliente_socket);
             t_contexto_ejecucion *contexto = obtener_contexto(pid);
+
+            t_registros *registros = contexto->registros;
             switch (registro) {
                 case 0: registros->AX = valor; break;
                 case 1: registros->BX = valor; break;
@@ -92,8 +94,9 @@ static void procesar_conexion_memoria(void *void_args)
         case PEDIDO_READ_MEM: {
                 uint32_t pid, direccion_logica;
                 recibir_read_mem(&pid, &direccion_logica, cliente_socket);
-                t_contexto_ejecucion *contexto = obtener_contexto(pid);
+
                 uint32_t valor = *(uint32_t *)((char *)memoriaUsuario + direccion_logica);
+
                 enviar_respuesta(cliente_socket, (char *)&valor); // Enviamos el valor leído
                 log_info(logger, "Se leyó memoria en dirección %d para PID %d", direccion_logica, pid);
             break;
@@ -112,7 +115,7 @@ static void procesar_conexion_memoria(void *void_args)
                 recibir_sub(&pid, &registro1, &registro2, cliente_socket);
                 
                 t_contexto_ejecucion *contexto = obtener_contexto(pid);  
-                t_registros *registros = &(contexto->registros);  // Acceder a los registros
+                t_registros *registros = contexto->registros;
 
                 uint32_t valor1 = 0, valor2 = 0;
 
@@ -163,7 +166,7 @@ static void procesar_conexion_memoria(void *void_args)
                         continue;
                 }
 
-                enviar_respuesta(cliente_socket, OK);
+                enviar_respuesta(cliente_socket, "OK");
                 log_info(logger, "Se restó el valor de registro %d de %d para PID %d", registro2, registro1, pid);
                 break;
     }
@@ -173,7 +176,7 @@ static void procesar_conexion_memoria(void *void_args)
                 recibir_sum(&pid, &registro1, &registro2, cliente_socket);
                 
                 t_contexto_ejecucion *contexto = obtener_contexto(pid);  
-                t_registros *registros = &(contexto->registros);  // Acceder a los registros
+                t_registros *registros = contexto->registros;
 
                 uint32_t valor1 = 0, valor2 = 0;
 
@@ -314,4 +317,31 @@ t_contexto_ejecucion*  obtener_contexto(uint32_t pid){
 
 t_contexto_ejecucion* test;
 return test;
+}
+
+void recibir_read_mem(uint32_t* pid, uint32_t* direccion_logica, int cliente_socket){
+
+}
+
+void recibir_write_mem(uint32_t* pid, uint32_t* direccion_logica, uint32_t* valor, int cliente_socket){
+
+}
+
+void recibir_sub(uint32_t* pid, uint32_t* registro1, uint32_t* registro2, int cliente_socket){
+
+}
+
+void recibir_sum(uint32_t* pid,uint32_t* registro1, uint32_t* registro2, int cliente_socket){
+
+}
+
+void recibir_jnz(uint32_t* pid, uint32_t* pc_actual, uint32_t* valor_condicion, int cliente_socket){
+
+}
+void cambiar_pc(uint32_t pid, uint32_t pc_actual){
+
+}
+
+void recibir_log(char mensaje[256], int cliente_socket){
+
 }
