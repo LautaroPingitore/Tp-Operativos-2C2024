@@ -29,7 +29,7 @@ typedef enum
 	PROCESO,
 	HILO,
 	PAQUETE
-}op_code;
+} op_code;
 
 typedef struct
 {
@@ -63,6 +63,8 @@ void eliminar_paquete(t_paquete* paquete);
 t_list* recibir_paquete(int);
 void paquete(int, t_log*);
 void terminar_programa(t_config*, t_log*, int []);
+t_paquete* crear_paquete_con_codigo_operacion(op_code);
+void* serializar_paquete(t_paquete*, int);
 
 int gestionarConexiones(int, t_log*);
 
@@ -113,7 +115,7 @@ typedef struct {
 
 typedef struct {
 	uint32_t PID;
-	uint32_t* TIDS;
+	t_list* TIDS;
 	t_contexto_ejecucion* CONTEXTO;
 	t_estado ESTADO;
 	pthread_mutex_t* MUTEXS; // SE PUEDE SACAR ESTO YA QUE NO SABEMOS IS ES VERDADERAMENTE NECESARIO

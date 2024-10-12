@@ -49,4 +49,11 @@ t_tcb* seleccionar_hilo_multinivel();
 // ENTRADA SALIDA
 void io(t_pcb*, uint32_t, int);
 
+char** tabla_de_paths;
+void eliminar_pcb_lista(t_list*, uint32_t);
+void esperar_a_que_termine(t_tcb*, t_tcb*);
+void bloquear_hilo_actual(t_tcb*);
+void desbloquear_hilo_actual(t_tcb*);
+
+
 #endif /* KERNEL_H_ */

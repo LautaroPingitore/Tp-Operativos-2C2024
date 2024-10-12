@@ -339,3 +339,10 @@ void terminar_programa(int conexion, t_log* logger, t_config* config)
 	liberar_conexion(conexion);
 }
 */
+
+t_paquete* crear_paquete_con_codigo_operacion(op_code operacion) {
+	t_paquete* paquete = malloc(sizeof(t_paquete));
+	paquete->codigo_operacion = operacion;
+	crear_buffer(paquete);
+	return paquete;
+}

@@ -52,7 +52,7 @@ pthread_mutex_t mutex_cola_ready;
 pthread_mutex_t mutex_cola_exit;
 
 uint32_t pid = 0;
-uint32_t contador_tid = 0;
+int contador_tid = 0;
 pthread_mutex_t mutex_pid = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutex_tid = PTHREAD_MUTEX_INITIALIZER;
 
@@ -124,8 +124,32 @@ void crear_proceso(char* path_proceso, int tamanio_proceso, int prioridad){
     //     inicializar_proceso(pcb, path_proceso);
     // }
 
+    tabla_de_paths[pid] = path_proceso;
+
     inicializar_proceso(pcb, path_proceso);
 }
+
+
+/*
+tabla_de_paths = malloc(numero_de_paths * sizeof(t_path*));
+
+// Crear cada t_path y asignarlo al array
+for (int i = 0; i < numero_de_paths; i++) {
+    tabla_de_paths[i] = malloc(sizeof(t_path));
+    tabla_de_paths[i]->PID = algun_valor;
+    tabla_de_paths[i]->path_proceso = strdup("ruta_del_proceso"); // Recuerda liberar esto después
+}
+
+// Liberar memoria al final
+for (int i = 0; i < numero_de_paths; i++) {
+    free(tabla_de_paths[i]->path_proceso);
+    free(tabla_de_paths[i]);
+}
+free(tabla_de_paths);
+
+*/
+
+
 
 uint32_t asignar_pid() {
     pthread_mutex_lock(&mutex_pid);
@@ -186,7 +210,6 @@ pthread_mutex_t* asignar_mutexs() {
     return mutexs;
 }
 
-
 // ENVIA EL PROCECSO A MEMORIA E INTENTA INICIALIZARLO
 void inicializar_proceso(t_pcb* pcb, char* path_proceso) {
     // ARREGLAR ESTA FUNCION
@@ -200,12 +223,11 @@ void inicializar_proceso(t_pcb* pcb, char* path_proceso) {
     }
 }
 
-int enviar_proceso_a_memoria(int pid_nuevo, char path_proceso){
+int enviar_proceso_a_memoria(int pid_nuevo, char* path_proceso){
 
-    t_paquete paquete = crear_paquete_con_codigo_operacion();
-    crear_buffer(paquete)
-    agregar_a_paquete(paquete, pid_nuevo, sizeof(pid_nuevo));
-    agregar_a_paquete(paquete, path_proceso, sizeof(path_proceso));
+    t_paquete* paquete = crear_paquete_con_codigo_operacion(PROCESO);
+    agregar_a_paquete(paquete, &pid_nuevo, sizeof(pid_nuevo));
+    agregar_a_paquete(paquete, &path_proceso, sizeof(path_proceso));
     serializar_paquete(paquete, paquete->buffer->size);
 
     int resultado = enviar_paquete(paquete, socket_kernel_memoria); //Poner el socket en el gestor.h
@@ -225,7 +247,7 @@ void mover_a_ready(t_pcb* pcb) {
     // REMUEVE EL PROCESO DE LA COLA NEW
     pthread_mutex_lock(&mutex_cola_new);
     // LO ELIMINA CUANDO SU PID COINCIDE CON EL DEL PROCESO QUE SE ESTA MOVIENDO
-    list_remove_by_condition(cola_new, (void*) (pcb->PID == ((t_pcb*) pcb)->PID)); 
+    eliminar_pcb_lista(cola_new, pcb->PID);
     pthread_mutex_unlock(&mutex_cola_new);
 
     pcb->ESTADO = READY;
@@ -236,10 +258,21 @@ void mover_a_ready(t_pcb* pcb) {
     log_info(logger, "Proceso %d movido a READY ", pcb->PID);
 }
 
+void eliminar_pcb_lista(t_list* lista, uint32_t pid) {
+    for(int i=0; i < list_size(lista); i++) {
+        t_pcb* pcb_actual = list_get(lista, i);
+        if(pcb_actual->PID == pid){
+            list_remove(lista, i);
+            break;
+        }
+    }
+}
+
+
 void mover_a_exit(t_pcb* pcb) {
     // REMUEVE EL PROCESO DE LA COLA READY
     pthread_mutex_lock(&mutex_cola_ready);
-    list_remove_by_condition(cola_ready, (void*) (pcb->PID == ((t_pcb*) pcb)->PID)); 
+    eliminar_pcb_lista(cola_ready, pcb->PID);
     pthread_mutex_unlock(&mutex_cola_ready);
 
     // PODRIA NECESITARSE QUE SE ELIMINACE DE LA COLA EXEC Y BLOCKED SI ES NECESARIO
@@ -257,7 +290,7 @@ void intentar_inicializar_proceso_de_new() {
     pthread_mutex_lock(&mutex_cola_new);
     if (!list_is_empty(cola_new)) {
         t_pcb* pcb = list_remove(cola_new, 0); // Guarda con lo que retorna list_remove
-        inicializar_proceso(pcb);
+        inicializar_proceso(pcb, tabla_de_paths[pcb->PID]);
     }
     pthread_mutex_unlock(&mutex_cola_new);
 }
@@ -292,11 +325,11 @@ void liberar_recursos_proceso(t_pcb* pcb) {
 // CREA UN NUEVO TCB ASOSICADO AL PROCESO Y LO CONFIGURA CON EL PSEUDOCODIGO A EJECUTAR
 void thread_create(t_pcb *pcb, char* archivo_pseudocodigo, int prioridad) {
 
-    uint32_t nuevo_tid = asigar_tid(pcb);
+    uint32_t nuevo_tid = asignar_tid(pcb);
 
     // CREA EL NUEVO HILO
     t_tcb* nuevo_tcb = crear_tcb(nuevo_tid, prioridad, NEW);
-    list_add(pcb->TIDS, nuevo_tid);
+    list_add(pcb->TIDS, &nuevo_tid);
 
     // CARGA PSEUDOGODIO A EJECUTAR
     cargar_archivo_pseudocodigo(nuevo_tcb, archivo_pseudocodigo);
@@ -343,19 +376,19 @@ void thread_join(t_pcb* pcb, uint32_t tid_actual, uint32_t tid_esperado) {
 void esperar_a_que_termine(t_tcb* esperado,  t_tcb* actual) {
     bloquear_hilo_actual(actual);
 
-    while(tcb_esperado->ESTADO != EXIT) {
+    while(esperado->ESTADO != EXIT) {
         usleep(100);
     }
 
     desbloquear_hilo_actual(actual);
 }
 
-void bloquear_hilo_actual(t_tcb* tcb_actual) {
+void bloquear_hilo_actual(t_tcb* actual) {
 
     // Cambiar el estado del hilo a BLOCK
-    tcb_actual->ESTADO = BLOCK;
+    actual->ESTADO = BLOCK;
 
-    log_info(LOGGER_KERNEL, "Hilo %d bloqueado.", tcb_actual->TID);
+    log_info(LOGGER_KERNEL, "Hilo %d bloqueado.", actual->TID);
 
     pthread_yield();  // Permite que otros hilos se ejecuten
 }
@@ -375,7 +408,7 @@ void desbloquear_hilo_actual(t_tcb* tcb_actual) {
 
 t_tcb* buscar_hilo_por_tid(t_pcb* pcb, uint32_t tid) {
     for (int i=0; i < list_size(pcb->TIDS); i++) {
-        t_tcb tcb = list_get(pcb->TIDS, i);
+        t_tcb* tcb = list_get(pcb->TIDS, i);
         if (tcb->TID == tid) {
             return tcb;
         }
@@ -478,11 +511,10 @@ void intentar_mover_a_execute() {
 
 int enviar_hilo_a_cpu(t_tcb* hilo) {
     t_paquete* paquete = crear_paquete_con_codigo_operacion(HILO);
-    crear_buffer(paquete);
-    agregar_a_paquete(paquete, hilo->TID, sizeof(hilo->TID));
-    agregar_a_paquete(paquete, hilo->PRIORIDAD, sizeof(hilo->PRIORIDAD));
-    agregar_a_paquete(paquete, hilo->ESTADO, sizeof(hilo->ESTADO));
-    serializar_paquete(paquete, paqu>size>size);
+    agregar_a_paquete(paquete, &hilo->TID, sizeof(hilo->TID));
+    agregar_a_paquete(paquete, &hilo->PRIORIDAD, sizeof(hilo->PRIORIDAD));
+    agregar_a_paquete(paquete, &hilo->ESTADO, sizeof(hilo->ESTADO));
+    serializar_paquete(paquete, paquete->buffer->size);
 
     int resultado = enviar_paquete(paquete, socket_kernel_cpu_dispatch);
     if(resultado == -1) {
