@@ -138,14 +138,14 @@ uint32_t asignar_pid() {
 
 uint32_t asignar_tid(t_pcb* pcb) {
 
-    int nuevo_tid = list_size(pcb->TIDS);
-    (uint32_t) nuevo_tid;
+    // int nuevo_tid = list_size(pcb->TIDS);
+    // (uint32_t) nuevo_tid;
 
     //  Asignamos TIDs unicos para cada hilo del proceso
-    // pthread_mutex_lock(&mutex_tid);  // Protegemos el acceso a contador_tid con un mutex    
-    // uint32_t nuevo_tid = contador_tid;
-    // contador_tid++;
-    // pthread_mutex_unlock(&mutex_tid);
+    pthread_mutex_lock(&mutex_tid);  // Protegemos el acceso a contador_tid con un mutex    
+    uint32_t nuevo_tid = contador_tid;
+    contador_tid++;
+    pthread_mutex_unlock(&mutex_tid);
 
     return nuevo_tid;
 } 
@@ -200,31 +200,26 @@ void inicializar_proceso(t_pcb* pcb, char* path_proceso) {
     }
 }
 
-int enviar_proceso_a_memoria(int pid_nuevo, char *path_proceso){
+int enviar_proceso_a_memoria(int pid_nuevo, char path_proceso){
 
-    t_paquete* paquete_para_memoria = crear_paquete_codop();//(codigo_operacion)
-    serializar_paquete_para_memoria(paquete_para_memoria, pid_nuevo, path_proceso);
+    t_paquete paquete = crear_paquete_con_codigo_operacion();
+    crear_buffer(paquete)
+    agregar_a_paquete(paquete, pid_nuevo, sizeof(pid_nuevo));
+    agregar_a_paquete(paquete, path_proceso, sizeof(path_proceso));
+    serializar_paquete(paquete, paquete->buffer->size);
 
-    int resultado = enviar_paquete(paquete_para_memoria, socket_kernel_memoria); //Poner el socket en el gestor.h
+    int resultado = enviar_paquete(paquete, socket_kernel_memoria); //Poner el socket en el gestor.h
     if(resultado == -1){
-        eliminar_paquete(paquete_para_memoria);
-        return resultado;    
+        eliminar_paquete(paquete);
+        return resultado;
     }
-    
+
     log_info(LOGGER_KERNEL, "El PID %d se envio a MEMORIA", pid_nuevo); //Poner el LOGGER en el gestor.h
-    eliminar_paquete(paquete_para_memoria);
-    
+    eliminar_paquete(paquete);
+
     return resultado;
 }
 
-void serializar_paquete_para_memoria(t_paquete* paquete, int pid, char* path_proceso) {
-    int size_pid = sizeof(int);
-    agregar_a_paquete(paquete, &pid, size_pid);
-
-    int length_path = strlen(path_proceso) + 1;
-    agregar_a_paquete(paquete, &length_path, sizeof(int));
-    agregar_a_paquete(paquete, path_proceso, length_path);
-}
 
 void mover_a_ready(t_pcb* pcb) {
     // REMUEVE EL PROCESO DE LA COLA NEW
@@ -480,6 +475,28 @@ void intentar_mover_a_execute() {
         pthread_mutex_lock(&mutex_cola_new);
     }
 }
+
+int enviar_hilo_a_cpu(t_tcb* hilo) {
+    t_paquete* paquete = crear_paquete_con_codigo_operacion(HILO);
+    crear_buffer(paquete);
+    agregar_a_paquete(paquete, hilo->TID, sizeof(hilo->TID));
+    agregar_a_paquete(paquete, hilo->PRIORIDAD, sizeof(hilo->PRIORIDAD));
+    agregar_a_paquete(paquete, hilo->ESTADO, sizeof(hilo->ESTADO));
+    serializar_paquete(paquete, paqu>size>size);
+
+    int resultado = enviar_paquete(paquete, socket_kernel_cpu_dispatch);
+    if(resultado == -1) {
+        eliminar_paquete(paquete);
+        return resultado;
+    }
+
+    log_info(LOGGER_KERNEL, "El TID %d se envio a CPU", hilo->TID);
+    eliminar_paquete(paquete);
+
+    return resultado;
+}
+
+
 
 
 // PLANIFICADOR A CORTO PLAZO ===============

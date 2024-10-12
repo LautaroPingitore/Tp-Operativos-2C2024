@@ -26,6 +26,8 @@
 typedef enum
 {
 	MENSAJE,
+	PROCESO,
+	HILO,
 	PAQUETE
 }op_code;
 
