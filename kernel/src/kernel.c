@@ -60,6 +60,7 @@ int main(int argc, char* argv[]) {
 
     while(1) {
         // LOGICA PARA LA CREACION DE MAS PROCESOS Y USO DE LOS PLANIIFICADORES
+        // IMPLEMENTAR UNA VEZ QUE SE TENGA EL ARCHIVO DEL PSEUDOCODIGO
     }
 
     terminar_programa(CONFIG_KERNEL, LOGGER_KERNEL, sockets);

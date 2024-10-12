@@ -138,7 +138,7 @@ uint32_t asignar_pid() {
 
 uint32_t asignar_tid(t_pcb* pcb) {
 
-    int nuevo_tid = list_size(pcb->TIDS) - 1 ;
+    int nuevo_tid = list_size(pcb->TIDS);
     (uint32_t) nuevo_tid;
 
     //  Asignamos TIDs unicos para cada hilo del proceso
@@ -546,6 +546,43 @@ t_tcb* seleccionar_hilo_multinivel() {
     pthread_mutex_unlock(&mutex_cola_ready);
 
     return siguiente_hilo;  // Este hilo sera movido a EXECUTE
+}
+
+void ejecutar_hilo_rr(t_tcb* hilo, t_list* cola, int quantum) {
+    while(1) {
+
+        hilo->ESTADO = EXECUTE;
+        log_info(LOGGER_KERNEL, "Ejecutando hilo TID %d del proceso por %d ms", hilo->TID, quantum);
+
+
+        struct timespec inicio, actual;
+        clock_gettime(CLOCK_MONOTONIC, &inicio);
+
+        int tiempo_transcurrido = 0;
+        while (tiempo_transcurrido < quantum) {
+            clock_gettime(CLOCK_MONOTONIC, &actual);
+            tiempo_transcurrido = (actual.tv_sec - inicio.tv_sec) * 1000 + 
+                                  (actual.tv_nsec - inicio.tv_nsec) / 1000000;
+            usleep(1000);
+        }
+
+        log_info(LOGGER_KERNEL, "Hilo TID %d ejecutado durante %d ms", hilo->TID, quantum);
+
+        
+        if(hilo->ESTADO != EXIT) {
+            pthread_mutex_lock(&mutex_cola_ready); 
+            hilo->ESTADO = READY;
+            list_add(cola, hilo);
+            pthread_mutex_unlock(&mutex_cola_ready);
+            log_info(LOGGER_KERNEL, "Hilo TID %d movido a READY después del quantum", hilo->TID);
+        } else {
+            log_info(LOGGER_KERNEL, "Hilo TID %d finalizado", hilo->TID);
+            liberar_recursos_hilo(hilo);
+        }
+
+        cpu_libre = true;
+    }
+
 }
 
 // ENTRADA Y SALIDA ====================
