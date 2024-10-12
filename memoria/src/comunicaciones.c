@@ -21,15 +21,13 @@ static void procesar_conexion_memoria(void *void_args)
 
         switch (cod_op)
         {
-        // ----------------------
-        // -- KERNEL - MEMORIA --
-        // ----------------------
+
         case HANDSHAKE_kernel:
             recibir_mensaje(cliente_socket, logger);
             log_info(logger, "Este deberia ser el canal mediante el cual nos comunicamos con el KERNEL");
             break;
 
-        case INICIALIZAR_PROCESO:
+        case PROCESS_CREATE:
             // Aquí se inicializa el proceso y se crea su contexto de ejecución
             // uint32_t pid, base, limite;
             // recibir_inicializar_proceso(&pid, &base, &limite, cliente_socket);
@@ -38,7 +36,7 @@ static void procesar_conexion_memoria(void *void_args)
             log_info(logger, "No implementado. Respondiendo OK.");
             break;
 
-        case FINALIZAR_PROCESO:
+        case PROCESS_EXIT:
             // uint32_t pid_a_finalizar;
             // recibir_finalizar_proceso(&pid_a_finalizar, cliente_socket);
             // liberar_proceso(pid_a_finalizar);
@@ -46,9 +44,51 @@ static void procesar_conexion_memoria(void *void_args)
             log_info(logger, "No implementado. Respondiendo OK.");
             break;
 
-        // -------------------
-        // -- CPU - MEMORIA --
-        // -------------------
+        case DUMP_MEMORY:
+
+            log_info(logger, "No implementado. Respondiendo OK.");
+            break;
+
+        case IO:
+        
+            log_info(logger, "No implementado. Respondiendo OK.");
+            break;
+
+        case THREAD_CREATE:
+        
+            log_info(logger, "No implementado. Respondiendo OK.");
+            break;
+
+        case THREAD_JOIN:
+        
+            log_info(logger, "No implementado. Respondiendo OK.");
+            break;
+
+        case THREAD_CANCEL:
+        
+            log_info(logger, "No implementado. Respondiendo OK.");
+            break;
+
+        case MUTEX_CREATE:
+        
+            log_info(logger, "No implementado. Respondiendo OK.");
+            break;
+
+        case MUTEX_LOCK:
+        
+            log_info(logger, "No implementado. Respondiendo OK.");
+            break;
+
+        case MUTEX_UNLOCK:
+        
+            log_info(logger, "No implementado. Respondiendo OK.");
+            break;
+
+        case THREAD_EXIT:
+        
+            log_info(logger, "No implementado. Respondiendo OK.");
+            break;
+            
         case HANDSHAKE_cpu:
             recibir_mensaje(cliente_socket, logger);
             log_info(logger, "Este deberia ser el canal mediante el cual nos comunicamos con la CPU");
