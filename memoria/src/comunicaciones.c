@@ -1,5 +1,11 @@
 #include "include/comunicaciones.h"
 
+t_dictionary* tabla_contextos; // Almacena los contextos de ejecución por PID
+t_dictionary instrucciones_por_pid;   // Almacena las instrucciones de cada proceso
+
+tabla_contextos = dictionary_create(); // Inicializar el diccionario de contextos
+instrucciones_por_pid = dictionary_create(); // Inicializar el diccionario de instrucciones
+
 
 static void procesar_conexion_memoria(void *void_args)
 {
@@ -335,13 +341,29 @@ void enviar_respuesta(int socket_cpu, char *mensaje) {
 }
 
 void recibir_pedido_instruccion(uint32_t* pid, uint32_t* pc, int cliente_socket){
+    recv(cliente_socket, pid, sizeof(uint32_t), 0);
+    recv(cliente_socket, pc, sizeof(uint32_t), 0);
 
 }
 
 t_instruccion* obtener_instruccion(uint32_t pid, uint32_t pc) {
-    t_instruccion* test; 
-    return test; 
+    char* key = string_itoa(pid); // Convertir PID a string
+    t_list* instrucciones_proceso = dictionary_get(instrucciones_por_pid, key); // Obtener la lista de instrucciones
+    
+    free(key); // Liberar la memoria asignada para la clave
+
+    if (instrucciones_proceso == NULL) {
+        return NULL; // Si no se encuentra la lista de instrucciones, retornar NULL
+    }
+
+    // Verificar que el PC esté dentro de los límites de la lista de instrucciones
+    if (pc < list_size(instrucciones_proceso)) {
+        return list_get(instrucciones_proceso, pc); // Devolver la instrucción en la posición PC
+    }
+
+    return NULL; // Si el PC está fuera de límites, retornar NULL
 }
+
 
 
 void enviar_instruccion(int cliente_socket, t_instruccion* instruccion){
@@ -349,39 +371,56 @@ void enviar_instruccion(int cliente_socket, t_instruccion* instruccion){
 }
 
 void recibir_set(uint32_t* pid, uint32_t* registro, uint32_t* valor, int cliente_socket){
-
+    recv(cliente_socket, pid, sizeof(uint32_t), 0);
+    recv(cliente_socket, registro, sizeof(uint32_t), 0);
+    recv(cliente_socket, valor, sizeof(uint32_t), 0);
 }
 
-t_contexto_ejecucion*  obtener_contexto(uint32_t pid){
-
-
-t_contexto_ejecucion* test;
-return test;
+t_contexto_ejecucion* obtener_contexto(uint32_t pid) {
+    char* key = string_itoa(pid); // Convertir PID a string
+    t_contexto_ejecucion* contexto = dictionary_get(tabla_contextos, key);
+    free(key); // Liberar la memoria asignada para la clave
+    return contexto; // Retornar el contexto encontrado (o NULL si no existe)
 }
 
 void recibir_read_mem(uint32_t* pid, uint32_t* direccion_logica, int cliente_socket){
-
+    recv(cliente_socket, pid, sizeof(uint32_t), 0);
+    recv(cliente_socket, direccion_logica, sizeof(uint32_t), 0);
 }
 
 void recibir_write_mem(uint32_t* pid, uint32_t* direccion_logica, uint32_t* valor, int cliente_socket){
-
+    recv(cliente_socket, pid, sizeof(uint32_t), 0);
+    recv(cliente_socket, direccion_logica, sizeof(uint32_t), 0);
+    recv(cliente_socket, valor, sizeof(uint32_t), 0);
 }
 
 void recibir_sub(uint32_t* pid, uint32_t* registro1, uint32_t* registro2, int cliente_socket){
-
+    recv(cliente_socket, pid, sizeof(uint32_t), 0);
+    recv(cliente_socket, registro1, sizeof(uint32_t), 0);
+    recv(cliente_socket, registro2, sizeof(uint32_t), 0);
 }
 
 void recibir_sum(uint32_t* pid,uint32_t* registro1, uint32_t* registro2, int cliente_socket){
-
+    recv(cliente_socket, pid, sizeof(uint32_t), 0);
+    recv(cliente_socket, registro1, sizeof(uint32_t), 0);
+    recv(cliente_socket, registro2, sizeof(uint32_t), 0);
 }
 
 void recibir_jnz(uint32_t* pid, uint32_t* pc_actual, uint32_t* valor_condicion, int cliente_socket){
-
+    recv(cliente_socket, pid, sizeof(uint32_t), 0);
+    recv(cliente_socket, pc_actual, sizeof(uint32_t), 0);
+    recv(cliente_socket, valor_condicion, sizeof(uint32_t), 0);
 }
 void cambiar_pc(uint32_t pid, uint32_t pc_actual){
 
 }
 
 void recibir_log(char mensaje[256], int cliente_socket){
+    recv(cliente_socket, mensaje, 256, 0);
+}
 
+void almacenar_instrucciones(uint32_t pid, t_list* instrucciones) {
+    char* key = string_itoa(pid);
+    dictionary_put(instrucciones_por_pid, key, instrucciones);
+    free(key);
 }
