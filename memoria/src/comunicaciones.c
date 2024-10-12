@@ -1,14 +1,17 @@
 #include "include/comunicaciones.h"
 
 t_dictionary* tabla_contextos; // Almacena los contextos de ejecución por PID
-t_dictionary instrucciones_por_pid;   // Almacena las instrucciones de cada proceso
+t_dictionary* instrucciones_por_pid;   // Almacena las instrucciones de cada proceso
 
-tabla_contextos = dictionary_create(); // Inicializar el diccionario de contextos
-instrucciones_por_pid = dictionary_create(); // Inicializar el diccionario de instrucciones
+void inicializar_datos() {
+    tabla_contextos = dictionary_create(); // Inicializar el diccionario de contextos
+    instrucciones_por_pid = dictionary_create(); // Inicializar el diccionario de instrucciones
+}
 
 
 static void procesar_conexion_memoria(void *void_args)
 {
+    inicializar_datos();
     t_procesar_conexion_args *args = (t_procesar_conexion_args *)void_args;
     t_log *logger = args->log;
     int cliente_socket = args->fd;
