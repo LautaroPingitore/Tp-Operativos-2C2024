@@ -1,4 +1,7 @@
-#include <include/syscalls.h>
+#include <include/syscall.h>
+//AGREGO ESTO PARA SOLUCIONAR PROBLEMA PERO PUEDE SACARSE SI HAY OTRA FORMA
+t_log* LOGGER_KERNEL;
+int socket_kernel_memoria;
 
 void syscall_process_create(char* path_proceso, int tamanio_proceso, int prioridad) {
     crear_proceso(path_proceso, tamanio_proceso, prioridad);
@@ -58,10 +61,10 @@ void syscall_io(t_pcb* pcb, uint32_t tid, int milisegundos) {
     io(pcb, tid, milisegundos);  // Invoca la funcion que gestiona la operacion IO
 }
 
-void manejar_syscall(t_syscall syscall, t_pcb* pcb, char* path_proceso, int prioridad, uint32_t tid_actual, uint32_t tid_esperado, phtread_mutex_t* mutex, int milisegundos) {
+void manejar_syscall(t_syscall syscall, t_pcb* pcb, char* path_proceso, int tamanio, int prioridad, uint32_t tid_actual, uint32_t tid_esperado, pthread_mutex_t* mutex, int milisegundos) {
     switch (syscall) {
         case PROCESS_CREATE:
-            syscall_process_create(path_proceso);
+            syscall_process_create(path_proceso, tamanio, prioridad);
             break;
         case PROCESS_EXIT:
             syscall_process_exit(pcb);
@@ -100,15 +103,6 @@ void manejar_syscall(t_syscall syscall, t_pcb* pcb, char* path_proceso, int prio
 }
 
 void dump_memory() {
-    log_info(LOGGER_KERNEL, "Dump de memoria:");
-    
-    // Imprime informacion sobre cada proceso en la memoria
-    for (int i = 0; i < list_size(cola_new); i++) {
-        t_pcb* proceso = list_get(cola_new, i);
-        log_info(LOGGER_KERNEL, "Proceso %d: TIDs: ", proceso->PID);
-        
-        for (int j = 0; j < CANTIDAD_HILOS; j++) {
-            log_info(LOGGER_KERNEL, "\tTID: %d, Estado: %d", proceso->TIDS[j], proceso->ESTADO);
-        }
-    }
+    log_info(LOGGER_KERNEL, "Syscall DUMP_MEMORY ejecutada");
+    // IMPLEMENTAR
 }

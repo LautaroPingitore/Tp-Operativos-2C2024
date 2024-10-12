@@ -13,19 +13,20 @@ extern pthread_mutex_t mutex_cola_exit;
 
 // PLANIFICADOR LARGO PLAZO
 void inicializar_colas_y_mutexs();
-t_pcb* crear_pcb(uint32_t, uint32_t*, t_contexto_ejecucion*, t_estado, pthread_mutex_t*);
+t_pcb* crear_pcb(uint32_t, t_contexto_ejecucion*, t_estado, pthread_mutex_t*);
 t_tcb* crear_tcb(uint32_t, int, t_estado);
-void crear_proceso(char*, int);
+void crear_proceso(char*, int, int);
 t_contexto_ejecucion* inicializar_contexto();
 void inicializar_proceso(t_pcb*, char*);
 int enviar_proceso_a_memoria(int, char*);
 void mover_a_ready(t_pcb*);
 void mover_a_exit(t_pcb*);
 void intentar_inicializar_proceso_de_new();
-void process_exit(t_pcb);
+void serializar_paquete_para_memoria(t_paquete*, int, char*);
+void process_exit(t_pcb*);
 void liberar_recursos_proceso(t_pcb*);
 uint32_t asignar_pid();
-uint32_t asignar_tids();
+uint32_t asignar_tid(t_pcb*);
 t_contexto_ejecucion* asignar_contexto();
 pthread_mutex_t* asignar_mutexs();
 int asignar_prioridad();

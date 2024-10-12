@@ -35,7 +35,7 @@
 // }
 
 int main(int argc, char* argv[]) {
-    // VERIFICACION DE QUE SE PASARON AL MENOS LOS 2 ARGUMENTOS ADICIONALES
+    // VERIFICACIÓN DE QUE SE PASARON AL MENOS 3 ARGUMENTOS (archivo pseudocódigo, tamaño proceso)
     if(argc < 3) {
         printf("Uso: %s [archivo_pseudocodigo] [tamanio_proceso]\n", argv[0]);
         return -1;
@@ -101,7 +101,7 @@ void iniciar_comunicaciones() {
     if(socket_kernel_memoria == -1) {
         log_error(LOGGER_KERNEL, "Error al conectar con memoria");
         terminar_programa(CONFIG_KERNEL, LOGGER_KERNEL, sockets);
-        return -1;
+        exit(EXIT_FAILURE);
     }
 
     log_info(LOGGER_KERNEL, "Conexion con Memoria Establecida");
@@ -113,7 +113,7 @@ void iniciar_comunicaciones() {
     if(socket_kernel_cpu_dispatch == -1) {
         log_error(LOGGER_KERNEL, "Error al conectar con CPU Dispatch");
         terminar_programa(CONFIG_KERNEL, LOGGER_KERNEL, sockets);
-        return -1;
+        exit(EXIT_FAILURE);
     }
         
     log_info(LOGGER_KERNEL, "Conexion con CPU Dispatch Establecida");
@@ -123,9 +123,9 @@ void iniciar_comunicaciones() {
     // CONEXION CON CPU INTERRUPT
     socket_kernel_cpu_interrupt = crear_conexion(IP_CPU, PUERTO_CPU_INTERRUPT);
     if (socket_kernel_cpu_interrupt == -1) {
-        log_error(LOGGER_KERNEL, "Error al conectar con CPU Interrupt.");
+        log_error(LOGGER_KERNEL, "Error al conectar con CPU Interrupt");
         terminar_programa(CONFIG_KERNEL, LOGGER_KERNEL, sockets);
-        return -1;
+        exit(EXIT_FAILURE);
     }
         
     log_info(LOGGER_KERNEL, "Conexion con CPU Interrupt establecida.");

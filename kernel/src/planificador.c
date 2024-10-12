@@ -71,7 +71,7 @@ void inicializar_colas_y_mutexs() {
 
 }
 
-t_pcb* crear_pcb(uint32_t pid, uint32_t* tids, t_contexto_ejecucion* contexto_ejecucion, t_estado estado, pthread_mutex_t* mutexs){
+t_pcb* crear_pcb(uint32_t pid, t_contexto_ejecucion* contexto_ejecucion, t_estado estado, pthread_mutex_t* mutexs){
 
     t_pcb* pcb = malloc(sizeof(t_pcb));
     if(pcb == NULL) {
@@ -80,12 +80,15 @@ t_pcb* crear_pcb(uint32_t pid, uint32_t* tids, t_contexto_ejecucion* contexto_ej
     }
 
     pcb->PID = pid;
-    pcb->TIDS = tids;
+    pcb->TIDS = list_create();
     pcb->CONTEXTO = contexto_ejecucion;
     pcb->ESTADO = estado;
     pcb->MUTEXS = mutexs;   
-    return pcb;
 
+    t_tcb* hilo_principal = crear_tcb(0, 0, NEW);
+    list_add(pcb->TIDS, hilo_principal);
+
+    return pcb;
 }
 
 t_tcb* crear_tcb(uint32_t tid, int prioridad, t_estado estado){
@@ -105,9 +108,8 @@ t_tcb* crear_tcb(uint32_t tid, int prioridad, t_estado estado){
 // FUNCION QUE CREA UN PROCESO Y LO METE A LA COLA DE NEW
 void crear_proceso(char* path_proceso, int tamanio_proceso, int prioridad){
     uint32_t pid = asignar_pid();
-    t_contexto_ejecucion* contexto = inicializar_contexto();
-    pthread_mutex_t* mutexs = asignar_mutexs();
-    t_pcb* pcb = crear_pcb(pid, [], contexto, NEW, mutexs);
+
+    t_pcb* pcb = crear_pcb(pid, inicializar_contexto(), NEW, asignar_mutexs());
 
     thread_create(pcb, path_proceso, prioridad);
 
@@ -118,12 +120,11 @@ void crear_proceso(char* path_proceso, int tamanio_proceso, int prioridad){
     log_info(LOGGER_KERNEL, "Proceso %d creado en NEW", pcb->PID);
 
     // Intentar inicializar el proceso en memoria si no hay otros en la cola NEW
-    if (list_size(cola_new) == 1) {
-        inicializar_proceso(pcb, path_proceso);
-    }
+    // if (list_size(cola_new) == 1) {
+    //     inicializar_proceso(pcb, path_proceso);
+    // }
 
-    enviar_proceso_a_memoria(pcb->pid, path_proceso);
-
+    inicializar_proceso(pcb, path_proceso);
 }
 
 uint32_t asignar_pid() {
@@ -135,12 +136,16 @@ uint32_t asignar_pid() {
     return pidNuevo;
 }
 
-uint32_t asignar_tids() {
-    // Asignamos TIDs unicos para cada hilo del proceso
-    pthread_mutex_lock(&mutex_tid);  // Protegemos el acceso a contador_tid con un mutex    
-    uint32_t nuevo_tid = contador_tid;
-    contador_tid++;
-    pthread_mutex_unlock(&mutex_tid);
+uint32_t asignar_tid(t_pcb* pcb) {
+
+    int nuevo_tid = list_size(pcb->TIDS) - 1 ;
+    (uint32_t) nuevo_tid;
+
+    //  Asignamos TIDs unicos para cada hilo del proceso
+    // pthread_mutex_lock(&mutex_tid);  // Protegemos el acceso a contador_tid con un mutex    
+    // uint32_t nuevo_tid = contador_tid;
+    // contador_tid++;
+    // pthread_mutex_unlock(&mutex_tid);
 
     return nuevo_tid;
 } 
@@ -164,6 +169,7 @@ t_contexto_ejecucion* inicializar_contexto() {
 }
 
 // CUIDADO, EXISTE UN STRUCT DE MUTEX EN LA BIBLIOTECA
+// SE PUEDE SACAR ESTO YA QUE NO SABEMOS IS ES VERDADERAMENTE NECESARIO
 // pthread_mutex_t 
 pthread_mutex_t* asignar_mutexs() {
    pthread_mutex_t* mutexs = malloc(sizeof(pthread_mutex_t) * CANTIDAD_MUTEX);
@@ -213,7 +219,7 @@ int enviar_proceso_a_memoria(int pid_nuevo, char *path_proceso){
 
 void serializar_paquete_para_memoria(t_paquete* paquete, int pid, char* path_proceso) {
     int size_pid = sizeof(int);
-    agregar_a_paquete(paquete, &pid_nuevo, size_pid);
+    agregar_a_paquete(paquete, &pid, size_pid);
 
     int length_path = strlen(path_proceso) + 1;
     agregar_a_paquete(paquete, &length_path, sizeof(int));
@@ -291,7 +297,7 @@ void liberar_recursos_proceso(t_pcb* pcb) {
 // CREA UN NUEVO TCB ASOSICADO AL PROCESO Y LO CONFIGURA CON EL PSEUDOCODIGO A EJECUTAR
 void thread_create(t_pcb *pcb, char* archivo_pseudocodigo, int prioridad) {
 
-    uint32_t nuevo_tid = asigar_tid();
+    uint32_t nuevo_tid = asigar_tid(pcb);
 
     // CREA EL NUEVO HILO
     t_tcb* nuevo_tcb = crear_tcb(nuevo_tid, prioridad, NEW);

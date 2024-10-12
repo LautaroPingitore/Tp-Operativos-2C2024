@@ -114,7 +114,7 @@ typedef struct {
 	uint32_t* TIDS;
 	t_contexto_ejecucion* CONTEXTO;
 	t_estado ESTADO;
-	pthread_mutex_t* MUTEXS;
+	pthread_mutex_t* MUTEXS; // SE PUEDE SACAR ESTO YA QUE NO SABEMOS IS ES VERDADERAMENTE NECESARIO
 } t_pcb;
 
 #endif
