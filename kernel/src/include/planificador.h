@@ -11,6 +11,8 @@ extern pthread_mutex_t mutex_cola_new;
 extern pthread_mutex_t mutex_cola_ready;
 extern pthread_mutex_t mutex_cola_exit;
 
+const int INT_MAX = 200;
+
 // PLANIFICADOR LARGO PLAZO
 void inicializar_colas_y_mutexs();
 t_pcb* crear_pcb(uint32_t, t_contexto_ejecucion*, t_estado, pthread_mutex_t*);
@@ -54,6 +56,6 @@ void eliminar_pcb_lista(t_list*, uint32_t);
 void esperar_a_que_termine(t_tcb*, t_tcb*);
 void bloquear_hilo_actual(t_tcb*);
 void desbloquear_hilo_actual(t_tcb*);
-
+int enviar_proceso_a_cpu(t_pcb*);
 
 #endif /* KERNEL_H_ */

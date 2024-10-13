@@ -3,6 +3,7 @@
 //AGREGO ESTO PARA SOLUCIONAR PROBLEMA PERO PUEDE SACARSE SI HAY OTRA FORMA
 t_log* LOGGER_KERNEL;
 int socket_kernel_memoria;
+int socket_kernel_cpu_dispatch;
 
 /*
 Tipos de planificacion:
@@ -55,6 +56,8 @@ uint32_t pid = 0;
 int contador_tid = 0;
 pthread_mutex_t mutex_pid = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutex_tid = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutex_estado = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t cond_estado = PTHREAD_COND_INITIALIZER;
 
 bool cpu_libre = true;
 
@@ -268,6 +271,16 @@ void eliminar_pcb_lista(t_list* lista, uint32_t pid) {
     }
 }
 
+void eliminar_tcb_lista(t_list* lista, uint32_t tid) {
+    for(int i=0; i < list_size(lista); i++) {
+        t_tcb* tcb_actual = list_get(lista, i);
+        if(tcb_actual->TID == tid){
+            list_remove(lista, i);
+            break;
+        }
+    }
+}
+
 
 void mover_a_exit(t_pcb* pcb) {
     // REMUEVE EL PROCESO DE LA COLA READY
@@ -383,27 +396,33 @@ void esperar_a_que_termine(t_tcb* esperado,  t_tcb* actual) {
     desbloquear_hilo_actual(actual);
 }
 
+
 void bloquear_hilo_actual(t_tcb* actual) {
+
+    pthread_mutex_lock(&mutex_estado);
 
     // Cambiar el estado del hilo a BLOCK
     actual->ESTADO = BLOCK;
-
     log_info(LOGGER_KERNEL, "Hilo %d bloqueado.", actual->TID);
 
-    pthread_yield();  // Permite que otros hilos se ejecuten
+    // Esperar hasta que se despierte el hilo (la condición se cumple)
+    pthread_cond_wait(&cond_estado, &mutex_estado);
+
+    pthread_mutex_unlock(&mutex_estado);
 }
 
-void desbloquear_hilo_actual(t_tcb* tcb_actual) {
+void desbloquear_hilo_actual(t_tcb* actual) {
+
+    pthread_mutex_lock(&mutex_estado);  // Bloquea el mutex
 
     // Cambiar el estado del hilo a READY
-    tcb_actual->ESTADO = READY;
+    actual->ESTADO = READY;
+    log_info(LOGGER_KERNEL, "Hilo %d desbloqueado.", actual->TID);
 
-    // Aniadir el hilo a la cola de READY
-    pthread_mutex_lock(&mutex_cola_ready);
-    list_add(cola_ready, tcb_actual);  // Mover el hilo a la cola de READY
-    pthread_mutex_unlock(&mutex_cola_ready);
+    // Enviar señal para despertar al hilo que está esperando en la condición
+    pthread_cond_signal(&cond_estado);
 
-    log_info(LOGGER_KERNEL, "Hilo %d desbloqueado y movido a READY.", tcb_actual->TID);
+    pthread_mutex_unlock(&mutex_estado);  // Desbloquea el mutex
 }
 
 t_tcb* buscar_hilo_por_tid(t_pcb* pcb, uint32_t tid) {
@@ -437,7 +456,6 @@ void thread_cancel(t_pcb* pcb, uint32_t tid) {
 }
 
 void liberar_recursos_hilo(t_tcb* tcb) {
-    free(tcb->TID); // NO SE SI SERA NECESARIO ESTO O SI FALTA ALGO
     free(tcb);
 }
 
@@ -528,7 +546,9 @@ int enviar_hilo_a_cpu(t_tcb* hilo) {
     return resultado;
 }
 
-
+int enviar_proceso_a_cpu(t_pcb* proceso) {
+    return 1;
+}
 
 
 // PLANIFICADOR A CORTO PLAZO ===============
@@ -568,7 +588,7 @@ t_tcb* obtener_hilo_x_prioridad() {
         }
     }
 
-    list_remove_by_condition(cola_ready, (void*) (hilo_mayor_prioridad->TID == ((t_tcb*) hilo_mayor_prioridad)->TID)); // SACA EL HILO DE LA COLA
+    eliminar_tcb_lista(cola_ready, hilo_a_ejecutar->TID);
 
     pthread_mutex_unlock(&mutex_cola_ready);
 
@@ -649,9 +669,9 @@ void io(t_pcb* pcb, uint32_t tid, int milisegundos) {
     usleep(milisegundos * 1000);
 
     tcb->ESTADO = READY;
-    phtread_mutex_lock(&mutex_cola_ready);
+    pthread_mutex_lock(&mutex_cola_ready);
     list_add(cola_ready, tcb);
-    phtread_mutex_unlock(&mutex_cola_ready);
+    pthread_mutex_unlock(&mutex_cola_ready);
 
     log_info(LOGGER_KERNEL, "Hilo %d en proceso %d ha terminado IO y esta en READY", tid, pcb->PID);
 }

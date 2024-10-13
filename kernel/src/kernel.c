@@ -44,13 +44,14 @@ int main(int argc, char* argv[]) {
     // OBTENCION DEL ARCHIVO DEL PSEUDOCODIGO Y EL TAMANIO DEL PROCESO
     char* archivo_pseudocodigo = argv[1];
     int tamanio_proceso = atoi(argv[2]);
+    int sockets[] = {socket_kernel_memoria, socket_kernel_cpu_dispatch, socket_kernel_cpu_interrupt, -1};
 
     // INICIAR CONFIGURACION DE KERNEL
     inicializar_config("kernel");
     log_info(LOGGER_KERNEL, "Iniciando KERNEL \n");
 
     // INICIAR CONEXIONES
-    iniciar_comunicaciones();
+    iniciar_comunicaciones(sockets);
 
     // INICIAR LOS SEMAFOROS Y COLAS
     inicializar_colas_y_mutexs();
@@ -93,8 +94,7 @@ void inicializar_config(char* arg){
     LOG_LEVEL = config_get_string_value(CONFIG_KERNEL, "LOG_LEVEL");
 }
 
-void iniciar_comunicaciones() {
-    int sockets[] = {socket_kernel_memoria, socket_kernel_cpu_dispatch, socket_kernel_cpu_interrupt, -1};
+void iniciar_comunicaciones(int sockets[]) {
 
     // CONECTAR CON MEMORIA
     socket_kernel_memoria = crear_conexion(IP_MEMORIA, PUERTO_MEMORIA);
@@ -131,4 +131,12 @@ void iniciar_comunicaciones() {
         
     log_info(LOGGER_KERNEL, "Conexion con CPU Interrupt establecida.");
     log_info(LOGGER_KERNEL, "IP_CPU: %s \nPUERTO_CPU_INTERRUPT %s", IP_CPU, PUERTO_CPU_INTERRUPT);
+}
+
+// AGREGO ESTO PARA QUE SE VAYAN LOS ERRORES
+void inicializar_colas_y_mutexs(){
+
+}
+void crear_proceso(char* archivo, int tamanio, int prioridad) {
+    
 }
