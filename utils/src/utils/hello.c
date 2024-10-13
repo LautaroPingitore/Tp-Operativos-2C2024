@@ -229,17 +229,17 @@ int crear_conexion(char *ip, char* puerto)
 
 void* serializar_paquete(t_paquete* paquete, int bytes)
 {
-	void * magic = malloc(bytes);
+	void * paqueteSerializado = malloc(bytes);
 	int desplazamiento = 0;
 
-	memcpy(magic + desplazamiento, &(paquete->codigo_operacion), sizeof(int));
+	memcpy(paqueteSerializado + desplazamiento, &(paquete->codigo_operacion), sizeof(int));
 	desplazamiento+= sizeof(int);
-	memcpy(magic + desplazamiento, &(paquete->buffer->size), sizeof(int));
+	memcpy(paqueteSerializado + desplazamiento, &(paquete->buffer->size), sizeof(int));
 	desplazamiento+= sizeof(int);
-	memcpy(magic + desplazamiento, paquete->buffer->stream, paquete->buffer->size);
+	memcpy(paqueteSerializado + desplazamiento, paquete->buffer->stream, paquete->buffer->size);
 	desplazamiento+= paquete->buffer->size;
 
-	return magic;
+	return paqueteSerializado;
 }
 
 void enviar_mensaje(char* mensaje, int socket_cliente)
@@ -288,14 +288,21 @@ void agregar_a_paquete(t_paquete* paquete, void* valor, int tamanio)
 	paquete->buffer->size += tamanio + sizeof(int);
 }
 
-void enviar_paquete(t_paquete* paquete, int socket_cliente)
+int enviar_paquete(t_paquete* paquete, int socket_cliente)
 {
 	int bytes = paquete->buffer->size + 2*sizeof(int);
 	void* a_enviar = serializar_paquete(paquete, bytes);
 
-	send(socket_cliente, a_enviar, bytes, 0);
+	int resultado = send(socket_cliente, a_enviar, bytes, 0);
 
 	free(a_enviar);
+
+	if (resultado == -1)
+	{
+		return -1;
+	}
+
+	return 0;
 }
 
 void eliminar_paquete(t_paquete* paquete)
@@ -337,7 +344,6 @@ void paquete(int conexion, t_log* logger)
 	
 }
 
-
 void terminar_programa(t_config* config, t_log* logger, int sockets[]){
 	log_destroy(logger);
 	config_destroy(config);
@@ -348,7 +354,6 @@ void terminar_programa(t_config* config, t_log* logger, int sockets[]){
 		n ++;
 	}
 }
-
 
 /*
 void terminar_programa(int conexion, t_log* logger, t_config* config)
@@ -361,8 +366,6 @@ void terminar_programa(int conexion, t_log* logger, t_config* config)
 	liberar_conexion(conexion);
 }
 */
-
-
 
 /*
 POSIBLE SOLUCION A LA GENERALIZACION DE GESTIONAR CONEXIONES
@@ -404,8 +407,7 @@ int gestionarConexiones(int socket_cliente, t_log* LOG_SERVIDOR)
 
 */
 
-t_paquete* crear_paquete_con_codigo_de_operacion(op_code operacion)
-{
+t_paquete* crear_paquete_con_codigo_operacion(op_code operacion) {
 	t_paquete* paquete = malloc(sizeof(t_paquete));
 	paquete->codigo_operacion = operacion;
 	crear_buffer(paquete);

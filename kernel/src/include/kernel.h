@@ -20,8 +20,11 @@ int socket_kernel_cpu_dispatch;
 int socket_kernel_cpu_interrupt;
 
 void inicializar_config(char*);
+void iniciar_comunicaciones(int []);
 
-
-
+// LO PONGO PARA QUE NO ESTEN LOS ERRORES
+void inicializar_colas_y_mutexs();
+void crear_proceso(char*, int, int);
 
 #endif /* KERNEL_H_ */
+
