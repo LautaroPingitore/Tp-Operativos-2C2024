@@ -104,6 +104,12 @@ typedef enum {
     FINALIZACION
 } motivo_desalojo;
 
+typedef enum {
+	INCIAL,
+    SUCCES,
+    ERROR
+} finalizacion_proceso;
+
 typedef struct {
     uint32_t program_counter; // Contador de programa (PC)
     uint32_t AX;
@@ -183,18 +189,6 @@ typedef struct {
     uint32_t  AX, BX, CX, DX ,EX, FX, GX, HX; // PUEDE REMPLAZARCE CON UN registros[8]
 } t_registros;
 
-typedef enum {
-	ESTADO_INICIAL,
-    INTERRUPCION_SYSCALL,
-    INTERRUPCION_BLOQUEO,
-    FINALIZACION
-} motivo_desalojo;
-
-typedef enum {
-	INCIAL,
-    SUCCES,
-    ERROR
-} finalizacion_proceso;
 
 // ===========================
 // typedef struct {
