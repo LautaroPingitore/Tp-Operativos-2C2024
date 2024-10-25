@@ -1,4 +1,5 @@
 #include <include/manejoArchivos.h>
+#include <include/filesystem.h>
 
 int crear_archivo_dump(char* nombre_archivo, char* contenido, int tamanio) {
     // VERIFICAR SI HAY BLOQUES DISPONIBLES
@@ -97,7 +98,9 @@ int hay_espacion_suficiente(int tamanio_archivo) {
     int bloques_necesarios = (tamanio_archivo + BLOCK_SIZE - 1) / BLOCK_SIZE;
     int bloques_libres = 0;
 
-    FILE* bitmap = fopen("/path/to/bitmap.dat", "r");
+    char bitmap_path[256];
+    sprintf(bitmap_path, "%s/bitmap.dat", MOUNT_DIR);
+    FILE* bitmap = fopen(bitmap_path, "r");
     if (!bitmap) {
         log_error(LOGGER_FILESYSTEM, "Error al abrir bitmap.dat");
         return 0;  // No hay espacio si no se puede abrir el bitmap
@@ -122,9 +125,38 @@ int hay_espacion_suficiente(int tamanio_archivo) {
 
 }
 
+int obtener_bloques_libres() {
+    int bloques_libres = 0;
+    char bitmap_path[256];
+    sprintf(bitmap_path, "%s/bitmap.dat", MOUNT_DIR);
+    FILE* bitmap = fopen(bitmap_path, "r");
+
+    if (!bitmap) {
+        log_error(LOGGER_FILESYSTEM, "Error al abrir bitmap.dat");
+        return -1;
+    }
+
+    // Iteramos sobre cada bloque en el bitmap
+    for (int i = 0; i < BLOCK_COUNT; i++) {
+        fseek(bitmap, i / 8, SEEK_SET);
+        unsigned char byte;
+        fread(&byte, 1, 1, bitmap);
+
+        // Verificamos si el bit correspondiente al bloque está libre
+        if (!(byte & (1 << (i % 8)))) {  // Si el bit está en 0, el bloque está libre
+            bloques_libres++;
+        }
+    }
+
+    fclose(bitmap);
+    return bloques_libres;
+}
+
 // LIBERAR BLOQUES (OPCIONAL)
 void liberar_bloque(int numero_bloque) {
-    FILE* bitmap = fopen("/path/to/bitmap.dat", "r+");
+    char bitmap_path[256];
+    sprintf(bitmap_path, "%s/bitmap.dat", MOUNT_DIR);
+    FILE* bitmap = fopen(bitmap_path, "r+");
     if (!bitmap) {
         log_error(LOGGER_FILESYSTEM, "Error al abrir bitmap.dat");
         return;

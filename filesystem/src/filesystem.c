@@ -1,4 +1,5 @@
 #include <include/filesystem.h>
+#include <include/manejoArchivos.h>
 
 volatile sig_atomic_t server_running = 1;  // Variable global para controlar el ciclo del servidor
 // Manejo de señales con signal(): Se define una función handle_signal para interceptar la señal SIGINT (cuando se presiona Ctrl+C)
@@ -97,7 +98,7 @@ void *handle_client(void *arg) {
     t_datos_cliente *datos_cliente = (t_datos_cliente *) arg;
     int socket_cliente = datos_cliente->socket_cliente;
     
-    t_list* lista;
+
 
     while (1) {
         int cod_op = recibir_operacion(socket_cliente);
@@ -110,13 +111,14 @@ void *handle_client(void *arg) {
                 //  if (resultado == -1) {
                 //      enviar_respuesta_error(socket_cliente, "Error en la creación de archivo");
                 //  }
-                log_info(LOGGER_FILESYSTEM, "OK");
+                // log_info(LOGGER_FILESYSTEM, "## Fin de solicitud - Archivo: %s", nombre_archivo);
+                log_info(LOGGER_FILESYSTEM, "OKY DOKY");
                 break;
             case -1:
                 //  log_error(LOGGER_FILESYSTEM, "El cliente se desconectó. Terminando hilo");
                 //  close(socket_cliente);
                 //  free(datos_cliente);
-                log_info(LOGGER_FILESYSTEM, "OK");
+                log_info(LOGGER_FILESYSTEM, "OKEY");
                 break;
             default:
                 log_warning(LOGGER_FILESYSTEM, "Operacion desconocida");
@@ -128,7 +130,3 @@ void *handle_client(void *arg) {
     free(datos_cliente);
     pthread_exit(NULL);
 }
-
-// void iterator(char* value) {
-// 	log_info(LOGGER_FILESYSTEM,"%s", value);
-// }
