@@ -94,7 +94,8 @@ typedef enum{
     MUTEX_UNLOCK,
     THREAD_EXIT,
     PROCESO,
-    HILO
+    HILO,
+    CREAR_ARCHIVO
 } op_code;
 
 

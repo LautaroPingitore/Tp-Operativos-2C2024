@@ -18,8 +18,7 @@ int socket_filesystem;
 int socket_filesystem_memoria;
 
 void inicializar_config(char*);
-void iterator(char*);
-int gestionarConexionConMemoria();
+void iniciar_archivos();
 void* handle_client(void*);
 void handle_signal(int);
 

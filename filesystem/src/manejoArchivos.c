@@ -8,7 +8,7 @@ int crear_archivo_dump(char* nombre_archivo, char* contenido, int tamanio) {
     }
 
     // ASIGNAR LOS BLOQUES DE INDICE Y LOS BLOQUES DE DATOS EN EL BITMAP
-    int bloque_indice asignar_bloque();
+    int bloque_indice = asignar_bloque();
     if(bloque_indice == -1) {
         log_error(LOGGER_FILESYSTEM, "Error al asignar bloque de índice");
         return -1;
@@ -37,7 +37,9 @@ int crear_archivo_dump(char* nombre_archivo, char* contenido, int tamanio) {
 // FUNCION LA CUAL TOMA Y ESCRIBE LOS DATOS EN LOS BLOQUES DE bloques.dat
 void escribir_en_bloques(char* contenido, int tamanio, int bloque_indice) {
     // ABRE BLOQUES.DAT PARA ESCRIBIR
-    FILE* bloques_file = fopen("/path/to/bloques.dat", "r+");
+    char bloques_path[256];
+    sprintf(bloques_path, "%s/bloques.dat", MOUNT_DIR);
+    FILE* bloques_file = fopen(bloques_path, "r+");
 
     // CALCULO DE CUANTOS BLOQUES SE NECESITAN
     int cantidad_bloques = (tamanio + BLOCK_SIZE - 1) / BLOCK_SIZE;
@@ -46,13 +48,14 @@ void escribir_en_bloques(char* contenido, int tamanio, int bloque_indice) {
         int bloque_datos = asignar_bloque();
 
         // SIMULACION DEL RETARDO DE ACCESO
-        usleep(RETARDO_ACCESO_BLOQUE * 1000)
+        usleep(RETARDO_ACCESO_BLOQUE * 1000);
 
         // ESCRIBE LOS DATOS EN EL BLOQUE
-        seek(bloques_file, bloque_datos * BLOCK_SIZE, SEEK_SET);
+        fseek(bloques_file, bloque_datos * BLOCK_SIZE, SEEK_SET);
         fwrite(contenido + i * BLOCK_SIZE, 1, BLOCK_SIZE, bloques_file);
 
-        log_info(LOGGER_FILESYSTEM, "Bloque asignado: %d - Archivo: %d", bloque_datos, bloque_indice);
+        log_info(LOGGER_FILESYSTEM, "## Bloque asignado: %d - Archivo: %s - Bloques Libres: %d", bloque_datos, bloques_path, obtener_bloques_libres());
+        log_info(LOGGER_FILESYSTEM, "## Acceso Bloque - Archivo: %s - Tipo Bloque: DATOS - Bloque File System: %d", bloques_path, bloque_datos);
     }
 
     fclose(bloques_file);
@@ -60,7 +63,10 @@ void escribir_en_bloques(char* contenido, int tamanio, int bloque_indice) {
 
 // GESTION Y ASIGNACION DE BLOQUES EN EL ARCHIVO bitmap.dat
 int asignar_bloque() {
-    FILE* bitmap = fopen("/path/to/bitmap.dat", "r+");
+    char bitmap_path[256];
+    sprintf(bitmap_path, "%s/bitmap.dat", MOUNT_DIR);
+    FILE* bitmap = fopen(bitmap_path, "r+");
+
     if (!bitmap) {
         log_error(LOGGER_FILESYSTEM, "Error al abrir bitmap.dat");
         return -1;

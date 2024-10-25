@@ -17,6 +17,7 @@ int main(int argc, char *argv[]) {
     signal(SIGINT, handle_signal);
 
     inicializar_config("filesystem");
+    iniciar_archivos();
 
     //Iniciar servidor
     socket_filesystem = iniciar_servidor(PUERTO_ESCUCHA,LOGGER_FILESYSTEM,IP_FILESYSTEM,"FILESYSTEM");
@@ -59,38 +60,37 @@ void inicializar_config(char* arg){
     
     PUERTO_ESCUCHA = config_get_string_value(CONFIG_FILESYSTEM, "PUERTO_ESCUCHA");
     MOUNT_DIR = config_get_string_value(CONFIG_FILESYSTEM, "MOUNT_DIR");
-    BLOCK_SIZE = config_get_string_value(CONFIG_FILESYSTEM, "BLOCK_SIZE");
-    BLOCK_COUNT = config_get_string_value(CONFIG_FILESYSTEM, "BLOCK_COUNT");
-    RETARDO_ACCESO_BLOQUE = config_get_string_value(CONFIG_FILESYSTEM, "RETARDO_ACCESO_BLOQUE");
+    BLOCK_SIZE = config_get_int_value(CONFIG_FILESYSTEM, "BLOCK_SIZE");
+    BLOCK_COUNT = config_get_int_value(CONFIG_FILESYSTEM, "BLOCK_COUNT");
+    RETARDO_ACCESO_BLOQUE = config_get_int_value(CONFIG_FILESYSTEM, "RETARDO_ACCESO_BLOQUE");
     LOG_LEVEL = config_get_string_value(CONFIG_FILESYSTEM, "LOG_LEVEL");
 
     IP_FILESYSTEM = config_get_string_value(CONFIG_FILESYSTEM,"IP_FILESYSTEM");
 }
 
-// int gestionarConexionConMemoria(){
+void iniciar_archivos() {
+    char bitmap_path[256], bloques_path[256];
+    sprintf(bitmap_path, "%s/bitmap.dat", MOUNT_DIR);
+    sprintf(bloques_path, "%s/bloques.dat", MOUNT_DIR);
 
-// t_list* lista;
-// while(1){
-//     int cod_op = recibir_operacion(socket_filesystem_memoria);
-//     switch(cod_op){
-//     case MENSAJE:
-//         recibir_mensaje(socket_filesystem_memoria, LOGGER_FILESYSTEM);
-//         break;
-//     case PAQUETE:
-//         lista = recibir_paquete(socket_filesystem_memoria);
-//         log_info(LOGGER_FILESYSTEM,"Me llegaron los siguientes valores:\n");
-//         list_iterate(lista, (void*) iterator);
-//         break;
-//     case -1:
-//         log_error(LOGGER_FILESYSTEM, "El cliente se desconecto. Terminando servidor");
-//         return EXIT_FAILURE;
-//     default:
-//         log_warning(LOGGER_FILESYSTEM,"Operacion desconocida. No quieras meter la pata");
-//         break;
-//     }
-// }
-//     return EXIT_SUCCESS;
-// }
+    FILE* bitmap = fopen(bitmap_path, "r+");
+    if(!bitmap) { // VERIFICA SI ESTA VACIO
+        bitmap = fopen(bitmap_path, "w");
+        for (int i = 0; i < (BLOCK_COUNT + 7) / 8; i++) {
+            fputc(0, bitmap); // VA PONIENDO 0 EN CADA BLOQUE DEL ARCHIVO (0 = BLOQUE LIBRE)
+        }
+        fclose(bitmap);
+    }
+    
+    
+    FILE* bloques = fopen(bloques_path, "r+");
+    if (!bloques) { // VERIFICA SI ESTA VACIO
+        bloques = fopen(bloques_path, "w");
+        fseek(bloques, BLOCK_COUNT * BLOCK_SIZE - 1, SEEK_SET); 
+        fputc('\0', bloques); // PONE UN 0 AL FINAL DEL ARCHIVO
+        fclose(bloques);
+    }
+}
 
 // FUNCION LA CUAL MANEJARA CADA PETICION DE UN HILO
 void *handle_client(void *arg) {
@@ -102,20 +102,24 @@ void *handle_client(void *arg) {
     while (1) {
         int cod_op = recibir_operacion(socket_cliente);
         switch (cod_op) {
-            case MENSAJE:
-                recibir_mensaje(socket_cliente, LOGGER_FILESYSTEM);
-                break;
-            case PAQUETE:
-                lista = recibir_paquete(socket_cliente);
-                log_info(LOGGER_FILESYSTEM, "Me llegaron los siguientes valores:\n");
-                list_iterate(lista, (void*) iterator);
+            case CREAR_ARCHIVO:
+                //  char* nombre_archivo = recibir_nombre(socket_cliente);
+                //  char* contenido = recibir_contenido(socket_cliente);
+                //  int tamanio = recibir_tamanio(socket_cliente);
+                //  int resultado = crear_archivo_dump(nombre_archivo, contenido, tamanio);
+                //  if (resultado == -1) {
+                //      enviar_respuesta_error(socket_cliente, "Error en la creación de archivo");
+                //  }
+                log_info(LOGGER_FILESYSTEM, "OK");
                 break;
             case -1:
-                log_error(LOGGER_FILESYSTEM, "El cliente se desconecto. Terminando hilo");
-                free(datos_cliente);
-                pthread_exit(NULL);  // Terminar el hilo si el cliente se desconecta
+                //  log_error(LOGGER_FILESYSTEM, "El cliente se desconectó. Terminando hilo");
+                //  close(socket_cliente);
+                //  free(datos_cliente);
+                log_info(LOGGER_FILESYSTEM, "OK");
+                break;
             default:
-                log_warning(LOGGER_FILESYSTEM, "Operacion desconocida. No quieras meter la pata");
+                log_warning(LOGGER_FILESYSTEM, "Operacion desconocida");
                 break;
         }
     }
@@ -125,7 +129,6 @@ void *handle_client(void *arg) {
     pthread_exit(NULL);
 }
 
-
-void iterator(char* value) {
-	log_info(LOGGER_FILESYSTEM,"%s", value);
-}
+// void iterator(char* value) {
+// 	log_info(LOGGER_FILESYSTEM,"%s", value);
+// }
