@@ -32,4 +32,11 @@ void recibir_jnz(uint32_t*, uint32_t* , uint32_t* , int);
 void cambiar_pc(uint32_t, uint32_t);
 void recibir_log(char [256], int);
 
+typedef struct {
+    uint32_t pid;
+    uint32_t tid;
+    uint32_t base;
+    uitn32_t limite;
+} t_proceso_memoria;
+
 #endif //COMUNICACIONES_H_

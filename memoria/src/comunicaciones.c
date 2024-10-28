@@ -37,29 +37,22 @@ static void procesar_conexion_memoria(void *void_args)
             break;
 
         case PROCESS_CREATE:
-            // Aquí se inicializa el proceso y se crea su contexto de ejecución
-            // uint32_t pid, base, limite;
-            // recibir_inicializar_proceso(&pid, &base, &limite, cliente_socket);
-            // crear_proceso(pid, base, limite); // Crear proceso y su contexto
-            // log_info(logger, "Proceso inicializado con PID: %d", pid);
-            log_info(logger, "No implementado. Respondiendo OK.");
+            t_proceso_memoria* proceso_nuevo = recibir_proceso_kernel(cliente_socket);
+            asignar_espacio_memoria(proceso_nuevo);
+            log_info(logger, "Proceso Creado - PID: %d - Tamanio: %d", proceso_nuevo->pid, proceso_nuevo->limite);
             break;
 
         case PROCESS_EXIT:
-            // uint32_t pid_a_finalizar;
-            // recibir_finalizar_proceso(&pid_a_finalizar, cliente_socket);
-            // liberar_proceso(pid_a_finalizar);
-            // log_info(logger, "Proceso con PID: %d finalizado", pid_a_finalizar);
-            log_info(logger, "No implementado. Respondiendo OK.");
+            t_proceso_memoria* proceso_a_eliminar = recibir_proceso_kernel(cliente_socket);
+            liberar_espacio_memoria(proceso_a_eliminar);
+            log_info(logger, "Proceso Destruido - PID: %d - Tamanio %d", proceso_a_eliminar->pid, proceso_nuevo->limite);
             break;
 
         case DUMP_MEMORY:
-
-            log_info(logger, "No implementado. Respondiendo OK.");
-            break;
-
-        case IO:
-        
+            t_proceso_memoria* proceso = recibir_proceso_kernel(cliente_socket);
+            // SI HACEMOS QUE CADA HILO TENGA ASIGNADO EL PID DEL PROCESO QUE LO CREO SE PODRIA ARREGLAR ESTO
+            // AUNQUE HAY QUE MODIFICAR MUCHO EN KERNEL
+            solicitar_archivo_filesystem(proceso->pid, proceso->tid);//, timestamp???); // dump memory todavia no la hicimos
             log_info(logger, "No implementado. Respondiendo OK.");
             break;
 
@@ -68,36 +61,41 @@ static void procesar_conexion_memoria(void *void_args)
             log_info(logger, "No implementado. Respondiendo OK.");
             break;
 
-        case THREAD_JOIN:
-        
-            log_info(logger, "No implementado. Respondiendo OK.");
-            break;
-
-        case THREAD_CANCEL:
-        
-            log_info(logger, "No implementado. Respondiendo OK.");
-            break;
-
-        case MUTEX_CREATE:
-        
-            log_info(logger, "No implementado. Respondiendo OK.");
-            break;
-
-        case MUTEX_LOCK:
-        
-            log_info(logger, "No implementado. Respondiendo OK.");
-            break;
-
-        case MUTEX_UNLOCK:
-        
-            log_info(logger, "No implementado. Respondiendo OK.");
-            break;
-
         case THREAD_EXIT:
         
             log_info(logger, "No implementado. Respondiendo OK.");
             break;
-            
+
+        // case IO:
+        
+        //     log_info(logger, "No implementado. Respondiendo OK.");
+        //     break;
+
+        // case THREAD_JOIN:
+        
+        //     log_info(logger, "No implementado. Respondiendo OK.");
+        //     break;
+
+        // case THREAD_CANCEL:
+        
+        //     log_info(logger, "No implementado. Respondiendo OK.");
+        //     break;
+
+        // case MUTEX_CREATE:
+        
+        //     log_info(logger, "No implementado. Respondiendo OK.");
+        //     break;
+
+        // case MUTEX_LOCK:
+        
+        //     log_info(logger, "No implementado. Respondiendo OK.");
+        //     break;
+
+        // case MUTEX_UNLOCK:
+        
+        //     log_info(logger, "No implementado. Respondiendo OK.");
+        //     break;
+
         case HANDSHAKE_cpu:
             recibir_mensaje(cliente_socket, logger);
             log_info(logger, "Este deberia ser el canal mediante el cual nos comunicamos con la CPU");
@@ -159,151 +157,151 @@ static void procesar_conexion_memoria(void *void_args)
                 break;
         }
 
-        case PEDIDO_SUB: {
-                uint32_t pid, registro1, registro2;
-                recibir_sub(&pid, &registro1, &registro2, cliente_socket);
+    //     case PEDIDO_SUB: {
+    //             uint32_t pid, registro1, registro2;
+    //             recibir_sub(&pid, &registro1, &registro2, cliente_socket);
                 
-                t_contexto_ejecucion *contexto = obtener_contexto(pid);  
-                t_registros *registros = contexto->registros;
+    //             t_contexto_ejecucion *contexto = obtener_contexto(pid);  
+    //             t_registros *registros = contexto->registros;
 
-                uint32_t valor1 = 0, valor2 = 0;
+    //             uint32_t valor1 = 0, valor2 = 0;
 
-                // Obtener valores de los registros usando un switch basado en índices
-                switch (registro1) {
-                    case 0: valor1 = registros->AX; break;
-                    case 1: valor1 = registros->BX; break;
-                    case 2: valor1 = registros->CX; break;
-                    case 3: valor1 = registros->DX; break;
-                    case 4: valor1 = registros->EX; break;
-                    case 5: valor1 = registros->FX; break;
-                    case 6: valor1 = registros->GX; break;
-                    case 7: valor1 = registros->HX; break;
-                    default: 
-                        enviar_respuesta(cliente_socket, "ERROR: Registro no válido");
-                        continue;
-                }
+    //             // Obtener valores de los registros usando un switch basado en índices
+    //             switch (registro1) {
+    //                 case 0: valor1 = registros->AX; break;
+    //                 case 1: valor1 = registros->BX; break;
+    //                 case 2: valor1 = registros->CX; break;
+    //                 case 3: valor1 = registros->DX; break;
+    //                 case 4: valor1 = registros->EX; break;
+    //                 case 5: valor1 = registros->FX; break;
+    //                 case 6: valor1 = registros->GX; break;
+    //                 case 7: valor1 = registros->HX; break;
+    //                 default: 
+    //                     enviar_respuesta(cliente_socket, "ERROR: Registro no válido");
+    //                     continue;
+    //             }
 
-                switch (registro2) {
-                    case 0: valor2 = registros->AX; break;
-                    case 1: valor2 = registros->BX; break;
-                    case 2: valor2 = registros->CX; break;
-                    case 3: valor2 = registros->DX; break;
-                    case 4: valor2 = registros->EX; break;
-                    case 5: valor2 = registros->FX; break;
-                    case 6: valor2 = registros->GX; break;
-                    case 7: valor2 = registros->HX; break;
-                    default: 
-                        enviar_respuesta(cliente_socket, "ERROR: Registro no válido");
-                        continue;
-                }
+    //             switch (registro2) {
+    //                 case 0: valor2 = registros->AX; break;
+    //                 case 1: valor2 = registros->BX; break;
+    //                 case 2: valor2 = registros->CX; break;
+    //                 case 3: valor2 = registros->DX; break;
+    //                 case 4: valor2 = registros->EX; break;
+    //                 case 5: valor2 = registros->FX; break;
+    //                 case 6: valor2 = registros->GX; break;
+    //                 case 7: valor2 = registros->HX; break;
+    //                 default: 
+    //                     enviar_respuesta(cliente_socket, "ERROR: Registro no válido");
+    //                     continue;
+    //             }
 
-                // Realizar la resta
-                uint32_t resultado = valor1 - valor2;
+    //             // Realizar la resta
+    //             uint32_t resultado = valor1 - valor2;
 
-                // Guardar el resultado en registro1
-                switch (registro1) {
-                    case 0: registros->AX = resultado; break;
-                    case 1: registros->BX = resultado; break;
-                    case 2: registros->CX = resultado; break;
-                    case 3: registros->DX = resultado; break;
-                    case 4: registros->EX = resultado; break;
-                    case 5: registros->FX = resultado; break;
-                    case 6: registros->GX = resultado; break;
-                    case 7: registros->HX = resultado; break;
-                    default: 
-                        enviar_respuesta(cliente_socket, "ERROR: Registro no válido");
-                        continue;
-                }
+    //             // Guardar el resultado en registro1
+    //             switch (registro1) {
+    //                 case 0: registros->AX = resultado; break;
+    //                 case 1: registros->BX = resultado; break;
+    //                 case 2: registros->CX = resultado; break;
+    //                 case 3: registros->DX = resultado; break;
+    //                 case 4: registros->EX = resultado; break;
+    //                 case 5: registros->FX = resultado; break;
+    //                 case 6: registros->GX = resultado; break;
+    //                 case 7: registros->HX = resultado; break;
+    //                 default: 
+    //                     enviar_respuesta(cliente_socket, "ERROR: Registro no válido");
+    //                     continue;
+    //             }
 
-                enviar_respuesta(cliente_socket, "OK");
-                log_info(logger, "Se restó el valor de registro %d de %d para PID %d", registro2, registro1, pid);
-                break;
-    }
+    //             enviar_respuesta(cliente_socket, "OK");
+    //             log_info(logger, "Se restó el valor de registro %d de %d para PID %d", registro2, registro1, pid);
+    //             break;
+    // }
 
-    case PEDIDO_SUM: {
-                uint32_t pid, registro1, registro2;
-                recibir_sum(&pid, &registro1, &registro2, cliente_socket);
+    // case PEDIDO_SUM: {
+    //             uint32_t pid, registro1, registro2;
+    //             recibir_sum(&pid, &registro1, &registro2, cliente_socket);
                 
-                t_contexto_ejecucion *contexto = obtener_contexto(pid);  
-                t_registros *registros = contexto->registros;
+    //             t_contexto_ejecucion *contexto = obtener_contexto(pid);  
+    //             t_registros *registros = contexto->registros;
 
-                uint32_t valor1 = 0, valor2 = 0;
+    //             uint32_t valor1 = 0, valor2 = 0;
 
-                // Obtener valores de los registros usando un switch basado en índices
-                switch (registro1) {
-                    case 0: valor1 = registros->AX; break;
-                    case 1: valor1 = registros->BX; break;
-                    case 2: valor1 = registros->CX; break;
-                    case 3: valor1 = registros->DX; break;
-                    case 4: valor1 = registros->EX; break;
-                    case 5: valor1 = registros->FX; break;
-                    case 6: valor1 = registros->GX; break;
-                    case 7: valor1 = registros->HX; break;
-                    default: 
-                        enviar_respuesta(cliente_socket, "ERROR: Registro no válido");
-                        continue;
-                }
+    //             // Obtener valores de los registros usando un switch basado en índices
+    //             switch (registro1) {
+    //                 case 0: valor1 = registros->AX; break;
+    //                 case 1: valor1 = registros->BX; break;
+    //                 case 2: valor1 = registros->CX; break;
+    //                 case 3: valor1 = registros->DX; break;
+    //                 case 4: valor1 = registros->EX; break;
+    //                 case 5: valor1 = registros->FX; break;
+    //                 case 6: valor1 = registros->GX; break;
+    //                 case 7: valor1 = registros->HX; break;
+    //                 default: 
+    //                     enviar_respuesta(cliente_socket, "ERROR: Registro no válido");
+    //                     continue;
+    //             }
 
-                switch (registro2) {
-                    case 0: valor2 = registros->AX; break;
-                    case 1: valor2 = registros->BX; break;
-                    case 2: valor2 = registros->CX; break;
-                    case 3: valor2 = registros->DX; break;
-                    case 4: valor2 = registros->EX; break;
-                    case 5: valor2 = registros->FX; break;
-                    case 6: valor2 = registros->GX; break;
-                    case 7: valor2 = registros->HX; break;
-                    default: 
-                        enviar_respuesta(cliente_socket, "ERROR: Registro no válido");
-                        continue;
-        }
+    //             switch (registro2) {
+    //                 case 0: valor2 = registros->AX; break;
+    //                 case 1: valor2 = registros->BX; break;
+    //                 case 2: valor2 = registros->CX; break;
+    //                 case 3: valor2 = registros->DX; break;
+    //                 case 4: valor2 = registros->EX; break;
+    //                 case 5: valor2 = registros->FX; break;
+    //                 case 6: valor2 = registros->GX; break;
+    //                 case 7: valor2 = registros->HX; break;
+    //                 default: 
+    //                     enviar_respuesta(cliente_socket, "ERROR: Registro no válido");
+    //                     continue;
+    //     }
 
-        // Realizar la suma
-        uint32_t resultado = valor1 + valor2;
+    //     // Realizar la suma
+    //     uint32_t resultado = valor1 + valor2;
 
-        // Guardar el resultado en registro1
-        switch (registro1) {
-            case 0: registros->AX = resultado; break;
-            case 1: registros->BX = resultado; break;
-            case 2: registros->CX = resultado; break;
-            case 3: registros->DX = resultado; break;
-            case 4: registros->EX = resultado; break;
-            case 5: registros->FX = resultado; break;
-            case 6: registros->GX = resultado; break;
-            case 7: registros->HX = resultado; break;
-            default: 
-                enviar_respuesta(cliente_socket, "ERROR: Registro no válido");
-                continue;
-        }
+    //     // Guardar el resultado en registro1
+    //     switch (registro1) {
+    //         case 0: registros->AX = resultado; break;
+    //         case 1: registros->BX = resultado; break;
+    //         case 2: registros->CX = resultado; break;
+    //         case 3: registros->DX = resultado; break;
+    //         case 4: registros->EX = resultado; break;
+    //         case 5: registros->FX = resultado; break;
+    //         case 6: registros->GX = resultado; break;
+    //         case 7: registros->HX = resultado; break;
+    //         default: 
+    //             enviar_respuesta(cliente_socket, "ERROR: Registro no válido");
+    //             continue;
+    //     }
 
-        enviar_respuesta(cliente_socket, "OK");
-        log_info(logger, "Se sumó el valor de registro %d y %d para PID %d", registro1, registro2, pid);
-        break;
-    }
+    //     enviar_respuesta(cliente_socket, "OK");
+    //     log_info(logger, "Se sumó el valor de registro %d y %d para PID %d", registro1, registro2, pid);
+    //     break;
+    // }
 
 
-        case PEDIDO_JNZ: {
-                uint32_t pid, pc_actual, valor_condicion;
-                recibir_jnz(&pid, &pc_actual, &valor_condicion, cliente_socket);
-                if (valor_condicion != 0) {
-                    // Cambiar el PC si la condición se cumple
-                    cambiar_pc(pid, pc_actual);
-                    enviar_respuesta(cliente_socket, "OK");
-                    log_info(logger, "JNZ: Se cambió el PC para PID %d", pid);
-                } else {
-                    enviar_respuesta(cliente_socket, "OK");
-                    log_info(logger, "JNZ: La condición no se cumplió para PID %d", pid);
-                }
-                break;
-            }
+    //     case PEDIDO_JNZ: {
+    //             uint32_t pid, pc_actual, valor_condicion;
+    //             recibir_jnz(&pid, &pc_actual, &valor_condicion, cliente_socket);
+    //             if (valor_condicion != 0) {
+    //                 // Cambiar el PC si la condición se cumple
+    //                 cambiar_pc(pid, pc_actual);
+    //                 enviar_respuesta(cliente_socket, "OK");
+    //                 log_info(logger, "JNZ: Se cambió el PC para PID %d", pid);
+    //             } else {
+    //                 enviar_respuesta(cliente_socket, "OK");
+    //                 log_info(logger, "JNZ: La condición no se cumplió para PID %d", pid);
+    //             }
+    //             break;
+    //         }
 
-        case PEDIDO_LOG: {
-                char mensaje[256];
-                recibir_log(mensaje, cliente_socket);
-                log_info(logger, "Log recibido: %s", mensaje);
-                enviar_respuesta(cliente_socket, "OK");
-                break;
-            }
+    //     case PEDIDO_LOG: {
+    //             char mensaje[256];
+    //             recibir_log(mensaje, cliente_socket);
+    //             log_info(logger, "Log recibido: %s", mensaje);
+    //             enviar_respuesta(cliente_socket, "OK");
+    //             break;
+    //         }
 
         case ERROROPCODE:
             log_error(logger, "Cliente desconectado de %s... con cod_op -1", server_name);
@@ -426,4 +424,40 @@ void almacenar_instrucciones(uint32_t pid, t_list* instrucciones) {
     char* key = string_itoa(pid);
     dictionary_put(instrucciones_por_pid, key, instrucciones);
     free(key);
+}
+
+void crear_proceso(uint32_t pid, uint32_t base, uint32_t limite) {
+    t_contexto_ejecucion *nuevo_contexto = malloc(sizeof(t_contexto_ejecucion));
+    nuevo_contexto->pid = pid;
+    nuevo_contexto->base = base;
+    nuevo_contexto->limite = limite;
+
+    dictionary_put(tabla_contextos, string_itoa(pid), nuevo_contexto);
+    log_info(logger, "Proceso %d creado con base %d y límite %d", pid, base, limite);
+}
+
+void asignar_espacio_memoria(t_proceso_memoria* proceso) {
+    proceso->inicio_memoria = malloc(proceso->limite); // Asignar memoria
+    if (proceso->inicio_memoria == NULL) {
+        log_error(logger, "No se pudo asignar memoria para el proceso PID %d", proceso->pid);
+        return;
+    }
+    log_info(logger, "Memoria asignada a PID %d con límite de %d bytes", proceso->pid, proceso->limite);
+    dictionary_put(tabla_contextos, string_itoa(proceso->pid), proceso); // Guardar en el diccionario
+}
+
+void liberar_espacio_memoria(t_proceso_memoria* proceso) {
+    if (dictionary_remove(tabla_contextos, string_itoa(proceso->pid)) != NULL) {
+        free(proceso->inicio_memoria); // Liberar la memoria asignada
+        log_info(logger, "Memoria liberada para PID %d", proceso->pid);
+    } else {
+        log_error(logger, "No se encontró el contexto para el PID %d al intentar liberar memoria", proceso->pid);
+    }
+}
+
+t_proceso_memoria* recibir_proceso_kernel(int cliente_socket) {
+    t_proceso_memoria* proceso = malloc(sizeof(t_proceso_memoria));
+    recv(cliente_socket, &(proceso->pid), sizeof(uint32_t), 0);
+    recv(cliente_socket, &(proceso->limite), sizeof(uint32_t), 0);
+    return proceso;
 }

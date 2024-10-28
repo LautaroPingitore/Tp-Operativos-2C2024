@@ -94,7 +94,8 @@ typedef enum{
     MUTEX_UNLOCK,
     THREAD_EXIT,
     PROCESO,
-    HILO
+    HILO,
+    CREAR_ARCHIVO
 } op_code;
 
 
@@ -103,6 +104,12 @@ typedef enum {
     INTERRUPCION_BLOQUEO,
     FINALIZACION
 } motivo_desalojo;
+
+typedef enum {
+	INCIAL,
+    SUCCES,
+    ERROR
+} finalizacion_proceso;
 
 typedef struct {
     uint32_t program_counter; // Contador de programa (PC)
@@ -177,24 +184,9 @@ void* serializar_paquete(t_paquete*, int);
 t_paquete* recibir_paquete_entero(int);
 int gestionarConexiones(int, t_log*);
 
-// NO SE SI ESTO IRIA ACA PERO LO PONGO PARA QUE NO TIRE ERRORES
-typedef struct {
-    uint32_t program_counter;  // Contador de programa (PC)
-    uint32_t  AX, BX, CX, DX ,EX, FX, GX, HX; // PUEDE REMPLAZARCE CON UN registros[8]
-} t_registros;
 
-typedef enum {
-	ESTADO_INICIAL,
-    INTERRUPCION_SYSCALL,
-    INTERRUPCION_BLOQUEO,
-    FINALIZACION
-} motivo_desalojo;
 
-typedef enum {
-	INCIAL,
-    SUCCES,
-    ERROR
-} finalizacion_proceso;
+
 
 // ===========================
 // typedef struct {
@@ -216,11 +208,7 @@ typedef struct {
 	t_estado ESTADO;
 }t_tcb;
 
-typedef struct {
-    t_registros *registros;
-    motivo_desalojo motivo_desalojo;
-    finalizacion_proceso motivo_finalizacion;
-} t_contexto_ejecucion;
+
 
 typedef struct {
 	uint32_t PID;
