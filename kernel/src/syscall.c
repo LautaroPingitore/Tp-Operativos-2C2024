@@ -1,7 +1,6 @@
+#include <include/kernel.h>
+#include <include/planificador.h>
 #include <include/syscall.h>
-//AGREGO ESTO PARA SOLUCIONAR PROBLEMA PERO PUEDE SACARSE SI HAY OTRA FORMA
-t_log* LOGGER_KERNEL;
-int socket_kernel_memoria;
 
 void syscall_process_create(char* path_proceso, int tamanio_proceso, int prioridad) {
     crear_proceso(path_proceso, tamanio_proceso, prioridad);

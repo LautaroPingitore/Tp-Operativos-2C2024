@@ -12,7 +12,7 @@ char* IP_CPU;
 char* PUERTO_CPU_DISPATCH;
 char* PUERTO_CPU_INTERRUPT;
 char* ALGORITMO_PLANIFICACION;
-char* QUANTUM;
+int QUANTUM;
 char* LOG_LEVEL;
 
 int socket_kernel_memoria;

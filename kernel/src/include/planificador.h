@@ -3,18 +3,21 @@
 
 #include <utils/hello.h>
 
-extern t_list* cola_new;
-extern t_list* cola_ready;
-extern t_list* cola_exit;
+// extern t_list* cola_new;
+// extern t_list* cola_ready;
+// extern t_list* cola_exit;
+// extern t_list* cola_nivel_1;
+// extern t_list* cola_nivel_2;
+// extern t_list* cola_nivel_3;
 
-extern pthread_mutex_t mutex_cola_new;
-extern pthread_mutex_t mutex_cola_ready;
-extern pthread_mutex_t mutex_cola_exit;
+// extern pthread_mutex_t mutex_cola_new;
+// extern pthread_mutex_t mutex_cola_ready;
+// extern pthread_mutex_t mutex_cola_exit;
 
 const int INT_MAX = 200;
 
 // PLANIFICADOR LARGO PLAZO
-void inicializar_colas_y_mutexs();
+void inicializar_kernel();
 t_pcb* crear_pcb(uint32_t, t_contexto_ejecucion*, t_estado, pthread_mutex_t*);
 t_tcb* crear_tcb(uint32_t, int, t_estado);
 void crear_proceso(char*, int, int);
@@ -44,6 +47,7 @@ void thread_exit(t_pcb*, uint32_t);
 void intentar_mover_a_execute();
 
 // PLANIFICADOR CORTO PLAZO
+t_tcb* seleccionar_hilo_por_algoritmo()
 t_tcb* obtener_hilo_fifo();
 t_tcb* obtener_hilo_x_prioridad();
 t_tcb* seleccionar_hilo_multinivel();

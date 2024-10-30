@@ -1,9 +1,6 @@
+#include <include/kernel.h>
 #include <include/planificador.h>
-
-//AGREGO ESTO PARA SOLUCIONAR PROBLEMA PERO PUEDE SACARSE SI HAY OTRA FORMA
-t_log* LOGGER_KERNEL;
-int socket_kernel_memoria;
-int socket_kernel_cpu_dispatch;
+#include <include/syscall.h>
 
 /*
 Tipos de planificacion:
@@ -44,35 +41,51 @@ IO(cantidad de milisegundos que el hilo va a permanecer haciendo la operación d
 t_list* cola_new;
 t_list* cola_ready;
 t_list* cola_exit;
-int CANTIDAD_HILOS = 3; // DE MOMENTO PUSIMOS QUE UN PROCESO TIENE 3 HILOS, CUIDADO CON ESTO
-int CANTIDAD_MUTEX = 3; // LO MISMO QUE LOS HILOS 
+t_list* cola_nivel_1;  // Mayor prioridad
+t_list* cola_nivel_2;  // Prioridad media
+t_list* cola_nivel_3;  // Menor prioridad
 
 // SEMAFOFOS QUE PROTEGEN EL ACCESO A CADA COLA
-pthread_mutex_t mutex_cola_new;
-pthread_mutex_t mutex_cola_ready;
-pthread_mutex_t mutex_cola_exit;
-
-uint32_t pid = 0;
-int contador_tid = 0;
+pthread_mutex_t mutex_cola_new = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutex_cola_ready = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutex_cola_exit = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutex_pid = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutex_tid = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutex_estado = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t cond_estado = PTHREAD_COND_INITIALIZER;
 
+// VARIABLES DE CONTROL
+uint32_t pid = 0;
+int contador_tid = 0;
 bool cpu_libre = true;
+char** tabla_paths;
 
-void inicializar_colas_y_mutexs() {
-    // SE CREA PARA ALMACENAR LOS PROCESOS
+void inicializar_kernel() {
     cola_new = list_create();
     cola_ready = list_create();
     cola_exit = list_create();
-
-    // SE INICIALIZAN LOS MUTEX QUE PROTEGERAN LAS COLAS
-    pthread_mutex_init(&mutex_cola_new, NULL);
-    pthread_mutex_init(&mutex_cola_ready, NULL);
-    pthread_mutex_init(&mutex_cola_exit, NULL);
-
+    cola_nivel_1 = list_create();
+    cola_nivel_2 = list_create();
+    cola_nivel_3 = list_create();
 }
+
+uint32_t asignar_pid() {
+    pthread_mutex_lock(&mutex_pid);
+    uint32_t pidNuevo = pid;
+    pid++;
+    pthread_mutex_unlock(&mutex_pid);
+
+    return pidNuevo;
+}
+
+uint32_t asignar_tid(t_pcb* pcb) {
+    pthread_mutex_lock(&mutex_tid); 
+    uint32_t nuevo_tid = contador_tid;
+    contador_tid++;
+    pthread_mutex_unlock(&mutex_tid);
+
+    return nuevo_tid;
+} 
 
 t_pcb* crear_pcb(uint32_t pid, t_contexto_ejecucion* contexto_ejecucion, t_estado estado, pthread_mutex_t* mutexs){
 
@@ -88,19 +101,20 @@ t_pcb* crear_pcb(uint32_t pid, t_contexto_ejecucion* contexto_ejecucion, t_estad
     pcb->ESTADO = estado;
     pcb->MUTEXS = mutexs;   
 
-    t_tcb* hilo_principal = crear_tcb(0, 0, NEW);
+    t_tcb* hilo_principal = crear_tcb(pid, 0, 0, NEW);
     list_add(pcb->TIDS, hilo_principal);
 
     return pcb;
 }
 
-t_tcb* crear_tcb(uint32_t tid, int prioridad, t_estado estado){
+t_tcb* crear_tcb(uint32_t pid_padre, uint32_t tid, int prioridad, t_estado estado){
     t_tcb* tcb = malloc(sizeof(t_tcb));
     if (tcb == NULL) {
         perror("Error al asignar memoria para el TCB");
         exit(EXIT_FAILURE);
     }
 
+    tcb->PID_PADRE = pid_padre;
     tcb->TID = tid;
     tcb->PRIORIDAD = prioridad;
     tcb->ESTADO = estado;
@@ -132,10 +146,7 @@ void crear_proceso(char* path_proceso, int tamanio_proceso, int prioridad){
     inicializar_proceso(pcb, path_proceso);
 }
 
-
 /*
-tabla_de_paths = malloc(numero_de_paths * sizeof(t_path*));
-
 // Crear cada t_path y asignarlo al array
 for (int i = 0; i < numero_de_paths; i++) {
     tabla_de_paths[i] = malloc(sizeof(t_path));
@@ -152,30 +163,6 @@ free(tabla_de_paths);
 
 */
 
-
-
-uint32_t asignar_pid() {
-    pthread_mutex_lock(&mutex_pid);
-    uint32_t pidNuevo = pid;
-    pid++;
-    pthread_mutex_unlock(&mutex_pid);
-
-    return pidNuevo;
-}
-
-uint32_t asignar_tid(t_pcb* pcb) {
-
-    // int nuevo_tid = list_size(pcb->TIDS);
-    // (uint32_t) nuevo_tid;
-
-    //  Asignamos TIDs unicos para cada hilo del proceso
-    pthread_mutex_lock(&mutex_tid);  // Protegemos el acceso a contador_tid con un mutex    
-    uint32_t nuevo_tid = contador_tid;
-    contador_tid++;
-    pthread_mutex_unlock(&mutex_tid);
-
-    return nuevo_tid;
-} 
 
 t_contexto_ejecucion* inicializar_contexto() {
     t_contexto_ejecucion* contexto = malloc(sizeof(t_contexto_ejecucion));
@@ -215,14 +202,18 @@ pthread_mutex_t* asignar_mutexs() {
 
 // ENVIA EL PROCECSO A MEMORIA E INTENTA INICIALIZARLO
 void inicializar_proceso(t_pcb* pcb, char* path_proceso) {
-    // ARREGLAR ESTA FUNCION
+    // OJO PORQUE ACA SOLO VERIFICA SI SE MANDO EL PAQUETE, NO SI HAY ESPACIO EN MEMORIA
     int resultado = enviar_proceso_a_memoria(pcb->PID, path_proceso);
 
     if (resultado != -1) {
-        log_info(logger, "Proceso %d inicializado y movido a READY", pcb->PID);
-        mover_a_ready(pcb);
+        //if(espacio_suficiente == 1) {}
+            log_info(logger, "Proceso %d inicializado y movido a READY", pcb->PID);
+            mover_a_ready(pcb);
+        // else {
+        //     log_warning(logger, "No hay espacio en memoria para el proceso %d , quedara en estado NEW", pcb->PID);
+        // }
     } else {
-        log_warning(logger, "No hay espacio en memoria para el proceso %d , quedara en estado NEW", pcb->PID);
+        log_warning(logger, "Error al enviar el proceso");
     }
 }
 
@@ -241,6 +232,8 @@ int enviar_proceso_a_memoria(int pid_nuevo, char* path_proceso){
 
     log_info(LOGGER_KERNEL, "El PID %d se envio a MEMORIA", pid_nuevo); //Poner el LOGGER en el gestor.h
     eliminar_paquete(paquete);
+
+    //int respuesta = esperar_respuesta()
 
     return resultado;
 }
@@ -312,6 +305,7 @@ void intentar_inicializar_proceso_de_new() {
 void process_exit(t_pcb* pcb) {
     mover_a_exit(pcb);
     liberar_recursos_proceso(pcb);
+    enviar_proceso_finalizado_a_memoria(pcb);
     intentar_inicializar_proceso_de_new();
 }
 
@@ -341,7 +335,7 @@ void thread_create(t_pcb *pcb, char* archivo_pseudocodigo, int prioridad) {
     uint32_t nuevo_tid = asignar_tid(pcb);
 
     // CREA EL NUEVO HILO
-    t_tcb* nuevo_tcb = crear_tcb(nuevo_tid, prioridad, NEW);
+    t_tcb* nuevo_tcb = crear_tcb(pcb, nuevo_tid, prioridad, NEW);
     list_add(pcb->TIDS, &nuevo_tid);
 
     // CARGA PSEUDOGODIO A EJECUTAR
@@ -553,6 +547,18 @@ int enviar_proceso_a_cpu(t_pcb* proceso) {
 
 // PLANIFICADOR A CORTO PLAZO ===============
 
+t_tcb* seleccionar_hilo_por_algoritmo() {
+    if (strcmp(ALGORITMO_PLANIFICACION, "FIFO") == 0) {
+        return obtener_hilo_fifo();
+    } else if (strcmp(ALGORITMO_PLANIFICACION, "PRIORIDADES") == 0) {
+        return obtener_hilo_x_prioridad();
+    } else if (strcmp(ALGORITMO_PLANIFICACION, "COLAS_MULTINIVEL") == 0) {
+        return seleccionar_hilo_multinivel();
+    }
+    return NULL;
+}
+
+
 // ESTA FUNCION RETORNA EL HILO QUE TOCA POR FIFO Y LO SACA DE READY
 t_tcb* obtener_hilo_fifo() {
     pthread_mutex_lock(&mutex_cola_ready);
@@ -594,10 +600,6 @@ t_tcb* obtener_hilo_x_prioridad() {
 
     return hilo_a_ejecutar;
 }
-
-t_list* cola_nivel_1;  // Mayor prioridad
-t_list* cola_nivel_2;  // Prioridad media
-t_list* cola_nivel_3;  // Menor prioridad
 
 t_tcb* seleccionar_hilo_multinivel() {
     pthread_mutex_lock(&mutex_cola_ready);
