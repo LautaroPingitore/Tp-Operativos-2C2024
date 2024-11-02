@@ -2,7 +2,6 @@
 #define SYSCALL_H
 
 #include <utils/hello.h>
-#include "planificador.h"
 
 // Definicion de codigos de operacion para las syscalls
 // #define SYS_THREAD_CREATE 1
@@ -11,19 +10,19 @@
 // #define SYS_THREAD_EXIT 4
 // #define SYS_IO 5
 
-typedef enum {
-    PROCESS_CREATE,
-    PROCESS_EXIT,
-    THREAD_CREATE,
-    THREAD_JOIN,
-    THREAD_CANCEL,
-    THREAD_EXIT,
-    MUTEX_CREATE,
-    MUTEX_LOCK,
-    MUTEX_UNLOCK,
-    DUMP_MEMORY,
-    IO
-} t_syscall;
+// typedef enum {
+//     PROCESS_CREATE,
+//     PROCESS_EXIT,
+//     THREAD_CREATE,
+//     THREAD_JOIN,
+//     THREAD_CANCEL,
+//     THREAD_EXIT,
+//     MUTEX_CREATE,
+//     MUTEX_LOCK,
+//     MUTEX_UNLOCK,
+//     DUMP_MEMORY,
+//     IO
+// } t_syscall;
 
 // Prototipos de funciones syscalls
 int sys_thread_create(char* path, int priority);
@@ -45,6 +44,6 @@ void syscall_mutex_unlock(pthread_mutex_t*);
 void syscall_dump_memory();
 void dump_memory();
 void syscall_io(t_pcb*, uint32_t, int);
-void manejar_syscall(t_syscall, t_pcb*, char*, int, int, uint32_t, uint32_t, pthread_mutex_t*, int);
+void manejar_syscall(op_code, t_pcb*, char*, int, int, uint32_t, uint32_t, pthread_mutex_t*, int);
 
 #endif

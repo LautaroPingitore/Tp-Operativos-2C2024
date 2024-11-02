@@ -1,6 +1,7 @@
 #include <include/kernel.h>
 #include <include/planificador.h>
 #include <include/syscall.h>
+#include <include/manejoPseudocofigo.h>
 
 /*
 Tipos de planificacion:
@@ -87,7 +88,7 @@ uint32_t asignar_tid(t_pcb* pcb) {
     return nuevo_tid;
 } 
 
-t_pcb* crear_pcb(uint32_t pid, t_contexto_ejecucion* contexto_ejecucion, t_estado estado, pthread_mutex_t* mutexs){
+t_pcb* crear_pcb(uint32_t pid, int tamanio, t_contexto_ejecucion* contexto_ejecucion, t_estado estado, pthread_mutex_t* mutexs){
 
     t_pcb* pcb = malloc(sizeof(t_pcb));
     if(pcb == NULL) {
@@ -97,6 +98,7 @@ t_pcb* crear_pcb(uint32_t pid, t_contexto_ejecucion* contexto_ejecucion, t_estad
 
     pcb->PID = pid;
     pcb->TIDS = list_create();
+    pcb->tamanio_proceso = tamanio;
     pcb->CONTEXTO = contexto_ejecucion;
     pcb->ESTADO = estado;
     pcb->MUTEXS = mutexs;   
@@ -126,7 +128,7 @@ t_tcb* crear_tcb(uint32_t pid_padre, uint32_t tid, int prioridad, t_estado estad
 void crear_proceso(char* path_proceso, int tamanio_proceso, int prioridad){
     uint32_t pid = asignar_pid();
 
-    t_pcb* pcb = crear_pcb(pid, inicializar_contexto(), NEW, asignar_mutexs());
+    t_pcb* pcb = crear_pcb(pid, tamanio_proceso, inicializar_contexto(), NEW, asignar_mutexs());
 
     thread_create(pcb, path_proceso, prioridad);
 

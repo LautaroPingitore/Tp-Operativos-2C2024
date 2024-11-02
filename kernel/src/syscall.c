@@ -1,6 +1,7 @@
 #include <include/kernel.h>
-#include <include/planificador.h>
 #include <include/syscall.h>
+#include <include/planificador.h>
+#include <include/manejoPseudocodigo.h>
 
 void syscall_process_create(char* path_proceso, int tamanio_proceso, int prioridad) {
     crear_proceso(path_proceso, tamanio_proceso, prioridad);
@@ -60,7 +61,7 @@ void syscall_io(t_pcb* pcb, uint32_t tid, int milisegundos) {
     io(pcb, tid, milisegundos);  // Invoca la funcion que gestiona la operacion IO
 }
 
-void manejar_syscall(t_syscall syscall, t_pcb* pcb, char* path_proceso, int tamanio, int prioridad, uint32_t tid_actual, uint32_t tid_esperado, pthread_mutex_t* mutex, int milisegundos) {
+void manejar_syscall(op_code syscall, t_pcb* pcb, char* path_proceso, int tamanio, int prioridad, uint32_t tid_actual, uint32_t tid_esperado, pthread_mutex_t* mutex, int milisegundos) {
     switch (syscall) {
         case PROCESS_CREATE:
             syscall_process_create(path_proceso, tamanio, prioridad);

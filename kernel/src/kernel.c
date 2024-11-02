@@ -1,6 +1,7 @@
 #include <include/kernel.h>
 #include <include/planificador.h>
 #include <include/syscall.h>
+#include <include/manejoPseudocodigo.h>
 
 
 int main(int argc, char* argv[]) {
