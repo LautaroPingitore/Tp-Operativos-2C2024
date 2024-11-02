@@ -11,7 +11,7 @@ int leer_archivo_pseudocodigo(char* nombre_archivo, archivo_pseudocodigo archivo
 
     char linea[100];
     while(fgets(linea, sizeof(linea), file) != NULL) {
-        instruccion *inst = &archivo->instrucciones[archivo->cantidad_instrucciones];
+        instruccion *inst = &archivo->instrucciones[archivo->cantidad_instrucciones]; //Que onda esta linea?
         // SSCANF, TE DICE CUANTOS VALORES PUDO METER
         int elementos = sscanf(linea, "%s %s %d", inst->comando, inst->argumento1, inst->argumento2);
 
@@ -31,7 +31,7 @@ int leer_archivo_pseudocodigo(char* nombre_archivo, archivo_pseudocodigo archivo
 
 void asignar_mutex_a_proceso(t_pcb* pcb, char* nombre_recurso) {
     int cantidad_recursos = pcb->CANTIDAD_RECURSOS;
-    strcpy(pcb->MUTEXS[cantidad_recursos], nombre_recurso)
+    strcpy(pcb->MUTEXS[cantidad_recursos], nombre_recurso); //Hay que cambiar esto pq el mutex ahora es un struct
     pcb->CANTIDAD_RECURSOS++;
 }
 
@@ -52,7 +52,7 @@ void obtener_recursos_del_proceso(archivo_pseudocodigo archivo, lista_recursos l
             }
 
             if (!existe) {  
-                asignar_mutex_a_proceso(pcb, inst.argumento1, mutex);
+                asignar_mutex_a_proceso(pcb, inst.argumento1);
             }
         }
     }
