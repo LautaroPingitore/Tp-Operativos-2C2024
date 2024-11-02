@@ -14,7 +14,7 @@ typedef struct {
 typedef struct {
     char comando[50];
     char argumento1[50];
-    char argumento2[50];
+    int argumento2;
 } instruccion;
 
 typedef struct {
@@ -27,7 +27,8 @@ typedef struct {
     int cantidad_recursos;
 } lista_recursos;
 
-int leer_archivo_pseudocodigo(const char*, archivo_pseudocodigo *);
-int obtener_recursos_del_proceso(const archivo_pseudocodigo *, lista_recursos *);
+int leer_archivo_pseudocodigo(char*, archivo_pseudocodigo);
+void asignar_mutex_a_proceso(t_pcb*, char*);
+void obtener_recursos_del_proceso(archivo_pseudocodigo, lista_recursos, t_pcb*);
 
 #endif /* MANEJOPSEUDOCODIGO_H_ */

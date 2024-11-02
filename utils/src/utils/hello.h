@@ -209,14 +209,19 @@ typedef struct {
     uint32_t PID_PADRE;
 }t_tcb;
 
-
+typedef struct {
+    char nombre_recurso[50];
+    pthread_mutex_t mutex;
+} t_recurso;
 
 typedef struct {
 	uint32_t PID;
 	t_list* TIDS;
+    int TAMANIO;
 	t_contexto_ejecucion* CONTEXTO;
 	t_estado ESTADO;
-	pthread_mutex_t* MUTEXS; // SE PUEDE SACAR ESTO YA QUE NO SABEMOS IS ES VERDADERAMENTE NECESARIO
+	t_recurso* MUTEXS;
+    int CANTIDAD_RECURSOS;
 } t_pcb;
 
 #endif

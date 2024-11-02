@@ -98,10 +98,11 @@ t_pcb* crear_pcb(uint32_t pid, int tamanio, t_contexto_ejecucion* contexto_ejecu
 
     pcb->PID = pid;
     pcb->TIDS = list_create();
-    pcb->tamanio_proceso = tamanio;
+    pcb->TAMANIO = tamanio;
     pcb->CONTEXTO = contexto_ejecucion;
     pcb->ESTADO = estado;
-    pcb->MUTEXS = mutexs;   
+    pcb->MUTEXS = obtener_recursos_del_proceso();
+    pcb->cantidad_recursos = 0;
 
     t_tcb* hilo_principal = crear_tcb(pid, 0, 0, NEW);
     list_add(pcb->TIDS, hilo_principal);
