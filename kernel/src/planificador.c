@@ -101,7 +101,7 @@ t_pcb* crear_pcb(uint32_t pid, int tamanio, t_contexto_ejecucion* contexto_ejecu
     pcb->TAMANIO = tamanio;
     pcb->CONTEXTO = contexto_ejecucion;
     pcb->ESTADO = estado;
-    pcb->MUTEXS = obtener_recursos_del_proceso();
+    pcb->MUTEXS = NULL;
     pcb->cantidad_recursos = 0;
 
     t_tcb* hilo_principal = crear_tcb(pid, 0, 0, NEW);
@@ -130,6 +130,7 @@ void crear_proceso(char* path_proceso, int tamanio_proceso, int prioridad){
     uint32_t pid = asignar_pid();
 
     t_pcb* pcb = crear_pcb(pid, tamanio_proceso, inicializar_contexto(), NEW, asignar_mutexs());
+    obtener_recursos_del_proceso(path_proceso, recursos_globales, pcb);
 
     thread_create(pcb, path_proceso, prioridad);
 

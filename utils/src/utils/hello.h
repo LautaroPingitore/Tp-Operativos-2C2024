@@ -137,20 +137,17 @@ typedef struct
 
 typedef enum {
     SET,
-    READ_MEM,
-    WRITE_MEM,
-    SUM,
-    SUB,
-    JNZ,
-    LOG,
-    SEGMENTATION_FAULT //QUE ESTO ESTE ACA DA ERROR EN EL SWITH DE execute PERO SACARLO HABILITA OTROS ERRORES DE que esta undeclared
-} nombre_instruccion;
+    SUM
+    //
+    //
+} tipo_instruccion
 
 typedef struct {
-    nombre_instruccion nombre;  // Tipo de instrucción (SET, SUM, etc.)
+    // ESTO PODEMOS REMPLAZARLO CON UN ENUM ESPEIFICO PARA NO TENER QUE USAR EL OP CODE
+    op_code nombre;  // Tipo de instrucción (SET, SUM, etc.)
     char *parametro1;
-    char *parametro2;
-    char *parametro3; // ELIMINE LOS OTROS PARAMETROS YA QUE LAS INSTRUCCIONES QUE TENEMOS SOLO USAN HASTA 2 PARAMETROS
+    int parametro2;
+    int parametro3; // ELIMINE LOS OTROS PARAMETROS YA QUE LAS INSTRUCCIONES QUE TENEMOS SOLO USAN HASTA 2 PARAMETROS
 } t_instruccion;
 
 typedef struct
@@ -210,9 +207,14 @@ typedef struct {
 }t_tcb;
 
 typedef struct {
-    char nombre_recurso[50];
+    char* nombre_recurso;
     pthread_mutex_t mutex;
 } t_recurso;
+
+typedef struct {
+    t_recurso* recursos;
+    int cantidad_recursos;
+} lista_recursos;
 
 typedef struct {
 	uint32_t PID;

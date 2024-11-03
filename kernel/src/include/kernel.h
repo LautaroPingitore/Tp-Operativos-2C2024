@@ -18,6 +18,7 @@ char* LOG_LEVEL;
 int socket_kernel_memoria;
 int socket_kernel_cpu_dispatch;
 int socket_kernel_cpu_interrupt;
+lista_recursos recursos_globales;
 
 void inicializar_config(char*);
 void iniciar_comunicaciones(int []);

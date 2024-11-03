@@ -7,28 +7,19 @@
 #include <include/syscall.h>
 
 typedef struct {
-    instruccion intrucciones[100];
+    char* path_archivo;
+    t_instruccion* intrucciones;
     int cantidad_instrucciones;
 } archivo_pseudocodigo;
 
 typedef struct {
-    char comando[50];
-    char argumento1[50];
-    int argumento2;
-} instruccion;
-
-typedef struct {
-    char nombre[50];
+    char* nombre;
     bool es_mutex;
 } recurso;
 
-typedef struct {
-    recurso recursos[10];
-    int cantidad_recursos;
-} lista_recursos;
-
-int leer_archivo_pseudocodigo(char*, archivo_pseudocodigo);
+archivo_pseudocodigo* leer_archivo_pseudocodigo(char*);
 void asignar_mutex_a_proceso(t_pcb*, char*);
 void obtener_recursos_del_proceso(archivo_pseudocodigo, lista_recursos, t_pcb*);
+void procesar_archivo(archivo_pseudocodigo);
 
 #endif /* MANEJOPSEUDOCODIGO_H_ */
