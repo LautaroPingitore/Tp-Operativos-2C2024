@@ -1,7 +1,8 @@
 #ifndef KERNEL_H_
 #define KERNEL_H_
 
-#include <utils/hello.h>
+#include "utils/hello.h"
+
 
 // extern t_list* cola_new;
 // extern t_list* cola_ready;
@@ -47,7 +48,7 @@ void thread_exit(t_pcb*, uint32_t);
 void intentar_mover_a_execute();
 
 // PLANIFICADOR CORTO PLAZO
-t_tcb* seleccionar_hilo_por_algoritmo()
+t_tcb* seleccionar_hilo_por_algoritmo();
 t_tcb* obtener_hilo_fifo();
 t_tcb* obtener_hilo_x_prioridad();
 t_tcb* seleccionar_hilo_multinivel();

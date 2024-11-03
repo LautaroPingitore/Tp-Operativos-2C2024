@@ -1,7 +1,11 @@
 #ifndef KERNEL_H_
 #define KERNEL_H_
 
-#include <utils/hello.h>
+#include "utils/hello.h"
+
+#include "manejoPseudocodigo.h"
+#include "syscall.h"
+#include "planificador.h"
 
 t_log* LOGGER_KERNEL;
 t_config* CONFIG_KERNEL;

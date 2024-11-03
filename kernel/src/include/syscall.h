@@ -1,7 +1,8 @@
 #ifndef SYSCALL_H
 #define SYSCALL_H
 
-#include <utils/hello.h>
+#include "utils/hello.h"
+#include "planificador.h"
 
 // Definicion de codigos de operacion para las syscalls
 // #define SYS_THREAD_CREATE 1

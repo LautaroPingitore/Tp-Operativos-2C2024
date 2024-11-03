@@ -1,7 +1,4 @@
-#include <include/kernel.h>
-#include <include/planificador.h>
-#include <include/syscall.h>
-#include <include/manejoPseudocofigo.h>
+#include "include/planificador.h"
 
 /*
 Tipos de planificacion:

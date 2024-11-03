@@ -1,7 +1,6 @@
-#include <include/kernel.h>
-#include <include/syscall.h>
-#include <include/planificador.h>
-#include <include/manejoPseudocodigo.h>
+#include "include/syscall.h"
+
+t_log* LOGGER_KERNEL;
 
 void syscall_process_create(char* path_proceso, int tamanio_proceso, int prioridad) {
     crear_proceso(path_proceso, tamanio_proceso, prioridad);

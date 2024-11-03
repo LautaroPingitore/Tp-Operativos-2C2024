@@ -1,10 +1,9 @@
 #ifndef MANEJOPSEUDOCODIGO_H_
 #define MANEJOPSEUDOCODIGO_H_
 
-#include <utils/hello.h>
-#include <include/kernel.h>
-#include <include/planificador.h>
-#include <include/syscall.h>
+#include "utils/hello.h"
+#include "kernel.h"
+
 
 typedef struct {
     char* path_archivo;

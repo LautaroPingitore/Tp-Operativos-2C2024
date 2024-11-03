@@ -140,7 +140,7 @@ typedef enum {
     SUM
     //
     //
-} tipo_instruccion
+} tipo_instruccion;
 
 typedef struct {
     // ESTO PODEMOS REMPLAZARLO CON UN ENUM ESPEIFICO PARA NO TENER QUE USAR EL OP CODE

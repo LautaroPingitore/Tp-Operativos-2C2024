@@ -1,7 +1,4 @@
-#include <include/kernel.h>
-#include <include/planificador.h>
-#include <include/syscall.h>
-#include <include/manejoPseudocodigo.h>
+#include "include/kernel.h"
 
 
 int main(int argc, char* argv[]) {
@@ -14,7 +11,7 @@ int main(int argc, char* argv[]) {
     // OBTENCION DEL ARCHIVO DEL PSEUDOCODIGO Y EL TAMANIO DEL PROCESO
     char* archivo_pseudocodigo = argv[1];
     int tamanio_proceso = atoi(argv[2]);
-    lista_recursos recursos_globales;
+    char** recursos_globales;
     int sockets[] = {socket_kernel_memoria, socket_kernel_cpu_dispatch, socket_kernel_cpu_interrupt, -1};
 
     // INICIAR CONFIGURACION DE KERNEL
