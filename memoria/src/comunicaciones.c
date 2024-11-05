@@ -368,8 +368,18 @@ t_instruccion* obtener_instruccion(uint32_t pid, uint32_t pc) {
 
 
 void enviar_instruccion(int cliente_socket, t_instruccion* instruccion){
-    
+    // Enviar el nombre de la instrucción
+    send(cliente_socket, &instruccion->nombre, sizeof(nombre_instruccion), 0);
+    // Enviar cada parámetro
+    uint32_t tam_param1 = strlen(instruccion->parametro1) + 1;
+    uint32_t tam_param2 = strlen(instruccion->parametro2) + 1;
+
+    send(cliente_socket, &tam_param1, sizeof(uint32_t), 0);
+    send(cliente_socket, instruccion->parametro1, tam_param1, 0);
+    send(cliente_socket, &tam_param2, sizeof(uint32_t), 0);
+    send(cliente_socket, instruccion->parametro2, tam_param2, 0);
 }
+
 
 void recibir_set(uint32_t* pid, uint32_t* registro, uint32_t* valor, int cliente_socket){
     recv(cliente_socket, pid, sizeof(uint32_t), 0);
