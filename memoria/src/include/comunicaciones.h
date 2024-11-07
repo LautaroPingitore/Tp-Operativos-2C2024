@@ -35,8 +35,8 @@ void recibir_log(char [256], int);
 typedef struct {
     uint32_t pid;
     uint32_t tid;
-    uint32_t base;
-    uitn32_t limite;
+    uint32_t base; //OJO CON LOS TIPOS DE DATOS
+    uint32_t limite;
 } t_proceso_memoria;
 
 #endif //COMUNICACIONES_H_

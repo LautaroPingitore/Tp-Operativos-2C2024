@@ -1,6 +1,8 @@
 #ifndef GESTION_MEMORIA_H
 #define GESTION_MEMORIA_H
 
+#include "memoria.h"
+
 #include <stdint.h>
 #include <stdbool.h>
 #include <commons/collections/list.h>
@@ -12,7 +14,7 @@
 extern t_list* lista_particiones;
 extern t_log* logger; // Logger compartido
 
-#define TAM_MEMORIA 1024 // Definir TAM_MEMORIA en un archivo de configuración o aquí
+
 
 typedef struct {
     uint32_t inicio;

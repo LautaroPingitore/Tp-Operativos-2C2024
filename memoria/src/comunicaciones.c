@@ -430,12 +430,6 @@ void recibir_log(char mensaje[256], int cliente_socket){
     recv(cliente_socket, mensaje, 256, 0);
 }
 
-void almacenar_instrucciones(uint32_t pid, t_list* instrucciones) {
-    char* key = string_itoa(pid);
-    dictionary_put(instrucciones_por_pid, key, instrucciones);
-    free(key);
-}
-
 void crear_proceso(uint32_t pid, uint32_t base, uint32_t limite) {
     t_contexto_ejecucion *nuevo_contexto = malloc(sizeof(t_contexto_ejecucion));
     nuevo_contexto->pid = pid;
@@ -444,25 +438,6 @@ void crear_proceso(uint32_t pid, uint32_t base, uint32_t limite) {
 
     dictionary_put(tabla_contextos, string_itoa(pid), nuevo_contexto);
     log_info(logger, "Proceso %d creado con base %d y límite %d", pid, base, limite);
-}
-
-void asignar_espacio_memoria(t_proceso_memoria* proceso) {
-    proceso->inicio_memoria = malloc(proceso->limite); // Asignar memoria
-    if (proceso->inicio_memoria == NULL) {
-        log_error(logger, "No se pudo asignar memoria para el proceso PID %d", proceso->pid);
-        return;
-    }
-    log_info(logger, "Memoria asignada a PID %d con límite de %d bytes", proceso->pid, proceso->limite);
-    dictionary_put(tabla_contextos, string_itoa(proceso->pid), proceso); // Guardar en el diccionario
-}
-
-void liberar_espacio_memoria(t_proceso_memoria* proceso) {
-    if (dictionary_remove(tabla_contextos, string_itoa(proceso->pid)) != NULL) {
-        free(proceso->inicio_memoria); // Liberar la memoria asignada
-        log_info(logger, "Memoria liberada para PID %d", proceso->pid);
-    } else {
-        log_error(logger, "No se encontró el contexto para el PID %d al intentar liberar memoria", proceso->pid);
-    }
 }
 
 t_proceso_memoria* recibir_proceso_kernel(int cliente_socket) {
