@@ -1,13 +1,8 @@
 #include "include/comunicaciones.h"
 
-t_dictionary* tabla_contextos; // Almacena los contextos de ejecución por PID
-t_dictionary* instrucciones_por_pid;   // Almacena las instrucciones de cada proceso
-
-void inicializar_datos() {
-    tabla_contextos = dictionary_create(); // Inicializar el diccionario de contextos
-    instrucciones_por_pid = dictionary_create(); // Inicializar el diccionario de instrucciones
-}
-
+t_contexto_proceso* lista_contextos = NULL;
+int cantidad_procesos = 0;
+t_proceso_instrucciones* lista_instrucciones = NULL;
 
 static void procesar_conexion_memoria(void *void_args)
 {
@@ -65,37 +60,6 @@ static void procesar_conexion_memoria(void *void_args)
         
             log_info(logger, "No implementado. Respondiendo OK.");
             break;
-
-        // case IO:
-        
-        //     log_info(logger, "No implementado. Respondiendo OK.");
-        //     break;
-
-        // case THREAD_JOIN:
-        
-        //     log_info(logger, "No implementado. Respondiendo OK.");
-        //     break;
-
-        // case THREAD_CANCEL:
-        
-        //     log_info(logger, "No implementado. Respondiendo OK.");
-        //     break;
-
-        // case MUTEX_CREATE:
-        
-        //     log_info(logger, "No implementado. Respondiendo OK.");
-        //     break;
-
-        // case MUTEX_LOCK:
-        
-        //     log_info(logger, "No implementado. Respondiendo OK.");
-        //     break;
-
-        // case MUTEX_UNLOCK:
-        
-        //     log_info(logger, "No implementado. Respondiendo OK.");
-        //     break;
-
         case HANDSHAKE_cpu:
             recibir_mensaje(cliente_socket, logger);
             log_info(logger, "Este deberia ser el canal mediante el cual nos comunicamos con la CPU");
@@ -156,153 +120,6 @@ static void procesar_conexion_memoria(void *void_args)
                 log_info(logger, "Se escribió valor %d en dirección %d para PID %d", valor, direccion_logica, pid);
                 break;
         }
-
-    //     case PEDIDO_SUB: {
-    //             uint32_t pid, registro1, registro2;
-    //             recibir_sub(&pid, &registro1, &registro2, cliente_socket);
-                
-    //             t_contexto_ejecucion *contexto = obtener_contexto(pid);  
-    //             t_registros *registros = contexto->registros;
-
-    //             uint32_t valor1 = 0, valor2 = 0;
-
-    //             // Obtener valores de los registros usando un switch basado en índices
-    //             switch (registro1) {
-    //                 case 0: valor1 = registros->AX; break;
-    //                 case 1: valor1 = registros->BX; break;
-    //                 case 2: valor1 = registros->CX; break;
-    //                 case 3: valor1 = registros->DX; break;
-    //                 case 4: valor1 = registros->EX; break;
-    //                 case 5: valor1 = registros->FX; break;
-    //                 case 6: valor1 = registros->GX; break;
-    //                 case 7: valor1 = registros->HX; break;
-    //                 default: 
-    //                     enviar_respuesta(cliente_socket, "ERROR: Registro no válido");
-    //                     continue;
-    //             }
-
-    //             switch (registro2) {
-    //                 case 0: valor2 = registros->AX; break;
-    //                 case 1: valor2 = registros->BX; break;
-    //                 case 2: valor2 = registros->CX; break;
-    //                 case 3: valor2 = registros->DX; break;
-    //                 case 4: valor2 = registros->EX; break;
-    //                 case 5: valor2 = registros->FX; break;
-    //                 case 6: valor2 = registros->GX; break;
-    //                 case 7: valor2 = registros->HX; break;
-    //                 default: 
-    //                     enviar_respuesta(cliente_socket, "ERROR: Registro no válido");
-    //                     continue;
-    //             }
-
-    //             // Realizar la resta
-    //             uint32_t resultado = valor1 - valor2;
-
-    //             // Guardar el resultado en registro1
-    //             switch (registro1) {
-    //                 case 0: registros->AX = resultado; break;
-    //                 case 1: registros->BX = resultado; break;
-    //                 case 2: registros->CX = resultado; break;
-    //                 case 3: registros->DX = resultado; break;
-    //                 case 4: registros->EX = resultado; break;
-    //                 case 5: registros->FX = resultado; break;
-    //                 case 6: registros->GX = resultado; break;
-    //                 case 7: registros->HX = resultado; break;
-    //                 default: 
-    //                     enviar_respuesta(cliente_socket, "ERROR: Registro no válido");
-    //                     continue;
-    //             }
-
-    //             enviar_respuesta(cliente_socket, "OK");
-    //             log_info(logger, "Se restó el valor de registro %d de %d para PID %d", registro2, registro1, pid);
-    //             break;
-    // }
-
-    // case PEDIDO_SUM: {
-    //             uint32_t pid, registro1, registro2;
-    //             recibir_sum(&pid, &registro1, &registro2, cliente_socket);
-                
-    //             t_contexto_ejecucion *contexto = obtener_contexto(pid);  
-    //             t_registros *registros = contexto->registros;
-
-    //             uint32_t valor1 = 0, valor2 = 0;
-
-    //             // Obtener valores de los registros usando un switch basado en índices
-    //             switch (registro1) {
-    //                 case 0: valor1 = registros->AX; break;
-    //                 case 1: valor1 = registros->BX; break;
-    //                 case 2: valor1 = registros->CX; break;
-    //                 case 3: valor1 = registros->DX; break;
-    //                 case 4: valor1 = registros->EX; break;
-    //                 case 5: valor1 = registros->FX; break;
-    //                 case 6: valor1 = registros->GX; break;
-    //                 case 7: valor1 = registros->HX; break;
-    //                 default: 
-    //                     enviar_respuesta(cliente_socket, "ERROR: Registro no válido");
-    //                     continue;
-    //             }
-
-    //             switch (registro2) {
-    //                 case 0: valor2 = registros->AX; break;
-    //                 case 1: valor2 = registros->BX; break;
-    //                 case 2: valor2 = registros->CX; break;
-    //                 case 3: valor2 = registros->DX; break;
-    //                 case 4: valor2 = registros->EX; break;
-    //                 case 5: valor2 = registros->FX; break;
-    //                 case 6: valor2 = registros->GX; break;
-    //                 case 7: valor2 = registros->HX; break;
-    //                 default: 
-    //                     enviar_respuesta(cliente_socket, "ERROR: Registro no válido");
-    //                     continue;
-    //     }
-
-    //     // Realizar la suma
-    //     uint32_t resultado = valor1 + valor2;
-
-    //     // Guardar el resultado en registro1
-    //     switch (registro1) {
-    //         case 0: registros->AX = resultado; break;
-    //         case 1: registros->BX = resultado; break;
-    //         case 2: registros->CX = resultado; break;
-    //         case 3: registros->DX = resultado; break;
-    //         case 4: registros->EX = resultado; break;
-    //         case 5: registros->FX = resultado; break;
-    //         case 6: registros->GX = resultado; break;
-    //         case 7: registros->HX = resultado; break;
-    //         default: 
-    //             enviar_respuesta(cliente_socket, "ERROR: Registro no válido");
-    //             continue;
-    //     }
-
-    //     enviar_respuesta(cliente_socket, "OK");
-    //     log_info(logger, "Se sumó el valor de registro %d y %d para PID %d", registro1, registro2, pid);
-    //     break;
-    // }
-
-
-    //     case PEDIDO_JNZ: {
-    //             uint32_t pid, pc_actual, valor_condicion;
-    //             recibir_jnz(&pid, &pc_actual, &valor_condicion, cliente_socket);
-    //             if (valor_condicion != 0) {
-    //                 // Cambiar el PC si la condición se cumple
-    //                 cambiar_pc(pid, pc_actual);
-    //                 enviar_respuesta(cliente_socket, "OK");
-    //                 log_info(logger, "JNZ: Se cambió el PC para PID %d", pid);
-    //             } else {
-    //                 enviar_respuesta(cliente_socket, "OK");
-    //                 log_info(logger, "JNZ: La condición no se cumplió para PID %d", pid);
-    //             }
-    //             break;
-    //         }
-
-    //     case PEDIDO_LOG: {
-    //             char mensaje[256];
-    //             recibir_log(mensaje, cliente_socket);
-    //             log_info(logger, "Log recibido: %s", mensaje);
-    //             enviar_respuesta(cliente_socket, "OK");
-    //             break;
-    //         }
-
         case ERROROPCODE:
             log_error(logger, "Cliente desconectado de %s... con cod_op -1", server_name);
             break;
@@ -335,6 +152,57 @@ int server_escuchar(t_log *logger, char *server_name, int server_socket)
     return 0;
 }
 
+
+// CONEXION KERNEL DE CREACION DE PROCESO
+t_pcb* recibir_proceso_kernel(t_pcb* pcb) {
+    // Funciones para obtener el proceso
+    int resultado = asignar_espacio_memoria(pcb_memoria, ALGORITMO_BUSQUEDA);
+    if(resultado) {
+        t_proceso_memoria pcb_memoria;
+        pcb_memoria->pid = pcb->PID;
+        pcb_memoria->limite = pcb->LIMITE;
+        pcb_memoria->contexto = pcb->CONTEXTO
+        respuesta_asignacion_kernel();//okey);
+        return pcb_memoria;
+    } else {
+        respuesta_asignacion_kernel();//mal);
+    }
+
+}
+
+// archivo gestion_memoria funcion "asignar_espacio"
+
+void respuesta_asignacion_kernel(t_pcb* pcb, int socket_cliente) {
+
+}
+// COMUNICACION DE CREACION DE PROCESO TERMINADA
+
+// CONEXION KERNEL DE FINALIZACION DE PROCESO
+t_pcb* recibir_proceso_a_terminar(uint32_t pid) {
+    // BUSCA EL STRUCT QUE TIENE EL MISMO PID
+    // LIBERA EL PROCESO DE MEMORIA
+}
+// COMUNICACION DE FINALIZACION DE PROCESO
+
+// 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 // Enviar respuesta a la CPU
 void enviar_respuesta(int socket_cpu, char *mensaje) {
     // Enviar el mensaje a través del socket de la CPU
@@ -348,23 +216,16 @@ void recibir_pedido_instruccion(uint32_t* pid, uint32_t* pc, int cliente_socket)
 }
 
 t_instruccion* obtener_instruccion(uint32_t pid, uint32_t pc) {
-    char* key = string_itoa(pid); // Convertir PID a string
-    t_list* instrucciones_proceso = dictionary_get(instrucciones_por_pid, key); // Obtener la lista de instrucciones
-    
-    free(key); // Liberar la memoria asignada para la clave
-
-    if (instrucciones_proceso == NULL) {
-        return NULL; // Si no se encuentra la lista de instrucciones, retornar NULL
+    for(int i=0; i<cantidad_procesos; i++) {
+        if(lista_instrucciones[i].pid == pid) {
+           if (pc < lista_instrucciones[i].cantidad_instrucciones) {
+                return lista_instrucciones[i].instrucciones[pc];
+            }
+            break; // Si el PC está fuera de límites
+        }
     }
-
-    // Verificar que el PC esté dentro de los límites de la lista de instrucciones
-    if (pc < list_size(instrucciones_proceso)) {
-        return list_get(instrucciones_proceso, pc); // Devolver la instrucción en la posición PC
-    }
-
-    return NULL; // Si el PC está fuera de límites, retornar NULL
+    return NULL;
 }
-
 
 
 void enviar_instruccion(int cliente_socket, t_instruccion* instruccion){
@@ -388,10 +249,12 @@ void recibir_set(uint32_t* pid, uint32_t* registro, uint32_t* valor, int cliente
 }
 
 t_contexto_ejecucion* obtener_contexto(uint32_t pid) {
-    char* key = string_itoa(pid); // Convertir PID a string
-    t_contexto_ejecucion* contexto = dictionary_get(tabla_contextos, key);
-    free(key); // Liberar la memoria asignada para la clave
-    return contexto; // Retornar el contexto encontrado (o NULL si no existe)
+    for(int i=0; i<cantidad_procesos; i++) {
+        if(lista_instrucciones[i].pid == pid) {
+            return &lista_instrucciones[i].contexo;
+        }
+    }
+    return NULL;
 }
 
 void recibir_read_mem(uint32_t* pid, uint32_t* direccion_logica, int cliente_socket){
@@ -430,14 +293,18 @@ void recibir_log(char mensaje[256], int cliente_socket){
     recv(cliente_socket, mensaje, 256, 0);
 }
 
-void crear_proceso(uint32_t pid, uint32_t base, uint32_t limite) {
-    t_contexto_ejecucion *nuevo_contexto = malloc(sizeof(t_contexto_ejecucion));
-    nuevo_contexto->pid = pid;
-    nuevo_contexto->base = base;
-    nuevo_contexto->limite = limite;
+void agregar_contexto(uint32_t pid, t_contexto_ejecucion* nuevo_contexto) {
+    cantidad_procesos++;
+    lista_contextos = realloc(lista_contextos, cantidad_procesos * sizeof(t_proceso_contexto));
+    lista_contextos[cantidad_procesos - 1].pid = pid;
+    lista_contextos[cantidad_procesos - 1].contexto = *nuevo_contexto;
+}
 
-    dictionary_put(tabla_contextos, string_itoa(pid), nuevo_contexto);
-    log_info(logger, "Proceso %d creado con base %d y límite %d", pid, base, limite);
+void agregar_instrucciones(uint32_t pid, t_instruccion** instrucciones, size_t cantidad) {
+    lista_instrucciones = realloc(lista_instrucciones, cantidad_procesos * sizeof(t_proceso_instrucciones));
+    lista_instrucciones[cantidad_procesos - 1].pid = pid;
+    lista_instrucciones[cantidad_procesos - 1].instrucciones = instrucciones;
+    lista_instrucciones[cantidad_procesos - 1].cantidad_instrucciones = cantidad;
 }
 
 t_proceso_memoria* recibir_proceso_kernel(int cliente_socket) {

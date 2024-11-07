@@ -46,7 +46,7 @@ t_particion* buscar_hueco_first_fit(uint32_t tamano_requerido) {
             return particion;
         }
     }
-    return NULL;
+    return NULL; // No hay espacio
 }
 
 // Best Fit: Encuentra el hueco que más se ajuste al tamaño solicitado
@@ -64,6 +64,7 @@ t_particion* buscar_hueco_best_fit(uint32_t tamano_requerido) {
             }
         }
     }
+    // QUE RETORNE NULL SI NO SE ENCONTRO ESPACIO
     return mejor_particion;
 }
 
@@ -82,28 +83,30 @@ t_particion* buscar_hueco_worst_fit(uint32_t tamano_requerido) {
             }
         }
     }
+    // QUE RETORNE NULL SI NO SE ENCONTRO ESPACIO CHECKEAR
     return peor_particion;
 }
 
 //CREAR FUNCION QUE CONVIERTA PROCESO DE KERNEL A PROCESO DE MEMORIA
 
 // Asigna espacio de memoria a un proceso, usando un algoritmo de búsqueda específico
-void* asignar_espacio_memoria(t_proceso_memoria* proceso, const char* algoritmo) {
+int asignar_espacio_memoria(t_proceso_memoria* proceso, const char* algoritmo) {
     t_particion* particion = buscar_hueco(proceso->limite, algoritmo);
 
     if (particion == NULL) {
         log_error(LOGGER_MEMORIA, "No se pudo asignar memoria para el proceso PID %d", proceso->pid);
-        return NULL;
+        return -1;
     }
 
     particion->libre = false;  // Marca la partición como ocupada
-    proceso->inicio_memoria = (void*) particion->inicio;
+    proceso->base = particion->inicio;
 
     log_info(LOGGER_MEMORIA, "Memoria asignada a PID %d en la dirección %p con límite de %d bytes",
-             proceso->pid, proceso->inicio_memoria, particion->tamano);
-
-    return proceso->inicio_memoria;
+             proceso->pid, proceso->base, particion->tamano);
+    
+    return 1;
 }
+
 
 /*void asignar_espacio_memoria(t_proceso_memoria* proceso) {
     proceso->inicio_memoria = malloc(proceso->limite); // Asignar memoria
@@ -160,4 +163,3 @@ void almacenar_instrucciones(uint32_t pid, t_list* instrucciones) {
     dictionary_put(instrucciones_por_pid, key, instrucciones);
     free(key);
 }
-

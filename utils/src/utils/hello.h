@@ -208,8 +208,6 @@ typedef struct {
 	t_estado ESTADO;
 }t_tcb;
 
-
-
 typedef struct {
 	uint32_t PID;
 	t_list* TIDS;
