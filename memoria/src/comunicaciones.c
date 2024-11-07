@@ -152,8 +152,10 @@ int server_escuchar(t_log *logger, char *server_name, int server_socket)
     return 0;
 }
 
+//---------------------------------------|
+// CONEXION KERNEL DE CREACION DE PROCESO|
+//---------------------------------------|
 
-// CONEXION KERNEL DE CREACION DE PROCESO
 t_pcb* recibir_proceso_kernel(t_pcb* pcb) {
     // Funciones para obtener el proceso
     int resultado = asignar_espacio_memoria(pcb_memoria, ALGORITMO_BUSQUEDA);
@@ -187,6 +189,68 @@ t_pcb* recibir_proceso_a_terminar(uint32_t pid) {
 // 
 
 
+//-----------------------------------------------------------
+// CREACION DE HILO
+//
+void recibir_creacion_hilo(int cliente_socket) {
+    uint32_t pid, tid;
+    recv(cliente_socket, &pid, sizeof(uint32_t), 0);
+    recv(cliente_socket, &tid, sizeof(uint32_t), 0);
+
+    t_contexto_ejecucion* nuevo_contexto = malloc(sizeof(t_contexto_ejecucion));
+    nuevo_contexto->registros = malloc(sizeof(t_registros));
+    memset(nuevo_contexto->registros, 0, sizeof(t_registros));  // Inicializa registros a 0
+    nuevo_contexto->registros->program_counter = 0;
+
+    agregar_contexto(pid, nuevo_contexto);
+
+    log_info(LOGGER_MEMORIA, "Hilo creado - PID: %d, TID: %d", pid, tid);
+    enviar_respuesta(cliente_socket, "OK");
+}
+
+
+
+
+
+//-----------------------------------------------------------
+//FINALIZACION DE HILO
+//
+void recibir_finalizacion_hilo(int cliente_socket) {
+    uint32_t pid, tid;
+    recv(cliente_socket, &pid, sizeof(uint32_t), 0);
+    recv(cliente_socket, &tid, sizeof(uint32_t), 0);
+
+    // Buscar y eliminar el contexto del hilo
+    t_contexto_ejecucion* contexto_a_eliminar = obtener_contexto(pid);
+    if (contexto_a_eliminar != NULL) {
+        free(contexto_a_eliminar->registros);
+        free(contexto_a_eliminar);
+        log_info(LOGGER_MEMORIA, "Hilo finalizado - PID: %d, TID: %d", pid, tid);
+        enviar_respuesta(cliente_socket, "OK");
+    } else {
+        log_error(LOGGER_MEMORIA, "Error al finalizar el hilo - PID: %d, TID: %d", pid, tid);
+        enviar_respuesta(cliente_socket, "ERROR");
+    }
+}
+
+
+
+//-----------------------------------------------------------
+//MEMORY DUMP
+//
+void realizar_memory_dump(int cliente_socket) {
+    uint32_t pid, tid;
+    recv(cliente_socket, &pid, sizeof(uint32_t), 0);
+    recv(cliente_socket, &tid, sizeof(uint32_t), 0);
+
+    char* nombre_archivo = malloc(50);
+    sprintf(nombre_archivo, "%d-%d-%ld.dmp", pid, tid, time(NULL));
+    solicitar_archivo_filesystem(pid, tid);  // Implementar para crear y escribir dump en FileSystem
+    
+    log_info(LOGGER_MEMORIA, "Memory Dump realizado - Archivo: %s", nombre_archivo);
+    enviar_respuesta(cliente_socket, "OK");
+    free(nombre_archivo);
+}
 
 
 
