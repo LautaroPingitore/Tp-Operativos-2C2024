@@ -155,43 +155,90 @@ int server_escuchar(t_log *logger, char *server_name, int server_socket)
 //---------------------------------------|
 // CONEXION KERNEL DE CREACION DE PROCESO|
 //---------------------------------------|
+t_list* lista_procesos_memoria;
 
-t_pcb* recibir_proceso_kernel(t_pcb* pcb) {
-    // Funciones para obtener el proceso
+// PUEDE ESTAR METIDO EN EL INICILIZAR LISTA DE PARTICIONES
+void inicializar_listas() {
+    lista_procesos_memoria = list_create();
+}
+
+// RECIBE EL PROCESO DE KERNEL, LO AGREGA A LA LISTA DE PROCESOS DE MEMORIA Y LE ASIGNA ESPACIO
+t_proceso_memoria* crear_proceso_en_memoria(int socket_cliente) {
+    t_pcb* pcb = recibir_proceso_kernel(socket_cliente);
     int resultado = asignar_espacio_memoria(pcb_memoria, ALGORITMO_BUSQUEDA);
     if(resultado) {
         t_proceso_memoria pcb_memoria;
         pcb_memoria->pid = pcb->PID;
         pcb_memoria->limite = pcb->LIMITE;
         pcb_memoria->contexto = pcb->CONTEXTO
-        respuesta_asignacion_kernel();//okey);
+        agregar_a_lista_procesos(proceso_memoria);
+        respuesta_asignacion_kernel(socket_cliente, resultado);//okey);
+        log_info(LOGGER_MEMORIA, "## Proceso Creado - PID: %d - Tamaño: %d", proceso_memoria->pid, proceso_memoria->limite);
         return pcb_memoria;
     } else {
-        respuesta_asignacion_kernel();//mal);
+        respuesta_asignacion_kernel(socket_cliente, resultado);//mal);
+        return NULL;
     }
 
 }
 
-// archivo gestion_memoria funcion "asignar_espacio"
-
-void respuesta_asignacion_kernel(t_pcb* pcb, int socket_cliente) {
-
+// RECIBE EL PROCESO DE KERNEL (T_PCB)
+t_pcb* recibir_proceso_kernel(int cliente_socket) {
+    t_pcb* proceso = malloc(sizeof(t_pcb));
+    recv(cliente_socket, &(proceso->PID), sizeof(uint32_t), 0);
+    recv(cliente_socket, &(proceso->TAMANIO), sizeof(uint32_t), 0);
+    recv(cliente_socket, &(proceso->CONTEXTO), sizeof(t_contexto_ejecucion), 0);
+    proceso->TIDS = NULL;
+    proceso->ESTADO = NEW;
+    proceso->MUTEXS = NULL;
+    proceso->CANTIDAD_RECURSOS = 0;
+    return proceso;
 }
-// COMUNICACION DE CREACION DE PROCESO TERMINADA
 
-// CONEXION KERNEL DE FINALIZACION DE PROCESO
-t_pcb* recibir_proceso_a_terminar(uint32_t pid) {
-    // BUSCA EL STRUCT QUE TIENE EL MISMO PID
-    // LIBERA EL PROCESO DE MEMORIA
+// LISTA DE PROCESOS QUE ESTAN EN MEMORIA
+void agregar_a_lista_procesos(t_proceso_memoria* proceso) {
+    proceso = malloc(sizeof(t_proceso_memoria));
+    list_add(lista_procesos_memoria, proceso);
 }
-// COMUNICACION DE FINALIZACION DE PROCESO
 
-// 
+// PODEMOS USAR EL ENVIAR_RESPUESTA(CLIENTE_SOCKET, "OK") O ENVIAR_RESPUESTA(CLIENTE_SOCKET, "ERROR")
+void respuesta_asignacion_kernel(int socket_cliente, int resultado) {
+    // Enviar resultado al cliente (1 si la asignación fue exitosa, -1 si falló)
+    if (send(socket_cliente, &resultado, sizeof(int), 0) <= 0) {
+        log_error(LOGGER_MEMORIA, "Error al enviar la respuesta de asignación de memoria.");
+    }
+}
 
 
-//-----------------------------------------------------------
-// CREACION DE HILO
-//
+//-------------------------------------------|
+// CONEXION KERNEL DE FINALIZACION DE PROCESO|
+//-------------------------------------------|
+
+void eliminar_proceso_recibido(int socket_cliente) {
+    t_pcb* proceso = recibir_proceso_kernel(socket_cliente);
+    t_proceso_memoria* proceso_memoria = eliminar_proceso_de_lista(proceso->PID);
+    if(proceso_memoria == NULL) {
+        log_error(LOGGER_MEMORIA, "## Proceso PID: %d .No encontrado en memoria", proceso->PID);
+    }
+    liberar_espacio_memoria(proceso_memoria);
+    log_info(LOGGER_MEMORIA, "## Proceso Destruido - PID: %d - Tamaño: %d", proceso_memoria->pid, proceso_memoria->limite);
+}
+
+t_proceso_memoria* eliminar_proceso_de_lista(uint32_t pid) {
+    for (int i = 0; i < list_size(lista_procesos_memoria); i++) {
+        t_proceso_memoria* proceso_actual = list_get(lista_procesos_memoria, i);
+        if (pid == proceso_actual->pid) {
+            t_proceso_memoria* proceso_eliminado = list_remove(lista_procesos_memoria, i);
+            return proceso_eliminado;
+        }
+    }
+    return NULL;
+}
+
+//-----------------|
+// CREACION DE HILO|
+//-----------------|
+
 void recibir_creacion_hilo(int cliente_socket) {
     uint32_t pid, tid;
     recv(cliente_socket, &pid, sizeof(uint32_t), 0);
@@ -210,11 +257,10 @@ void recibir_creacion_hilo(int cliente_socket) {
 
 
 
+//--------------------|
+//FINALIZACION DE HILO|
+//--------------------|
 
-
-//-----------------------------------------------------------
-//FINALIZACION DE HILO
-//
 void recibir_finalizacion_hilo(int cliente_socket) {
     uint32_t pid, tid;
     recv(cliente_socket, &pid, sizeof(uint32_t), 0);
@@ -235,9 +281,9 @@ void recibir_finalizacion_hilo(int cliente_socket) {
 
 
 
-//-----------------------------------------------------------
-//MEMORY DUMP
-//
+//-----------|
+//MEMORY DUMP|
+//-----------|
 void realizar_memory_dump(int cliente_socket) {
     uint32_t pid, tid;
     recv(cliente_socket, &pid, sizeof(uint32_t), 0);
@@ -369,11 +415,4 @@ void agregar_instrucciones(uint32_t pid, t_instruccion** instrucciones, size_t c
     lista_instrucciones[cantidad_procesos - 1].pid = pid;
     lista_instrucciones[cantidad_procesos - 1].instrucciones = instrucciones;
     lista_instrucciones[cantidad_procesos - 1].cantidad_instrucciones = cantidad;
-}
-
-t_proceso_memoria* recibir_proceso_kernel(int cliente_socket) {
-    t_proceso_memoria* proceso = malloc(sizeof(t_proceso_memoria));
-    recv(cliente_socket, &(proceso->pid), sizeof(uint32_t), 0);
-    recv(cliente_socket, &(proceso->limite), sizeof(uint32_t), 0);
-    return proceso;
 }
