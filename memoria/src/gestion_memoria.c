@@ -1,7 +1,8 @@
-#include "gestion_memoria.h"
+#include "include/gestion_memoria.h"
 
 // Implementación de estructuras y variables necesarias
 t_list* lista_particiones;
+t_list* lista_instrucciones;
 
 // Inicializa la lista de particiones, en base al esquema elegido (fijo o dinámico)
 void inicializar_lista_particiones(char* esquema, t_list* particiones_fijas) {
@@ -121,29 +122,25 @@ int asignar_espacio_memoria(t_proceso_memoria* proceso, const char* algoritmo) {
 
 
 // Libera la memoria asignada a un proceso y consolida las particiones libres
+// OJO QUE NO ESTAMOS SEGUROS SI UN PROCESO PUEDE OCUPAR MAS DE UNA PARTICION
 void liberar_espacio_memoria(t_proceso_memoria* proceso) {
-    for (int i = 0; i < list_size(lista_particiones); i++) {
+    for(int i = 0; i < list_size(lista_particiones); i++) {
         t_particion* particion = list_get(lista_particiones, i);
-        if ((void*)particion->inicio == proceso->inicio_memoria) {
+        if ((void*)particion->inicio == proceso->inicio_memoria){
             particion->libre = true;
-            log_info(LOGGER_MEMORIA, "Memoria liberada para PID %d en la dirección %p", proceso->pid, proceso->inicio_memoria);
-            consolidar_particiones_libres();
-            return;
+            if(ESQUEMA == "FIJAS") {
+                return;
+                log_info(LOGGER_MEMORIA, "Memoria liberada para PID %d en la dirección %p", proceso->pid, proceso->inicio_memoria);
+            } else if(ESQUEMA == "DINAMICA") {
+                consolidar_particiones_libres()
+                log_info(LOGGER_MEMORIA, "Memoria liberada para PID %d en la dirección %p", proceso->pid, proceso->inicio_memoria);
+                return;
+            }
         }
     }
     log_error(LOGGER_MEMORIA, "No se encontró la partición para PID %d al intentar liberar memoria", proceso->pid);
 }
-
-/*
-void liberar_espacio_memoria(t_proceso_memoria* proceso) {
-    if (dictionary_remove(tabla_contextos, string_itoa(proceso->pid)) != NULL) {
-        free(proceso->inicio_memoria); // Liberar la memoria asignada
-        log_info(logger, "Memoria liberada para PID %d", proceso->pid);
-    } else {
-        log_error(logger, "No se encontró el contexto para el PID %d al intentar liberar memoria", proceso->pid);
-    }
-}
-*/
+ 
 // Consolida particiones adyacentes libres en particiones dinámicas
 void consolidar_particiones_libres() {
     for (int i = 0; i < list_size(lista_particiones) - 1; i++) {
@@ -161,7 +158,5 @@ void consolidar_particiones_libres() {
 
 // Almacena instrucciones en el diccionario de instrucciones de cada proceso
 void almacenar_instrucciones(uint32_t pid, t_list* instrucciones) {
-    char* key = string_itoa(pid);
-    dictionary_put(instrucciones_por_pid, key, instrucciones);
-    free(key);
+    
 }

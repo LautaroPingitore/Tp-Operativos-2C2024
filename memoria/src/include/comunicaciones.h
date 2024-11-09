@@ -1,7 +1,8 @@
 #ifndef COMUNICACIONES_H_
 #define COMUNICACIONES_H_
 
-#include <include/memoria.h>
+#include "memoria.h"
+#include "gestion_memoria.h"
 
 void *memoriaUsuario;
 
@@ -24,8 +25,8 @@ void enviar_instruccion(int, t_instruccion*);
 void recibir_set(uint32_t*, uint32_t*, uint32_t*, int);
 t_contexto_ejecucion*  obtener_contexto(uint32_t);
 
-void recibir_read_mem(uint32_t* , uint32_t*, int);
-void recibir_write_mem(uint32_t*, uint32_t*, uint32_t*, int);
+void recibir_read_mem(int);
+void recibir_write_mem(int);
 void recibir_sub(uint32_t*, uint32_t*, uint32_t*, int);
 void recibir_sum(uint32_t*, uint32_t*, uint32_t*, int);
 void recibir_jnz(uint32_t*, uint32_t* , uint32_t* , int);
@@ -42,7 +43,7 @@ typedef struct {
 typedef struct {
     uint32_t pid_padre;
     uint32_t tid;
-} ;
+} t_hilo_memoria;
 
 // typedef struct {
 //     uint32_t pid;
@@ -58,8 +59,25 @@ typedef struct {
 
 typedef struct {
     uint32_t pid;
-    t_instruccion** instrucciones;
+    t_list* instrucciones;
     int cantidad_instrucciones;
 } t_proceso_instrucciones;
+
+t_list* lista_procesos; // TIPO t_proceso_memoria
+t_list* lista_contextos; // TIPO t_contexto_proceso
+t_list* lista_instrucciones; // TIPO t_proceso_instrucciones
+
+t_proceso_memoria* recibir_proceso_kernel(int);
+void eliminar_proceso_de_lista(uint32_t);
+void inicializar_datos();
+void recibir_creacion_hilo(int);
+void recibir_finalizacion_hilo(int);
+int solicitar_archivo_filesystem(uint32_t, uint32_t);
+void recibir_solicitud_instruccion(int);
+
+// FALTA HACER
+void recibir_solicitud_contexto();
+void recibir_actualizacion_contexto();
+
 
 #endif //COMUNICACIONES_H_

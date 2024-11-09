@@ -2,14 +2,7 @@
 #define GESTION_MEMORIA_H
 
 #include "memoria.h"
-
-#include <stdint.h>
-#include <stdbool.h>
-#include <commons/collections/list.h>
-#include <commons/log.h>
-#include <string.h>
-#include "include/comunicaciones.h" // Asegúrate de tener el path correcto para las commons y logger
-#include <limits.h>
+#include "comunicaciones.h"
 
 extern t_list* lista_particiones;
 extern t_log* logger; // Logger compartido
