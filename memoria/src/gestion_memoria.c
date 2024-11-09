@@ -1,8 +1,7 @@
-#include "include/gestion_memoria.h"
+#include "include/gestor.h"
 
 // Implementación de estructuras y variables necesarias
 t_list* lista_particiones;
-t_list* lista_instrucciones;
 
 // Inicializa la lista de particiones, en base al esquema elegido (fijo o dinámico)
 void inicializar_lista_particiones(char* esquema, t_list* particiones_fijas) {

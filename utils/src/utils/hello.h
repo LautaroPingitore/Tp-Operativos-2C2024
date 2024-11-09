@@ -147,10 +147,10 @@ typedef enum {
 } nombre_instruccion;
 
 typedef struct {
-    nombre_instruccion nombre;  // Tipo de instrucción (SET, SUM, etc.)
+    char* nombre;  // Tipo de instrucción (SET, SUM, etc.)
     char *parametro1;
     char *parametro2;
-    char *parametro3; // ELIMINE LOS OTROS PARAMETROS YA QUE LAS INSTRUCCIONES QUE TENEMOS SOLO USAN HASTA 2 PARAMETROS
+    int parametro3; // ELIMINE LOS OTROS PARAMETROS YA QUE LAS INSTRUCCIONES QUE TENEMOS SOLO USAN HASTA 2 PARAMETROS
 } t_instruccion;
 
 typedef struct

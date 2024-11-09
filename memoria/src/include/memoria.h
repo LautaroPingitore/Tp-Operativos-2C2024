@@ -1,8 +1,6 @@
 #ifndef MEMORIA_H_
 #define MEMORIA_H_
 
-#include <utils/hello.h>
-
 char* PUERTO_ESCUCHA;
 char* IP_FILESYSTEM;
 char* PUERTO_FILESYSTEM;
