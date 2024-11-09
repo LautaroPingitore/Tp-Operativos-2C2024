@@ -93,19 +93,20 @@ t_particion* buscar_hueco_worst_fit(uint32_t tamano_requerido) {
 int asignar_espacio_memoria(t_proceso_memoria* proceso, const char* algoritmo) {
     t_particion* particion = buscar_hueco(proceso->limite, algoritmo);
 
-    if (particion == NULL) {
+    if (particion == NULL || particion->tamano < proceso->limite) {
         log_error(LOGGER_MEMORIA, "No se pudo asignar memoria para el proceso PID %d", proceso->pid);
         return -1;
     }
 
-    particion->libre = false;  // Marca la partición como ocupada
+    particion->libre = false;  
     proceso->base = particion->inicio;
 
-    log_info(LOGGER_MEMORIA, "Memoria asignada a PID %d en la dirección %p con límite de %d bytes",
+    log_info(LOGGER_MEMORIA, "Memoria asignada a PID %d en la dirección %d con límite de %d bytes",
              proceso->pid, proceso->base, particion->tamano);
-    
+
     return 1;
 }
+
 
 
 /*void asignar_espacio_memoria(t_proceso_memoria* proceso) {
@@ -156,6 +157,7 @@ void consolidar_particiones_libres() {
         }
     }
 }
+
 
 // Almacena instrucciones en el diccionario de instrucciones de cada proceso
 void almacenar_instrucciones(uint32_t pid, t_list* instrucciones) {
