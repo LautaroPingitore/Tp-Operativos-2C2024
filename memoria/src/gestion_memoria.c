@@ -122,24 +122,46 @@ int asignar_espacio_memoria(t_proceso_memoria* proceso, const char* algoritmo) {
 
 // Libera la memoria asignada a un proceso y consolida las particiones libres
 // OJO QUE NO ESTAMOS SEGUROS SI UN PROCESO PUEDE OCUPAR MAS DE UNA PARTICION
+// void liberar_espacio_memoria(t_proceso_memoria* proceso) {
+//     for(int i = 0; i < list_size(lista_particiones); i++) {
+//         t_particion* particion = list_get(lista_particiones, i);
+//         if ((void*)particion->inicio == proceso->base){
+//             particion->libre = true;
+//             if(strcmp(ESQUEMA, "FIJAS") == 0) {
+//                 log_info(LOGGER_MEMORIA, "Memoria liberada para PID %d en la dirección %d", proceso->pid, proceso->base);
+//                 return;
+//             } else if(strcmp(ESQUEMA, "DINAMICA") == 0) {
+//                 consolidar_particiones_libres();
+//                 log_info(LOGGER_MEMORIA, "Memoria liberada para PID %d en la dirección %d", proceso->pid, proceso->base);
+//                 return;
+//             }
+//         }
+//     }
+//     log_error(LOGGER_MEMORIA, "No se encontró la partición para PID %d al intentar liberar memoria", proceso->pid);
+// }
+
+
 void liberar_espacio_memoria(t_proceso_memoria* proceso) {
-    for(int i = 0; i < list_size(lista_particiones); i++) {
+    for (int i = 0; i < list_size(lista_particiones); i++) {
         t_particion* particion = list_get(lista_particiones, i);
-        if ((void*)particion->inicio == proceso->inicio_memoria){
+        if ((uintptr_t)particion->inicio == (uintptr_t)proceso->base) {
             particion->libre = true;
-            if(ESQUEMA == "FIJAS") {
+            if (strcmp(ESQUEMA, "FIJAS") == 0) {
+                log_info(LOGGER_MEMORIA, "Memoria liberada para PID %u en la dirección %u", proceso->pid, proceso->base);
                 return;
-                log_info(LOGGER_MEMORIA, "Memoria liberada para PID %d en la dirección %p", proceso->pid, proceso->inicio_memoria);
-            } else if(ESQUEMA == "DINAMICA") {
-                consolidar_particiones_libres()
-                log_info(LOGGER_MEMORIA, "Memoria liberada para PID %d en la dirección %p", proceso->pid, proceso->inicio_memoria);
+            } else if (strcmp(ESQUEMA, "DINAMICA") == 0) {
+                consolidar_particiones_libres();
+                log_info(LOGGER_MEMORIA, "Memoria liberada para PID %u en la dirección %u", proceso->pid, proceso->base);
                 return;
             }
         }
     }
-    log_error(LOGGER_MEMORIA, "No se encontró la partición para PID %d al intentar liberar memoria", proceso->pid);
+    log_error(LOGGER_MEMORIA, "No se encontró la partición para PID %u al intentar liberar memoria", proceso->pid);
 }
- 
+
+
+
+
 // Consolida particiones adyacentes libres en particiones dinámicas
 void consolidar_particiones_libres() {
     for (int i = 0; i < list_size(lista_particiones) - 1; i++) {

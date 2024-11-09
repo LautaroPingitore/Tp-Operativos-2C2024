@@ -19,7 +19,7 @@ void enviar_respuesta(int, char*);
 void procesar_conexion_memoria(void *);
 
 void recibir_pedido_instruccion(uint32_t*, uint32_t*, int);
-t_instruccion* obtener_instruccion(uint32_t, uint32_t, uint32_t);
+t_instruccion* obtener_instruccion(uint32_t, uint32_t);
 void enviar_instruccion(int, uint32_t , uint32_t , uint32_t );
 void recibir_set(uint32_t*, uint32_t*, uint32_t*, int);
 t_contexto_ejecucion*  obtener_contexto(uint32_t);
@@ -47,7 +47,7 @@ typedef struct {
 
 typedef struct {
     uint32_t pid;
-    t_contexto_ejecucion contexo;
+    t_contexto_ejecucion* contexto;
 } t_contexto_proceso;
 
 typedef struct {
@@ -67,16 +67,18 @@ void recibir_creacion_hilo(int);
 void recibir_finalizacion_hilo(int);
 t_contexto_ejecucion* obtener_contexto(uint32_t);
 void eliminar_instrucciones_hilo(uint32_t);
+void liberar_hilo(uint32_t);
 int solicitar_archivo_filesystem(uint32_t, uint32_t);
 void recibir_solicitud_instruccion(int);
 char* obtener_contenido_proceso(uint32_t);
-int  mandar_solicitud(char[256], char*, int);
 
 
 // FALTA HACER
+int  mandar_solicitud(char*, char*, int);
 void recibir_solicitud_contexto();
 void recibir_actualizacion_contexto();
 void agregar_instrucciones_a_lista(uint32_t, char*);
 uint32_t leer_memoria(uint32_t direccion_fisica);
+void escribir_memoria(uint32_t, uint32_t);
 
 #endif //COMUNICACIONES_H_

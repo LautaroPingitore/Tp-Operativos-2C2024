@@ -138,7 +138,7 @@ int server_escuchar(t_log *logger, char *server_name, int server_socket)
 t_proceso_memoria* recibir_proceso_kernel(int socket_cliente) {
     t_pcb* pcb;
     recv(socket_cliente, &pcb, sizeof(t_pcb), 0); // Checkear
-    t_proceso_memoria* pcb_memoria;
+    t_proceso_memoria* pcb_memoria = malloc(sizeof(t_proceso_memoria));
     pcb_memoria->pid = pcb->PID;
     pcb_memoria->limite = pcb->TAMANIO;
     pcb_memoria->contexto = pcb->CONTEXTO;
@@ -192,9 +192,9 @@ void agregar_instrucciones_a_lista(uint32_t tid, char* archivo) {
     }
 
     char line[256];
-    t_list* lst_instrucciones;
+    t_list* lst_instrucciones = list_create();
     while (fgets(line, sizeof(line), file) != NULL) {
-        t_instruccion* inst;
+        t_instruccion* inst = malloc(sizeof(t_instruccion));
         int elementos = sscanf(line, "%s %s %s %d", inst->nombre, inst->parametro1, inst->parametro2, &(inst->parametro3));
         if (elementos == 3) {
             inst->parametro3 = -1;
@@ -208,13 +208,14 @@ void agregar_instrucciones_a_lista(uint32_t tid, char* archivo) {
         }
         
         list_add(lst_instrucciones, inst);
+        free(inst);
     }
 
-    t_hilo_instrucciones* instrucciones_hilo;
+    t_hilo_instrucciones* instrucciones_hilo = malloc(sizeof(t_hilo_instrucciones));
     instrucciones_hilo->tid = tid;
     instrucciones_hilo->instrucciones = lst_instrucciones;
     list_add(lista_instrucciones, instrucciones_hilo);
-    free(lst_instrucciones);
+    list_destroy(lst_instrucciones);  
     fclose(file);
 }
 
@@ -233,6 +234,7 @@ void recibir_finalizacion_hilo(int cliente_socket) {
         free(contexto_a_eliminar);
         eliminar_instrucciones_hilo(tid);
         log_info(LOGGER_MEMORIA, "Hilo finalizado - PID: %d, TID: %d", pid, tid);
+        liberar_hilo(tid);
         enviar_respuesta(cliente_socket, "OK");
     } else {
         log_error(LOGGER_MEMORIA, "Error al finalizar el hilo - PID: %d, TID: %d", pid, tid);
@@ -255,8 +257,17 @@ void eliminar_instrucciones_hilo(uint32_t tid) {
         t_hilo_instrucciones* instruccion_actual = list_get(lista_instrucciones, i);
         if(instruccion_actual->tid == tid) {
             list_remove(lista_instrucciones, i);
-            free(instruccion_actual->tid);
             free(instruccion_actual->instrucciones);
+            return;
+        }
+    }
+}
+
+void liberar_hilo(uint32_t tid) {
+    for(int i=0; i < list_size(lista_hilos); i++) {
+        t_hilo_memoria* hilo_actual = list_get(lista_hilos, i);
+        if(hilo_actual->tid == tid) {
+            free(hilo_actual);
             return;
         }
     }
@@ -317,8 +328,7 @@ char* obtener_contenido_proceso(uint32_t pid) {
     //     strcat(contenido, list_get(instrucciones, i));
     //     strcat(contenido, "\n"); // Separar instrucciones con salto de línea
     // }
-    char* hola;
-    return hola;
+    return "hola mundo";
 }
 
 
@@ -349,11 +359,11 @@ void recibir_pedido_instruccion(uint32_t* pid, uint32_t* pc, int cliente_socket)
 
 
 void enviar_instruccion(int cliente_socket, uint32_t pid, uint32_t tid, uint32_t pc) {
-    t_instruccion* instruccion = obtener_instruccion(pid, tid, pc);
+    t_instruccion* instruccion = obtener_instruccion(tid, pc);
     
     if (instruccion) {
         send(cliente_socket, instruccion, sizeof(t_instruccion), 0);
-        log_info(LOGGER_MEMORIA, "## Obtener instrucción - (PID:TID) - (%d:%d) - Instrucción: %d", pid, tid, instruccion->nombre);
+        log_info(LOGGER_MEMORIA, "## Obtener instrucción - (PID:TID) - (%d:%d) - Instrucción: %s", pid, tid, instruccion->nombre);
     } else {
         log_error(LOGGER_MEMORIA, "Error: Instrucción no encontrada para PID %d, TID %d en PC %d", pid, tid, pc);
     }
@@ -383,7 +393,7 @@ void recibir_read_mem(int cliente_socket) {
     uint32_t valor = leer_memoria(direccion_fisica);
 
     send(cliente_socket, &valor, sizeof(uint32_t), 0);
-    log_info(LOGGER_MEMORIA, "## Lectura - Dirección Física: %d - Tamaño: %d bytes", direccion_fisica, sizeof(uint32_t));
+    log_info(LOGGER_MEMORIA, "## Lectura - Dirección Física: %d - Tamaño: %lu bytes", direccion_fisica, sizeof(uint32_t));
 }
 
 void recibir_write_mem(int cliente_socket) {
@@ -422,30 +432,37 @@ void recibir_log(char mensaje[256], int cliente_socket){
     recv(cliente_socket, mensaje, 256, 0);
 }
 
-//DESARROLLAARRRRRRRRRRRRRRRRRRRRR
-void recibir_solicitud_contexto(){} 
-void recibir_actualizacion_contexto(){}
-int  mandar_solicitud(char[256] nombre_archivo, char* contenido_proceso, int tamanio) {
-    return 1;
-}
-void agregar_instrucciones(uint32_t pid, t_instruccion** instrucciones, size_t cantidad) {
-    
-}
-
-
 // Lista de instrucciones es de tipo t_proceso_instruccion
 // NO SE USA POR AHORA
 t_instruccion* obtener_instruccion(uint32_t tid, uint32_t pc) {
     for(int i = 0; i < list_size(lista_instrucciones); i++) {
         t_hilo_instrucciones* instruccion_actual = list_get(lista_instrucciones, i);
         if(instruccion_actual->tid == tid && list_size(instruccion_actual->instrucciones) >= pc) {
-            instruccion_deseada = list_get(instruccion_actual->instrucciones, pc + 1); // CHECKEAR EL + 1
+            t_instruccion* instruccion_deseada = list_get(instruccion_actual->instrucciones, pc + 1); // CHECKEAR EL + 1
             return instruccion_deseada;
         }
     }
     return NULL;
 }
 
+
+//DESARROLLAARRRRRRRRRRRRRRRRRRRRR
+void recibir_solicitud_contexto() {
+
+} 
+void recibir_actualizacion_contexto() {
+
+}
+int  mandar_solicitud(char* nombre_archivo, char* contenido_proceso, int tamanio) {
+    return 1;
+}
+void agregar_instrucciones(uint32_t pid, t_instruccion** instrucciones, size_t cantidad) {
+    
+}
 uint32_t leer_memoria(uint32_t direccion_fisica) {
     return direccion_fisica;
+}
+
+void escribir_memoria(uint32_t direccion_fisica,uint32_t valor){
+
 }
