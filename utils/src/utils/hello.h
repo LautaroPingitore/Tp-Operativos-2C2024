@@ -147,10 +147,10 @@ typedef enum {
 } nombre_instruccion;
 
 typedef struct {
-    nombre_instruccion nombre;  // Tipo de instrucción (SET, SUM, etc.)
+    char* nombre;  // Tipo de instrucción (SET, SUM, etc.)
     char *parametro1;
     char *parametro2;
-    char *parametro3; // ELIMINE LOS OTROS PARAMETROS YA QUE LAS INSTRUCCIONES QUE TENEMOS SOLO USAN HASTA 2 PARAMETROS
+    int parametro3; // ELIMINE LOS OTROS PARAMETROS YA QUE LAS INSTRUCCIONES QUE TENEMOS SOLO USAN HASTA 2 PARAMETROS
 } t_instruccion;
 
 typedef struct
@@ -208,14 +208,24 @@ typedef struct {
 	t_estado ESTADO;
 }t_tcb;
 
+typedef struct {
+    char* nombre_recurso;
+    pthread_mutex_t mutex;
+} t_recurso;
 
+typedef struct {
+    t_recurso* recursos;
+    int cantidad_recursos;
+} lista_recursos;
 
 typedef struct {
 	uint32_t PID;
 	t_list* TIDS;
+    int TAMANIO;
 	t_contexto_ejecucion* CONTEXTO;
 	t_estado ESTADO;
-	pthread_mutex_t* MUTEXS; // SE PUEDE SACAR ESTO YA QUE NO SABEMOS IS ES VERDADERAMENTE NECESARIO
+	t_recurso* MUTEXS;
+    int CANTIDAD_RECURSOS;
 } t_pcb;
 
 #endif
