@@ -19,6 +19,5 @@ t_particion* buscar_hueco_worst_fit(uint32_t tamano_requerido);
 int asignar_espacio_memoria(t_proceso_memoria* proceso, const char* algoritmo);
 void liberar_espacio_memoria(t_proceso_memoria* proceso);
 void consolidar_particiones_libres();
-void almacenar_instrucciones(uint32_t pid, t_list* instrucciones);
 
 #endif

@@ -9,7 +9,7 @@ char* PATH_INSTRUCCIONES;
 int RETARDO_RESPUESTA;
 char* ESQUEMA;
 char* ALGORITMO_BUSQUEDA;
-char** PARTICIONES;
+char** PARTICIONES_FIJAS;
 char* LOG_LEVEL; 
 
 int socket_memoria;
@@ -26,6 +26,7 @@ int gestionarConexionConKernel();
 void iterator(char*);
 int gestionarConexionConCPUDispatch();
 int gestionarConexionConCPUInterrupt();
+t_list* obtener_particiones_fijas(char**);
 
 char* IP_MEMORIA;
 

@@ -5,6 +5,13 @@ t_list* lista_hilos; // TIPO t_hilo_memoria
 t_list* lista_contextos; // TIPO t_contexto_proceso
 t_list* lista_instrucciones; // TIPO t_hilo_instrucciones
 
+void inicializar_datos() {
+    lista_procesos = list_create();
+    lista_hilos = list_create();
+    lista_contextos = list_create();
+    lista_instrucciones = list_create();
+}
+
 void procesar_conexion_memoria(void *void_args){
     inicializar_datos();
     t_procesar_conexion_args *args = (t_procesar_conexion_args *)void_args;
@@ -81,7 +88,11 @@ void procesar_conexion_memoria(void *void_args){
                 break;
 
             case CONTEXTO:
-                recibir_solicitud_contexto(cliente_socket);
+            
+                //uint32_t pid, tid;
+                recv(cliente_socket, &pid, sizeof(uint32_t), 0);
+                recv(cliente_socket, &tid, sizeof(uint32_t), 0);
+                recibir_solicitud_contexto(pid, tid);
                 break;
 
             case ACTUALIZAR_CONTEXTO:
@@ -281,7 +292,7 @@ int solicitar_archivo_filesystem(uint32_t pid, uint32_t tid) {
     time_t t = time(NULL);
     struct tm* tiempo = localtime(&t);
     sprintf(nombre_archivo, "%d-%d-%d", pid, tid, tiempo->tm_sec);
-    char* contenido_proceso = obtener_contenido_proceso(pid);
+    char* contenido_proceso = obtener_contenido_proceso(tid);
     int tamanio = strlen(contenido_proceso);
 
     int resultado = mandar_solicitud(nombre_archivo, contenido_proceso, tamanio);
@@ -291,58 +302,56 @@ int solicitar_archivo_filesystem(uint32_t pid, uint32_t tid) {
 
     if (resultado == 0) {
         log_info(LOGGER_MEMORIA, "Solicitud enviada correctamente para el archivo: %s", nombre_archivo);
-        return 1;
+        return 0;
     } else {
         log_error(LOGGER_MEMORIA, "Error al enviar solicitud para el archivo: %s", nombre_archivo);
         return -1;
     }
 }
 
-char* obtener_contenido_proceso(uint32_t pid) {
-    // char* pid_str = string_itoa(pid);
-    
-    // // Obtener las instrucciones del proceso usando el PID como clave
-    // t_list* instrucciones = dictionary_get(instrucciones_por_pid, pid_str);
-    
-    // // Liberar el string del PID
-    // free(pid_str);
+char* obtener_contenido_proceso(uint32_t tid) {
+    t_list* instrucciones = obtener_lista_instrucciones_por_tid(tid);
+    if (!instrucciones) return NULL;
 
-    // if (instrucciones == NULL) {
-    //     log_error(LOGGER_MEMORIA, "No se encontró contenido para el proceso PID %d", pid);
-    //     return NULL;
-    // }
+    size_t tamanio_total = 0;
 
-    // // Asumimos que cada instrucción es una cadena de texto; concatenarlas
-    // size_t tamanio_total = 0;
-    // for (int i = 0; i < list_size(instrucciones); i++) {
-    //     char* instruccion = list_get(instrucciones, i);
-    //     tamanio_total += strlen(instruccion) + 1; // +1 para el espacio o salto de línea
-    // }
+    // Calcular el tamaño total necesario para el contenido de las instrucciones
+    for (int i = 0; i < list_size(instrucciones); i++) {
+        t_instruccion* instruccion = list_get(instrucciones, i);
+        tamanio_total += strlen(instruccion->parametro1) + strlen(instruccion->parametro2) + 12; // Considera 10 dígitos para int y separadores
+    }
 
-    // // Crear una cadena grande para almacenar todas las instrucciones
-    // char* contenido = malloc(tamanio_total + 1); // +1 para el '\0' final
-    // contenido[0] = '\0'; // Iniciar cadena vacía
+    // Asignar espacio para el contenido y construirlo
+    char* contenido = malloc(tamanio_total + 1);
+    contenido[0] = '\0';
 
-    // // Concatenar todas las instrucciones
-    // for (int i = 0; i < list_size(instrucciones); i++) {
-    //     strcat(contenido, list_get(instrucciones, i));
-    //     strcat(contenido, "\n"); // Separar instrucciones con salto de línea
-    // }
-    return "hola mundo";
+    char parametro3_str[12]; // Buffer para convertir `parametro3` a cadena
+    for (int i = 0; i < list_size(instrucciones); i++) {
+        t_instruccion* inst = list_get(instrucciones, i);
+        sprintf(parametro3_str, "%d", inst->parametro3); // Convertir `parametro3` a cadena
+
+        strcat(contenido, inst->parametro1);
+        strcat(contenido, " ");
+        strcat(contenido, inst->parametro2);
+        strcat(contenido, " ");
+        strcat(contenido, parametro3_str);
+        strcat(contenido, "\n");
+    }
+
+    return contenido;
 }
 
 
+t_list* obtener_lista_instrucciones_por_tid(uint32_t tid) {
+    for (int i = 0; i < list_size(lista_instrucciones); i++) {
+        t_hilo_instrucciones* hilo_instrucciones = list_get(lista_instrucciones, i);
+        if (hilo_instrucciones->tid == tid) {
+            return hilo_instrucciones->instrucciones;
+        }
+    }
 
-
-
-
-
-
-
-
-
-
-
+    return NULL;
+}
 
 // Enviar respuesta a la CPU
 void enviar_respuesta(int socket_cpu, char *mensaje) {
@@ -447,22 +456,92 @@ t_instruccion* obtener_instruccion(uint32_t tid, uint32_t pc) {
 
 
 //DESARROLLAARRRRRRRRRRRRRRRRRRRRR
-void recibir_solicitud_contexto() {
+void recibir_solicitud_contexto(uint32_t pid, uint32_t tid) {
+    for (int i = 0; i < list_size(lista_contextos); i++) {
+        t_contexto_proceso* contexto_proceso = list_get(lista_contextos, i);
+        
+        if (contexto_proceso->pid == pid) {
+            send(socket_memoria_cpu_dispatch, contexto_proceso->contexto, sizeof(t_contexto_ejecucion), 0);
+            log_info(LOGGER_MEMORIA, "Contexto enviado al CPU - PID: %d, TID: %d", pid, tid);
+            return;
+        }
+    }
 
+    log_error(LOGGER_MEMORIA, "No se encontró contexto para el PID: %d, TID: %d", pid, tid);
+    enviar_respuesta(socket_memoria_cpu_dispatch, "ERROR: Contexto no encontrado");
 } 
-void recibir_actualizacion_contexto() {
 
+void recibir_actualizacion_contexto(int socket_cliente) {
+    uint32_t pid, tid;
+    t_contexto_ejecucion* nuevo_contexto;
+
+    recv(socket_cliente, &pid, sizeof(uint32_t), 0);
+    recv(socket_cliente, &tid, sizeof(uint32_t), 0);
+    recv(socket_cliente, &nuevo_contexto, sizeof(t_contexto_ejecucion), 0);
+
+    for (int i = 0; i < list_size(lista_contextos); i++) {
+        t_contexto_proceso* contexto_proceso = list_get(lista_contextos, i);
+        
+        if (contexto_proceso->pid == pid) {
+            contexto_proceso->contexto = nuevo_contexto;
+            log_info(LOGGER_MEMORIA, "Contexto actualizado para PID: %d, TID: %d", pid, tid);
+            enviar_respuesta(socket_cliente, "OK");
+            return;
+        }
+    }
+
+    log_error(LOGGER_MEMORIA, "No se encontró contexto para actualizar en PID: %d, TID: %d", pid, tid);
+    enviar_respuesta(socket_cliente, "ERROR: Contexto no encontrado");
 }
-int  mandar_solicitud(char* nombre_archivo, char* contenido_proceso, int tamanio) {
+
+int mandar_solicitud(char* nombre_archivo, char* contenido_proceso, int tamanio) {
+    send(socket_memoria_filesystem, nombre_archivo, strlen(nombre_archivo) + 1, 0);
+    send(socket_memoria_filesystem, &tamanio, sizeof(int), 0);
+    send(socket_memoria_filesystem, contenido_proceso, tamanio, 0);
+
+    close(socket_memoria_filesystem);
     return 1;
 }
-void agregar_instrucciones(uint32_t pid, t_instruccion** instrucciones, size_t cantidad) {
-    
+
+void agregar_instrucciones(uint32_t tid, t_instruccion** instrucciones, size_t cantidad) {
+    t_hilo_instrucciones* hilo_instrucciones = malloc(sizeof(t_hilo_instrucciones));
+    hilo_instrucciones->tid = tid;
+    hilo_instrucciones->instrucciones = list_create(); 
+
+    for (size_t i = 0; i < cantidad; i++) {
+        list_add(hilo_instrucciones->instrucciones, instrucciones[i]);
+    }
+
+    list_add(lista_instrucciones, hilo_instrucciones);
 }
+
 uint32_t leer_memoria(uint32_t direccion_fisica) {
-    return direccion_fisica;
+    // Verificar que la dirección física esté dentro de los límites de la memoria de usuario
+    if (direccion_fisica + sizeof(uint32_t) > TAM_MEMORIA) {
+        log_error(LOGGER_MEMORIA, "Error de segmentación: Dirección física %d fuera de los límites de memoria de usuario", direccion_fisica);
+        return 0;  // Retornar 0 o algún valor de error para indicar fallo de segmentación
+    }
+
+    // Leer los primeros 4 bytes a partir de la dirección física
+    uint32_t valor = *((uint32_t*)(direccion_fisica));
+
+    // Log de éxito
+    log_info(LOGGER_MEMORIA, "Lectura exitosa: Dirección física %d, Valor %d", direccion_fisica, valor);
+
+    return valor;
 }
 
-void escribir_memoria(uint32_t direccion_fisica,uint32_t valor){
+void escribir_memoria(uint32_t direccion_fisica, uint32_t valor) {
+    // Verificar que la dirección física esté dentro de los límites de la memoria de usuario
+    if (direccion_fisica + sizeof(uint32_t) > TAM_MEMORIA) {
+        log_error(LOGGER_MEMORIA, "Error de segmentación: Dirección física %d fuera de los límites de memoria de usuario", direccion_fisica);
+        return;
+    }
 
+    // Escribir los 4 bytes de `valor` a partir de `direccion_fisica`
+    *((uint32_t*)(direccion_fisica)) = valor;
+
+    // Log de éxito y respuesta
+    log_info(LOGGER_MEMORIA, "Escritura exitosa: Dirección física %d, Valor %d", direccion_fisica, valor);
+    enviar_respuesta(socket_memoria_cpu_dispatch, "OK");  // Responder OK al cliente
 }

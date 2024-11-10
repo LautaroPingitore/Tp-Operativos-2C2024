@@ -13,6 +13,8 @@ typedef struct
     char *server_name;   // Nombre del servidor para logging
 } t_procesar_conexion_args;
 
+void inicializar_datos();
+
 // Funciones para manejar el servidor y la comunicación con otros módulos
 int server_escuchar(t_log *, char *, int );
 void enviar_respuesta(int, char*); 
@@ -71,6 +73,7 @@ void liberar_hilo(uint32_t);
 int solicitar_archivo_filesystem(uint32_t, uint32_t);
 void recibir_solicitud_instruccion(int);
 char* obtener_contenido_proceso(uint32_t);
+t_list* obtener_lista_instrucciones_por_tid(uint32_t);
 
 
 // FALTA HACER
