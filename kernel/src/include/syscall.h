@@ -1,8 +1,5 @@
-#ifndef SYSCALL_H
-#define SYSCALL_H
-
-#include "utils/hello.h"
-#include "planificador.h"
+#ifndef SYSCALL_H_
+#define SYSCALL_H_
 
 // Definicion de codigos de operacion para las syscalls
 // #define SYS_THREAD_CREATE 1
@@ -47,4 +44,4 @@ void dump_memory();
 void syscall_io(t_pcb*, uint32_t, int);
 void manejar_syscall(op_code, t_pcb*, char*, int, int, uint32_t, uint32_t, pthread_mutex_t*, int);
 
-#endif
+#endif /* SYSCALL_H_ */

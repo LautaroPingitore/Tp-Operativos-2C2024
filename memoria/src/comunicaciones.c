@@ -147,12 +147,18 @@ int server_escuchar(t_log *logger, char *server_name, int server_socket)
 //---------------------------------------|
 
 t_proceso_memoria* recibir_proceso_kernel(int socket_cliente) {
-    t_pcb* pcb;
-    recv(socket_cliente, &pcb, sizeof(t_pcb), 0); // Checkear
+    t_pcb* pcb = malloc(sizeof(t_pcb));
+    if (recv(socket_cliente, pcb, sizeof(t_pcb), MSG_WAITALL) <= 0) {
+        log_error(LOGGER_MEMORIA, "Error al recibir el PCB desde el kernel");
+        free(pcb);
+        return NULL;
+    }
     t_proceso_memoria* pcb_memoria = malloc(sizeof(t_proceso_memoria));
     pcb_memoria->pid = pcb->PID;
     pcb_memoria->limite = pcb->TAMANIO;
-    pcb_memoria->contexto = pcb->CONTEXTO;
+    pcb_memoria->contexto = malloc(sizeof(t_contexto_ejecucion));
+    memcpy(pcb_memoria->contexto, pcb->CONTEXTO, sizeof(t_contexto_ejecucion));
+    free(pcb);
     return pcb_memoria;
 }
 

@@ -102,7 +102,8 @@ typedef enum{
 typedef enum {
     INTERRUPCION_SYSCALL,
     INTERRUPCION_BLOQUEO,
-    FINALIZACION
+    FINALIZACION,
+    ESTADO_INICIAL
 } motivo_desalojo;
 
 typedef enum {
@@ -148,8 +149,8 @@ typedef enum {
 
 typedef struct {
     char* nombre;  // Tipo de instrucción (SET, SUM, etc.)
-    char *parametro1;
-    char *parametro2;
+    char* parametro1;
+    char* parametro2;
     int parametro3; // ELIMINE LOS OTROS PARAMETROS YA QUE LAS INSTRUCCIONES QUE TENEMOS SOLO USAN HASTA 2 PARAMETROS
 } t_instruccion;
 
@@ -207,6 +208,7 @@ typedef struct {
 	int PRIORIDAD;
 	t_estado ESTADO;
     uint32_t PID_PADRE;
+    char* archivo;
 }t_tcb;
 
 typedef struct {
@@ -215,7 +217,7 @@ typedef struct {
 } t_recurso;
 
 typedef struct {
-    t_recurso* recursos;
+    t_list* recursos; // t_recurso
     int cantidad_recursos;
 } lista_recursos;
 
@@ -225,7 +227,7 @@ typedef struct {
     int TAMANIO;
 	t_contexto_ejecucion* CONTEXTO;
 	t_estado ESTADO;
-	t_recurso* MUTEXS;
+	char** MUTEXS;
     int CANTIDAD_RECURSOS;
 } t_pcb;
 

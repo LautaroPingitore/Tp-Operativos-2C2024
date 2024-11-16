@@ -1,8 +1,5 @@
-#ifndef KERNEL_H_
-#define KERNEL_H_
-
-#include "utils/hello.h"
-
+#ifndef PLANIFICADOR_H_
+#define PLANIFICADOR_H_
 
 // extern t_list* cola_new;
 // extern t_list* cola_ready;
@@ -20,11 +17,10 @@ const int INT_MAX = 200;
 // PLANIFICADOR LARGO PLAZO
 void inicializar_kernel();
 t_pcb* crear_pcb(uint32_t, int, t_contexto_ejecucion*, t_estado, pthread_mutex_t*);
-t_tcb* crear_tcb(uint32_t, int, t_estado);
+t_tcb* crear_tcb(uint32_t, uint32_t, char*, int, t_estado);
 void crear_proceso(char*, int, int);
 t_contexto_ejecucion* inicializar_contexto();
 void inicializar_proceso(t_pcb*, char*);
-int enviar_proceso_a_memoria(int, char*);
 void mover_a_ready(t_pcb*);
 void mover_a_exit(t_pcb*);
 void intentar_inicializar_proceso_de_new();
@@ -56,11 +52,10 @@ t_tcb* seleccionar_hilo_multinivel();
 // ENTRADA SALIDA
 void io(t_pcb*, uint32_t, int);
 
-char** tabla_de_paths;
 void eliminar_pcb_lista(t_list*, uint32_t);
 void esperar_a_que_termine(t_tcb*, t_tcb*);
 void bloquear_hilo_actual(t_tcb*);
 void desbloquear_hilo_actual(t_tcb*);
 int enviar_proceso_a_cpu(t_pcb*);
 
-#endif /* KERNEL_H_ */
+#endif /* PLANIFICADOR_H_ */

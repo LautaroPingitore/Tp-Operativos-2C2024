@@ -1,12 +1,6 @@
 #ifndef KERNEL_H_
 #define KERNEL_H_
 
-#include "utils/hello.h"
-
-#include "manejoPseudocodigo.h"
-#include "syscall.h"
-#include "planificador.h"
-
 t_log* LOGGER_KERNEL;
 t_config* CONFIG_KERNEL;
 
@@ -23,6 +17,9 @@ int socket_kernel_memoria;
 int socket_kernel_cpu_dispatch;
 int socket_kernel_cpu_interrupt;
 lista_recursos recursos_globales;
+
+
+
 
 void inicializar_config(char*);
 void iniciar_comunicaciones(int []);
