@@ -206,6 +206,7 @@ typedef struct {
 	uint32_t TID;
 	int PRIORIDAD;
 	t_estado ESTADO;
+    uint32_t PID_PADRE;
 }t_tcb;
 
 typedef struct {
