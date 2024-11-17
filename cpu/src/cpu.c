@@ -1,5 +1,4 @@
-#include <include/cpu.h>
-#include <include/ciclo_instruccion.h>
+#include "include/gestor.h"
 
 int main() {
 

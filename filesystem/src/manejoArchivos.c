@@ -1,5 +1,4 @@
-#include <include/manejoArchivos.h>
-#include <include/filesystem.h>
+#include "include/gestor.h"
 
 int crear_archivo_dump(char* nombre_archivo, char* contenido, int tamanio) {
     // VERIFICAR SI HAY BLOQUES DISPONIBLES

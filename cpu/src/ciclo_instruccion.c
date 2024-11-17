@@ -1,4 +1,4 @@
-#include <include/ciclo_instruccion.h>
+#include "include/gestor.h"
 
 t_pcb *pcb_actual;
 int fd_cpu_memoria;

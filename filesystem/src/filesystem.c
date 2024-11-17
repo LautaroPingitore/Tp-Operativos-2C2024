@@ -1,5 +1,4 @@
-#include <include/filesystem.h>
-#include <include/manejoArchivos.h>
+#include "include/gestor.h"
 
 volatile sig_atomic_t server_running = 1;  // Variable global para controlar el ciclo del servidor
 // Manejo de señales con signal(): Se define una función handle_signal para interceptar la señal SIGINT (cuando se presiona Ctrl+C)

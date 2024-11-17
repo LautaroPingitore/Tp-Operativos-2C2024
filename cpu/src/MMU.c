@@ -1,5 +1,4 @@
-#include <include/ciclo_instruccion.h>
-#include <include/MMU.h>
+#include "include/gestor.h"
 #define SEGMENTATION_FAULT ((uint32_t)-1)
 
 // MMU: Traducir direccion logica a fisica con Asignacion Contigua

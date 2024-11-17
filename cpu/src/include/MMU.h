@@ -1,8 +1,6 @@
 #ifndef MMU_H_
 #define MMU_H_
 
-#include <include/cpu.h>
-
 typedef struct {
     uint32_t pid;      // Identificador del proceso
     uint32_t base;     // Direccion base de la particion asignada

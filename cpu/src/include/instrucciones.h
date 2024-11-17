@@ -1,10 +1,6 @@
 #ifndef INSTRUCCIONES_H_
 #define INSTRUCCIONES_H_
 
-#include <include/cpu.h>
-#include <include/MMU.h>
-#include <include/ciclo_instruccion.h>
-
 //instrucciones
 void set_registro(char*, char*);
 void read_mem(char*, char*, int);

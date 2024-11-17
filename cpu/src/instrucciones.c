@@ -1,6 +1,4 @@
-#include <include/instrucciones.h>
-
-
+#include "include/gestor.h"
 
 //esto problabemente termine declarado en otro arhivo pero lo hago para descartar errores
 t_pcb* pcb_actual;

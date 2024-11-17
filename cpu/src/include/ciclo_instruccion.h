@@ -1,11 +1,6 @@
 #ifndef CICLO_INSTRUCCION_H_
 #define CICLO_INSTRUCCION_H_
 
-#include "include/cpu.h"
-#include "include/MMU.h"
-#include "include/instrucciones.h"
-
-
 //ESTOS STRUCTS VAN EN EL UTILS.
 //ESTOS STRUCTS VAN EN EL UTILS.
 //ESTOS STRUCTS VAN EN EL UTILS.

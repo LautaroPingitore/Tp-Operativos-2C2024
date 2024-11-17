@@ -1,8 +1,6 @@
 #ifndef CPU_H_
 #define CPU_H_
 
-#include "utils/hello.h"
-
 char* IP_MEMORIA;
 char* PUERTO_MEMORIA;
 char* PUERTO_ESCUCHA_DISPATCH;

@@ -2,8 +2,6 @@
 #define FILESYSTEM_H_
 #define MAX_CLIENTES 100
 
-#include <utils/hello.h>
-
 char* PUERTO_ESCUCHA;
 char* MOUNT_DIR;
 int BLOCK_SIZE;

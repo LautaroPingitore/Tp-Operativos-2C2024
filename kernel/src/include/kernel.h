@@ -1,32 +1,27 @@
 #ifndef KERNEL_H_
 #define KERNEL_H_
 
-t_log* LOGGER_KERNEL;
-t_config* CONFIG_KERNEL;
+extern t_log* LOGGER_KERNEL;
+extern t_config* CONFIG_KERNEL;
 
-char* IP_MEMORIA;
-char* PUERTO_MEMORIA;
-char* IP_CPU;
-char* PUERTO_CPU_DISPATCH;
-char* PUERTO_CPU_INTERRUPT;
-char* ALGORITMO_PLANIFICACION;
-int QUANTUM;
-char* LOG_LEVEL;
+extern char* IP_MEMORIA;
+extern char* PUERTO_MEMORIA;
+extern char* IP_CPU;
+extern char* PUERTO_CPU_DISPATCH;
+extern char* PUERTO_CPU_INTERRUPT;
+extern char* ALGORITMO_PLANIFICACION;
+extern int QUANTUM;
+extern char* LOG_LEVEL;
 
-int socket_kernel_memoria;
-int socket_kernel_cpu_dispatch;
-int socket_kernel_cpu_interrupt;
-lista_recursos recursos_globales;
-
-
+extern int socket_kernel_memoria;
+extern int socket_kernel_cpu_dispatch;
+extern int socket_kernel_cpu_interrupt;
+extern lista_recursos recursos_globales;
 
 
 void inicializar_config(char*);
 void iniciar_comunicaciones(int []);
 
-// LO PONGO PARA QUE NO ESTEN LOS ERRORES
-void inicializar_colas_y_mutexs();
-void crear_proceso(char*, int, int);
 
 #endif /* KERNEL_H_ */
 
