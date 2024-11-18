@@ -1,13 +1,6 @@
 #ifndef CICLO_INSTRUCCION_H_
 #define CICLO_INSTRUCCION_H_
 
-typedef enum {
-    EJECUTANDO,
-    BLOQUEADO,
-    LISTO,
-    FINALIZADO
-} estado_proceso;
-
 typedef struct {
     uint32_t direccion_fisica;
     uint32_t tamanio;

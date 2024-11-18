@@ -1,70 +1,44 @@
 #include "include/gestor.h"
 
-/*
-Tipos de planificacion:
-FIFO
-Prioridades
-Colas multinivel
-*/
-
-/*
-Instrucciones o sycalls a utilizar
-
-procesos:
-PROCESS_CREATE(nombre del archivo pseudocodigo que ejecutara el proceso, tamaño del proceso, prioridad del hilo)
-PROCESS_ EXIT()
-
-threads:
-THREAD_CREATE(nombre del archivo pseudocodigo que debera ejecutar el hilo, prioridad)
-THREAD_JOIN(TID)
-THREAD_CANCEL(TID)
-THREAD_EXIT()
-
-mutex:
-MUTEX_CREATE()
-MUTEX_LOCK()
-MUTEX_UNLOCK()
-
-memoria:
-DUMP_MEMORY()
-
-entrada y salida:
-IO(cantidad de milisegundos que el hilo va a permanecer haciendo la operación de entrada/salida)
-*/
-
-
 //PLANIFICADOR LARGO PLAZO ==============================
     
 // COLAS QUE EN LAS CUALES SE GUARDARAN LOS PROCESOS
 t_list* cola_new;
 t_list* cola_ready;
+t_list* cola_exec;
+t_list* cola_blocked;
 t_list* cola_exit;
-t_list* cola_nivel_1;  // Mayor prioridad
-t_list* cola_nivel_2;  // Prioridad media
-t_list* cola_nivel_3;  // Menor prioridad
+
+uint32_t pid_actual = 0;
+uint32_t tid_actual = 0;
+t_log* logger;
 
 // SEMAFOFOS QUE PROTEGEN EL ACCESO A CADA COLA
-pthread_mutex_t mutex_cola_new = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t mutex_cola_ready = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t mutex_cola_exit = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t mutex_pid = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t mutex_tid = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t mutex_estado = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutex_cola_new;
+pthread_mutex_t mutex_cola_ready;
+pthread_mutex_t mutex_cola_exit;
+pthread_mutex_t mutex_pid;
+pthread_mutex_t mutex_tid;
+pthread_mutex_t mutex_estado;
 pthread_cond_t cond_estado = PTHREAD_COND_INITIALIZER;
 
 // VARIABLES DE CONTROL
 uint32_t pid = 0;
 int contador_tid = 0;
 bool cpu_libre = true;
-char** tabla_paths;
 
 void inicializar_kernel() {
     cola_new = list_create();
     cola_ready = list_create();
     cola_exit = list_create();
+
     cola_nivel_1 = list_create();
     cola_nivel_2 = list_create();
     cola_nivel_3 = list_create();
+
+    pthread_mutex_init(&mutex_cola_new, NULL);
+    pthread_mutex_init(&mutex_cola_ready, NULL);
+    pthread_mutex_init(&mutex_cola_exit, NULL);
 }
 
 uint32_t asignar_pid() {
@@ -85,7 +59,7 @@ uint32_t asignar_tid(t_pcb* pcb) {
     return nuevo_tid;
 } 
 
-t_pcb* crear_pcb(uint32_t pid, int tamanio, t_contexto_ejecucion* contexto_ejecucion, t_estado estado, pthread_mutex_t* mutexs){
+t_pcb* crear_pcb(uint32_t pid, int tamanio, t_contexto_ejecucion* contexto_ejecucion, t_estado estado, pthread_mutex_t* mutexs, char* archivo){
 
     t_pcb* pcb = malloc(sizeof(t_pcb));
     if(pcb == NULL) {
@@ -98,7 +72,7 @@ t_pcb* crear_pcb(uint32_t pid, int tamanio, t_contexto_ejecucion* contexto_ejecu
     pcb->TAMANIO = tamanio;
     pcb->CONTEXTO = contexto_ejecucion;
     pcb->ESTADO = estado;
-    pcb->MUTEXS = NULL;
+    pcb->MUTEXS = list_create();
     pcb->CANTIDAD_RECURSOS = 0;
 
     // OJO ACA PORQUE NO SABEMOS QUE PATH PASARLE AL HILO PRINCIPAL
@@ -126,9 +100,8 @@ t_tcb* crear_tcb(uint32_t pid_padre, uint32_t tid, char* archivo_pseudocodigo, i
 
 // FUNCION QUE CREA UN PROCESO Y LO METE A LA COLA DE NEW
 void crear_proceso(char* path_proceso, int tamanio_proceso, int prioridad){
-    uint32_t pid = asignar_pid();
     archivo_pseudocodigo* archivo = leer_archivo_pseudocodigo(path_proceso);
-    t_pcb* pcb = crear_pcb(pid, tamanio_proceso, inicializar_contexto(), NEW, asignar_mutexs());
+    t_pcb* pcb = crear_pcb(asignar_pid(), tamanio_proceso, inicializar_contexto(), NEW, asignar_mutexs());
     obtener_recursos_del_proceso(archivo, pcb);
 
     char* path_hilo = "";
@@ -496,7 +469,6 @@ int enviar_proceso_a_cpu(t_pcb* proceso) {
 
 
 // PLANIFICADOR A CORTO PLAZO ===============
-
 t_tcb* seleccionar_hilo_por_algoritmo() {
     if (strcmp(ALGORITMO_PLANIFICACION, "FIFO") == 0) {
         return obtener_hilo_fifo();

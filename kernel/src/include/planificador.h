@@ -1,16 +1,23 @@
 #ifndef PLANIFICADOR_H_
 #define PLANIFICADOR_H_
 
-// extern t_list* cola_new;
-// extern t_list* cola_ready;
-// extern t_list* cola_exit;
-// extern t_list* cola_nivel_1;
-// extern t_list* cola_nivel_2;
-// extern t_list* cola_nivel_3;
 
-// extern pthread_mutex_t mutex_cola_new;
-// extern pthread_mutex_t mutex_cola_ready;
-// extern pthread_mutex_t mutex_cola_exit;
+// Variables globales
+extern t_list* cola_new;
+extern t_list* cola_ready;
+extern t_list* cola_exec;
+extern t_list* cola_blocked;
+extern t_list* cola_exit;
+extern uint32_t pid_actual;
+extern uint32_t tid_actual;
+
+// Sincronización
+extern pthread_mutex_t mutex_new;
+extern pthread_mutex_t mutex_ready;
+extern pthread_mutex_t mutex_exec;
+extern pthread_mutex_t mutex_blocked;
+extern pthread_mutex_t mutex_exit;
+extern sem_t sem_ready; // Controla los procesos listos para ejecutar
 
 const int INT_MAX = 200;
 

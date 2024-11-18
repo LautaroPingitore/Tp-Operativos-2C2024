@@ -1,5 +1,6 @@
 #ifndef FILESYSTEM_H_
 #define FILESYSTEM_H_
+
 #define MAX_CLIENTES 100
 
 char* PUERTO_ESCUCHA;
@@ -13,7 +14,9 @@ t_log *LOGGER_FILESYSTEM;
 t_config *CONFIG_FILESYSTEM;
 
 int socket_filesystem;
-int socket_filesystem_memoria;
+
+extern pthread_mutex_t server_mutex;
+extern sem_t sem_clientes;
 
 void inicializar_config(char*);
 void iniciar_archivos();

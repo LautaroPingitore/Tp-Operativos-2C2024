@@ -185,16 +185,6 @@ void* serializar_paquete(t_paquete*, int);
 t_paquete* recibir_paquete_entero(int);
 int gestionarConexiones(int, t_log*);
 
-
-
-
-
-// ===========================
-// typedef struct {
-// 	int id;
-// 	int contador;
-// } t_mutex;
-
 typedef enum {
     NEW,
     READY,
@@ -209,16 +199,17 @@ typedef struct {
 	t_estado ESTADO;
     uint32_t PID_PADRE;
     char* archivo;
+    //uint32_t PC;
 }t_tcb;
 
 typedef struct {
     char* nombre_recurso;
     pthread_mutex_t mutex;
+    //uint32_t procesos_bloqueados; // Cantidad de procesos bloqueados en este recurso
 } t_recurso;
 
 typedef struct {
     t_list* recursos; // t_recurso
-    int cantidad_recursos;
 } lista_recursos;
 
 typedef struct {
@@ -227,8 +218,9 @@ typedef struct {
     int TAMANIO;
 	t_contexto_ejecucion* CONTEXTO;
 	t_estado ESTADO;
-	char** MUTEXS;
+	t_list* MUTEXS; // char*
     int CANTIDAD_RECURSOS;
+    //char* ARCHIVO;
 } t_pcb;
 
 #endif

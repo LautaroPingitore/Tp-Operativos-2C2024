@@ -7,5 +7,7 @@ int asignar_bloque();
 int hay_espacion_suficiente(int);
 int obtener_bloques_libres();
 void liberar_bloque(int);
+void cargar_bitmap();
+void guardar_bitmap();
 
 #endif /* MANEJOARCHIVOS_H_*/

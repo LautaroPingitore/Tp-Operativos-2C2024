@@ -1,5 +1,47 @@
 #include "include/gestor.h"
 
+void cargar_bitmap() {
+    char bitmap_path[256];
+    sprintf(bitmap_path, "%s/bitmap.dat", MOUNT_DIR);
+
+    FILE* bitmap = fopen(bitmap_path, "r");
+    if (!bitmap) {
+        log_error(LOGGER_FILESYSTEM, "Error al abrir bitmap.dat");
+        exit(EXIT_FAILURE);
+    }
+
+    // Reservar memoria para el bitmap
+    bitmap_memoria = malloc((BLOCK_COUNT + 7) / 8);
+    if (!bitmap_memoria) {
+        log_error(LOGGER_FILESYSTEM, "Error al asignar memoria para el bitmap.");
+        fclose(bitmap);
+        exit(EXIT_FAILURE);
+    }
+
+    // Leer el contenido del archivo en la memoria
+    fread(bitmap_memoria, 1, (BLOCK_COUNT + 7) / 8, bitmap);
+    fclose(bitmap);
+
+    log_info(LOGGER_FILESYSTEM, "Bitmap cargado desde %s", bitmap_path);
+}
+
+void guardar_bitmap() {
+    char bitmap_path[256];
+    sprintf(bitmap_path, "%s/bitmap.dat", MOUNT_DIR);
+
+    FILE* bitmap = fopen(bitmap_path, "w");
+    if (!bitmap) {
+        log_error(LOGGER_FILESYSTEM, "Error al guardar bitmap.dat");
+        return;
+    }
+
+    fwrite(bitmap_memoria, 1, (BLOCK_COUNT + 7) / 8, bitmap);
+    fclose(bitmap);
+
+    log_info(LOGGER_FILESYSTEM, "Bitmap guardado correctamente en %s", bitmap_path);
+}
+
+
 int crear_archivo_dump(char* nombre_archivo, char* contenido, int tamanio) {
     // VERIFICAR SI HAY BLOQUES DISPONIBLES
     if(!hay_espacion_suficiente(tamanio)) {

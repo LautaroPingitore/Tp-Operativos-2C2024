@@ -2,7 +2,6 @@
 #define GESTION_MEMORIA_H
 
 extern t_list* lista_particiones;
-extern t_log* logger; // Logger compartido
 
 typedef struct {
     uint32_t inicio;
@@ -10,7 +9,7 @@ typedef struct {
     bool libre;
 } t_particion;
 
-// Funciones para manejar particiones y memoria
+// Funciones para manejar particiones y memoria 
 void inicializar_lista_particiones(char* esquema, t_list* particiones_fijas);
 t_particion* buscar_hueco(uint32_t tamano_requerido, const char* algoritmo);
 t_particion* buscar_hueco_first_fit(uint32_t tamano_requerido);
