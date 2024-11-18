@@ -1,26 +1,28 @@
 #ifndef CPU_H_
 #define CPU_H_
 
-char* IP_MEMORIA;
-char* PUERTO_MEMORIA;
-char* PUERTO_ESCUCHA_DISPATCH;
-char* PUERTO_ESCUCHA_INTERRUPT;
-char* LOG_LEVEL;
+extern char* IP_MEMORIA;
+extern char* PUERTO_MEMORIA;
+extern char* PUERTO_ESCUCHA_DISPATCH;
+extern char* PUERTO_ESCUCHA_INTERRUPT;
+extern char* LOG_LEVEL;
+extern char* IP_CPU;
 
-t_log *LOGGER_CPU;
-t_config *CONFIG_CPU;
+extern t_log *LOGGER_CPU;
+extern t_config *CONFIG_CPU;
 
-int socket_cpu_dispatch;
-int socket_cpu_dispatch_kernel;
-int socket_cpu_interrupt;
-int socket_cpu_interrupt_kernel;
-int socket_cpu_dispatch_memoria;
-int socket_cpu_interrupt_memoria;
+extern int socket_cpu_dispatch;
+extern int socket_cpu_dispatch_kernel;
+extern int socket_cpu_interrupt;
+extern int socket_cpu_interrupt_kernel;
+extern int socket_cpu_dispatch_memoria;
+extern int socket_cpu_interrupt_memoria;
 
-char* IP_CPU;
 
 void inicializar_config(char*);
-void iterator(char*);
+void cerrar_conexiones();
+int iniciar_conexion_con_kernel(int, char*, char*);
+int gestionar_conexion(int, const char*);
 int gestionarConexionConKernelDispatch();
 int gestionarConexionConKernelInterrupt();
 

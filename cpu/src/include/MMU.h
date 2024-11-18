@@ -7,18 +7,11 @@ typedef struct {
     uint32_t limite;   // Tamanio o limite de la particion asignada
 } t_particion;
 
-// typedef struct {
-//     uint32_t direccion_fisica;
-//     uint32_t tamanio;
-// } t_direcciones_fisicas;
-
+uint32_t traducir_direccion(uint32_t, uint32_t);
 uint32_t consultar_base_particion(uint32_t);
 uint32_t consultar_limite_particion(uint32_t);
-uint32_t traducir_direccion(uint32_t, uint32_t);
 
-void enviar_solicitud_base_memoria(uint32_t);
-uint32_t recibir_base_memoria();
-uint32_t recibir_limite_memoria();
-void enviar_solicitud_limite_memoria(uint32_t);
+void enviar_solicitud_memoria(uint32_t, op_code, const char*);
+uint32_t recibir_entero(int, const char*);
 
 #endif /* MMU_H_ */
