@@ -12,7 +12,7 @@ void ejecutar_ciclo_instruccion(int socket_cliente) {
             break;
         }
 
-        t_instruccion *instruccion = fetch(pcb_actual->pid, pcb_actual->contexto_ejecucion->registros->program_counter);
+        t_instruccion *instruccion = fetch(pcb_actual->PID, pcb_actual->CONTEXTO->registros->program_counter);
         
         if (!instruccion) {
             log_error(LOGGER_CPU, "Error al obtener la instrucción. Terminando ciclo.");
@@ -101,8 +101,8 @@ void check_interrupt() {
 // MUESTRA EN CONSOLA LA INSTRUCCION EJECUTADA Y LE SUMA 1 AL PC
 void loguear_y_sumar_pc(t_instruccion *instruccion)
 {
-    log_info(LOGGER_CPU, "PID: %d - Ejecutando: %s - Parametros: %s %s %d", pcb_actual->pid, instruccion->nombre, intruccion->parametro1, instruccion->parametro2, instruccion->parametro3);
-    pcb_actual->contexto_ejecucion->registros->program_counter++;
+    log_info(LOGGER_CPU, "PID: %d - Ejecutando: %s - Parametros: %s %s %d", pcb_actual->PID, instruccion->nombre, intruccion->parametro1, instruccion->parametro2, instruccion->parametro3);
+    pcb_actual->CONTEXTO->registros->program_counter++;
 }
 
 void pedir_instruccion_memoria(uint32_t pid, uint32_t pc, int socket)
@@ -186,7 +186,7 @@ void actualizar_contexto_memoria() {
     }
     // Enviar los registros y el program counter a memoria
     // A través de la memoria se actualizaría el PCB
-    enviar_contexto_memoria(pcb_actual->pid, pcb_actual->contexto_ejecucion->registros, pcb_actual->contexto_ejecucion->registros->program_counter, fd_cpu_memoria);
+    enviar_contexto_memoria(pcb_actual->PID, pcb_actual->CONTEXTO->registros, pcb_actual->contexto_ejecucion->registros->program_counter, fd_cpu_memoria);
 
     log_info(LOGGER_CPU, "Contexto de la CPU actualizado en memoria.");
 }

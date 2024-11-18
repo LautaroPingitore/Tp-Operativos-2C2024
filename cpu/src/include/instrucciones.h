@@ -11,8 +11,9 @@ void jnz_pc(char*, char*);
 void log_registro(char*);
 
 //funciones ayuda
-void log_registro(char*);
+bool es_numerico(const char*);
 uint32_t* obtener_registro(char*);
+void log_registro(char*);
 void* recibir_dato_de_memoria(int,t_log*,t_list*,uint32_t);
 void enviar_interrupcion_segfault(uint32_t, int);
 
