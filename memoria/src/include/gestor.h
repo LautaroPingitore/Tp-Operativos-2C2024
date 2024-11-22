@@ -5,5 +5,6 @@
 #include "memoria.h"
 #include "comunicaciones.h"
 #include "gestion_memoria.h"
+#include "../../../cpu/src/include/instrucciones.h"
 
 #endif //GESTOR_H_

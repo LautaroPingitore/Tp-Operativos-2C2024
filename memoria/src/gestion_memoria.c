@@ -1,17 +1,21 @@
 #include "include/gestor.h"
 
-// Implementación de estructuras y variables necesarias
+// Variables Globales
 t_list* lista_particiones;
+pthread_mutex_t mutex_particiones = PTHREAD_MUTEX_INITIALIZER;
 
 // Inicializa la lista de particiones, en base al esquema elegido (fijo o dinámico)
 void inicializar_lista_particiones(char* esquema, t_list* particiones_fijas) {
+    pthread_mutex_lock(&mutex_particiones);
     lista_particiones = list_create();
 
     if (strcmp(esquema, "FIJAS") == 0) {
         for (int i = 0; i < list_size(particiones_fijas); i++) {
             int* tam_particion = list_get(particiones_fijas, i);
             t_particion* particion = malloc(sizeof(t_particion));
-            particion->inicio = (i == 0) ? 0 : particion->inicio + particion->tamano;
+            particion->inicio = (i == 0) ? 0 :
+                ((t_particion*)list_get(lista_particiones, i - 1))->inicio +
+                ((t_particion*)list_get(lista_particiones, i - 1))->tamano;
             particion->tamano = *tam_particion;
             particion->libre = true;
             list_add(lista_particiones, particion);
@@ -24,6 +28,9 @@ void inicializar_lista_particiones(char* esquema, t_list* particiones_fijas) {
         particion->libre = true;
         list_add(lista_particiones, particion);
     }
+
+    pthread_mutex_unlock(&mutex_particiones);
+    log_info(LOGGER_MEMORIA, "Lista de particiones inicializada bajo esquema: %s", esquema);
 }
 
 // Función general para buscar hueco usando un algoritmo especificado
@@ -42,10 +49,11 @@ t_particion* buscar_hueco(uint32_t tamano_requerido, const char* algoritmo) {
 t_particion* buscar_hueco_first_fit(uint32_t tamano_requerido) {
     for (int i = 0; i < list_size(lista_particiones); i++) {
         t_particion* particion = list_get(lista_particiones, i);
-        if (particion->libre && particion->tamano >= tamano_requerido) {
+        if (particion && particion->libre && particion->tamano >= tamano_requerido) {
             return particion;
         }
     }
+    log_warning(LOGGER_MEMORIA, "No se encontró espacio suficiente usando First Fit.");
     return NULL; // No hay espacio
 }
 
@@ -56,7 +64,7 @@ t_particion* buscar_hueco_best_fit(uint32_t tamano_requerido) {
 
     for (int i = 0; i < list_size(lista_particiones); i++) {
         t_particion* particion = list_get(lista_particiones, i);
-        if (particion->libre && particion->tamano >= tamano_requerido) {
+        if (particion && particion->libre && particion->tamano >= tamano_requerido) {
             uint32_t espacio_sobrante = particion->tamano - tamano_requerido;
             if (espacio_sobrante < tamano_minimo) {
                 mejor_particion = particion;
@@ -64,7 +72,9 @@ t_particion* buscar_hueco_best_fit(uint32_t tamano_requerido) {
             }
         }
     }
-    // QUE RETORNE NULL SI NO SE ENCONTRO ESPACIO
+    if (!mejor_particion) {
+        log_warning(LOGGER_MEMORIA, "No se encontró espacio suficiente usando Best Fit.");
+    }
     return mejor_particion;
 }
 
@@ -75,7 +85,7 @@ t_particion* buscar_hueco_worst_fit(uint32_t tamano_requerido) {
 
     for (int i = 0; i < list_size(lista_particiones); i++) {
         t_particion* particion = list_get(lista_particiones, i);
-        if (particion->libre && particion->tamano >= tamano_requerido) {
+        if (particion && particion->libre && particion->tamano >= tamano_requerido) {
             uint32_t espacio_libre = particion->tamano - tamano_requerido;
             if (espacio_libre > tamano_maximo) {
                 peor_particion = particion;
@@ -83,17 +93,17 @@ t_particion* buscar_hueco_worst_fit(uint32_t tamano_requerido) {
             }
         }
     }
-    // QUE RETORNE NULL SI NO SE ENCONTRO ESPACIO CHECKEAR
+    if (!peor_particion) {
+        log_warning(LOGGER_MEMORIA, "No se encontró espacio suficiente usando Worst Fit.");
+    }
     return peor_particion;
 }
-
-//CREAR FUNCION QUE CONVIERTA PROCESO DE KERNEL A PROCESO DE MEMORIA
 
 // Asigna espacio de memoria a un proceso, usando un algoritmo de búsqueda específico
 int asignar_espacio_memoria(t_proceso_memoria* proceso, const char* algoritmo) {
     t_particion* particion = buscar_hueco(proceso->limite, algoritmo);
 
-    if (particion == NULL || particion->tamano < proceso->limite) {
+    if (particion->tamano < proceso->limite) {
         log_error(LOGGER_MEMORIA, "No se pudo asignar memoria para el proceso PID %d", proceso->pid);
         return -1;
     }
@@ -107,26 +117,10 @@ int asignar_espacio_memoria(t_proceso_memoria* proceso, const char* algoritmo) {
     return 1;
 }
 
-void liberar_espacio_memoria(t_proceso_memoria* proceso) {
-    for (int i = 0; i < list_size(lista_particiones); i++) {
-        t_particion* particion = list_get(lista_particiones, i);
-        if ((uintptr_t)particion->inicio == (uintptr_t)proceso->base) {
-            particion->libre = true;
-            if (strcmp(ESQUEMA, "FIJAS") == 0) {
-                log_info(LOGGER_MEMORIA, "Memoria liberada para PID %u en la dirección %u", proceso->pid, proceso->base);
-                return;
-            } else if (strcmp(ESQUEMA, "DINAMICA") == 0) {
-                consolidar_particiones_libres();
-                log_info(LOGGER_MEMORIA, "Memoria liberada para PID %u en la dirección %u", proceso->pid, proceso->base);
-                return;
-            }
-        }
-    }
-    log_error(LOGGER_MEMORIA, "No se encontró la partición para PID %u al intentar liberar memoria", proceso->pid);
-}
-
 // Consolida particiones adyacentes libres en particiones dinámicas
 void consolidar_particiones_libres() {
+    pthread_mutex_lock(&mutex_particiones);
+
     for (int i = 0; i < list_size(lista_particiones) - 1; i++) {
         t_particion* actual = list_get(lista_particiones, i);
         t_particion* siguiente = list_get(lista_particiones, i + 1);
@@ -137,5 +131,44 @@ void consolidar_particiones_libres() {
             i--;  // Revisa de nuevo la posición actual
         }
     }
+
+    pthread_mutex_unlock(&mutex_particiones);
+    log_info(LOGGER_MEMORIA, "Particiones libres consolidadas.");
 }
 
+void liberar_espacio_memoria(t_proceso_memoria* proceso) {
+    if (proceso == NULL) {
+        log_error(LOGGER_MEMORIA, "Intento de liberar memoria para un proceso nulo.");
+        return;
+    }
+
+    pthread_mutex_lock(&mutex_particiones);
+    bool particion_encontrada = false;
+
+    for (int i = 0; i < list_size(lista_particiones); i++) {
+        t_particion* particion = list_get(lista_particiones, i);
+
+        if (particion->inicio == proceso->base) {
+            particion->libre = true;
+            particion_encontrada = true;
+
+            if (strcmp(ESQUEMA, "FIJAS") == 0) {
+                log_info(LOGGER_MEMORIA, "Memoria liberada para PID %u en la dirección %u (Esquema Fijas)", 
+                         proceso->pid, proceso->base);
+            } else if (strcmp(ESQUEMA, "DINAMICA") == 0) {
+                consolidar_particiones_libres();
+                log_info(LOGGER_MEMORIA, "Memoria liberada para PID %u en la dirección %u (Esquema Dinámicas)", 
+                         proceso->pid, proceso->base);
+            }
+
+            break;
+        }
+    }
+
+    if (!particion_encontrada) {
+        log_error(LOGGER_MEMORIA, "No se encontró la partición para PID %u al intentar liberar memoria (Base: %u)", 
+                  proceso->pid, proceso->base);
+    }
+    
+    pthread_mutex_unlock(&mutex_particiones);
+}

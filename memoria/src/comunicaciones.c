@@ -5,11 +5,27 @@ t_list* lista_hilos; // TIPO t_hilo_memoria
 t_list* lista_contextos; // TIPO t_contexto_proceso
 t_list* lista_instrucciones; // TIPO t_hilo_instrucciones
 
+pthread_mutex_t mutex_procesos = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutex_hilos = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutex_contextos = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutex_instrucciones = PTHREAD_MUTEX_INITIALIZER;
+
 void inicializar_datos() {
+    pthread_mutex_lock(&mutex_procesos);
     lista_procesos = list_create();
+    pthread_mutex_unlock(&mutex_procesos);
+
+    pthread_mutex_lock(&mutex_hilos);
     lista_hilos = list_create();
+    pthread_mutex_unlock(&mutex_hilos);
+
+    pthread_mutex_lock(&mutex_contextos);
     lista_contextos = list_create();
+    pthread_mutex_unlock(&mutex_contextos);
+
+    pthread_mutex_lock(&mutex_instrucciones);
     lista_instrucciones = list_create();
+    pthread_mutex_unlock(&mutex_instrucciones);
 }
 
 void procesar_conexion_memoria(void *void_args){
@@ -21,27 +37,30 @@ void procesar_conexion_memoria(void *void_args){
     free(args);
 
     op_code cod_op;
-    while (cliente_socket != -1)
-    {
-        if (recv(cliente_socket, &cod_op, sizeof(op_code), 0) != sizeof(op_code))
-        {
+    while (cliente_socket != -1) {
+        if (recv(cliente_socket, &cod_op, sizeof(op_code), 0) != sizeof(op_code)) {
             log_debug(logger, "Cliente desconectado.\n");
             return;
         }
 
-        switch (cod_op)
-        {
+        switch (cod_op) {
             case HANDSHAKE_kernel:
                 recibir_mensaje(cliente_socket, logger);
-                log_info(logger, "Este deberia ser el canal mediante el cual nos comunicamos con el KERNEL");
+                log_info(LOGGER_MEMORIA, "Conexion establecida con Kernel");
                 break;
 
             case PROCESS_CREATE: // TERMINADO
                 t_proceso_memoria* proceso_nuevo = recibir_proceso_kernel(cliente_socket);
+                if(proceso_nuevo == NULL) {
+                    enviar_respuesta(cliente_socket, "ERROR");
+                    break;
+                }
+                
                 if (asignar_espacio_memoria(proceso_nuevo, ALGORITMO_BUSQUEDA) == -1) {
                     enviar_respuesta(cliente_socket, "ERROR: No se pudo asignar memoria");
+                    pthread_mutex_lock(&mutex_procesos);
                     list_add(lista_procesos, proceso_nuevo);
-                    free(proceso_nuevo);
+                    pthread_mutex_unlock(&mutex_procesos);
                 } else {
                     enviar_respuesta(cliente_socket, "OK");
                     log_info(logger, "Proceso Creado - PID: %d - Tamanio: %d", proceso_nuevo->pid, proceso_nuevo->limite);
@@ -50,9 +69,18 @@ void procesar_conexion_memoria(void *void_args){
 
             case PROCESS_EXIT: // TERMINADO
                 t_proceso_memoria* proceso_a_eliminar = recibir_proceso_kernel(cliente_socket);
+                if (proceso_a_eliminar == NULL) {
+                    enviar_respuesta(cliente_socket, "ERROR");
+                    break;
+                }
+                
                 liberar_espacio_memoria(proceso_a_eliminar);
+                pthread_mutex_lock(&mutex_procesos);
                 eliminar_proceso_de_lista(proceso_a_eliminar->pid);
-                log_info(logger, "Proceso Destruido - PID: %d - Tamanio %d", proceso_a_eliminar->pid, proceso_a_eliminar->limite);
+                pthread_mutex_unlock(&mutex_procesos);
+
+                log_info(logger, "Proceso eliminado: PID=%d", proceso_a_eliminar->pid);
+                enviar_respuesta(cliente_socket, "OK");
                 free(proceso_a_eliminar);
                 break;
 
@@ -65,46 +93,44 @@ void procesar_conexion_memoria(void *void_args){
             case THREAD_EXIT: // FALTA VER
                 recibir_finalizacion_hilo(cliente_socket);
                 enviar_respuesta(cliente_socket, "OK");
-                log_info(logger, "Hilo finalizado exitosamente");
                 break;
 
             case DUMP_MEMORY:
                 uint32_t pid, tid;
                 recv(cliente_socket, &pid, sizeof(uint32_t), 0);
                 recv(cliente_socket, &tid, sizeof(uint32_t), 0);
+                if (recv(cliente_socket, &pid, sizeof(uint32_t),0) <= 0 ||
+                    recv(cliente_socket, &tid, sizeof(uint32_t),0) <= 0) {
+                    enviar_respuesta(cliente_socket, "ERROR");
+                    break;
+                }
 
                 if (solicitar_archivo_filesystem(pid, tid) == 0) {
-                    log_info(logger, "Memory Dump realizado correctamente para PID: %d, TID: %d", pid, tid);
                     enviar_respuesta(cliente_socket, "OK");
                 } else {
-                    log_error(logger, "Error al realizar Memory Dump para PID: %d, TID: %d", pid, tid);
                     enviar_respuesta(cliente_socket, "ERROR");
                 }
                 break;
 
             case HANDSHAKE_cpu:
                 recibir_mensaje(cliente_socket, logger);
-                log_info(logger, "Este deberia ser el canal mediante el cual nos comunicamos con la CPU");
+                log_info(LOGGER_MEMORIA, "Conexion establecida con CPU");
                 break;
 
             case CONTEXTO:
-            
-                //uint32_t pid, tid;
-                recv(cliente_socket, &pid, sizeof(uint32_t), 0);
-                recv(cliente_socket, &tid, sizeof(uint32_t), 0);
-                recibir_solicitud_contexto(pid, tid);
+                recibir_solicitud_contexto(cliente_socket);
                 break;
 
             case ACTUALIZAR_CONTEXTO:
                 recibir_actualizacion_contexto(cliente_socket);
                 break;
-/*
-            case READ_MEM:
-                recibir_read_mem(cliente_socket);
-                break;
-*/
-            case WRITE_MEM:
+
+            case PEDIDO_WRITE_MEM:
                 recibir_write_mem(cliente_socket);
+                break;
+
+            case PEDIDO_READ_MEM:
+                recibir_read_mem(cliente_socket);
                 break;
 
             case PEDIDO_INSTRUCCION:
@@ -125,23 +151,33 @@ void procesar_conexion_memoria(void *void_args){
     return;
 }
 
-int server_escuchar(t_log *logger, char *server_name, int server_socket)
-{
+int server_escuchar(t_log *logger, char *server_name, int server_socket) {
     int cliente_socket = esperar_cliente(server_socket, logger);
 
-    if (cliente_socket != -1)
-    {
+    if (cliente_socket != -1) {
         pthread_t hilo;
         t_procesar_conexion_args *args = malloc(sizeof(t_procesar_conexion_args));
         args->log = logger;
         args->fd = cliente_socket;
-        args->server_name = server_name;
-        pthread_create(&hilo, NULL, (void *)procesar_conexion_memoria, (void *)args);
-        pthread_detach(hilo);
+        args->server_name = strdup(server_name);
+        if (pthread_create(&hilo, NULL, (void *)procesar_conexion_memoria, (void *)args) != 0) {
+            log_error(logger, "Error al crear hilo para cliente en %s.", server_name);
+            free(args->server_name);
+            free(args);
+            close(cliente_socket);
+            return 0;
+        }
         return 1;
     }
     return 0;
 }
+
+// Enviar respuesta a la CPU
+void enviar_respuesta(int socket_cpu, char *mensaje) {
+    // Enviar el mensaje a través del socket de la CPU
+    send(socket_cpu, mensaje, strlen(mensaje) + 1, 0); // +1 para incluir el terminador nulo
+}
+
 //---------------------------------------|
 // CONEXION KERNEL DE CREACION DE PROCESO|
 //---------------------------------------|
@@ -163,12 +199,15 @@ t_proceso_memoria* recibir_proceso_kernel(int socket_cliente) {
 }
 
 void eliminar_proceso_de_lista(uint32_t pid) {
+    pthread_mutex_lock(&mutex_procesos);
     for (int i = 0; i < list_size(lista_procesos); i++) {
         t_proceso_memoria* proceso_actual = list_get(lista_procesos, i);
         if (pid == proceso_actual->pid) {
-            list_remove(lista_procesos, i);
+            list_remove_and_destroy_element(lista_procesos, i, (void *)liberar_espacio_memoria);
+            break;
         }
     }
+    pthread_mutex_unlock(&mutex_procesos);
 }
 
 //-----------------|
@@ -241,10 +280,14 @@ void agregar_instrucciones_a_lista(uint32_t tid, char* archivo) {
 //--------------------|
 void recibir_finalizacion_hilo(int cliente_socket) {
     uint32_t pid, tid;
-    recv(cliente_socket, &pid, sizeof(uint32_t), 0);
-    recv(cliente_socket, &tid, sizeof(uint32_t), 0);
+    if (recv(cliente_socket, &pid, sizeof(uint32_t), 0) <= 0 ||
+        recv(cliente_socket, &tid, sizeof(uint32_t), 0) <= 0) {
+        log_error(LOGGER_MEMORIA, "Error al recibir datos para finalizar hilo.");
+        return;
+    }
 
     // Buscar y eliminar el contexto del hilo
+    pthread_mutex_lock(&mutex_hilos);
     t_contexto_ejecucion* contexto_a_eliminar = obtener_contexto(pid);
     if (contexto_a_eliminar != NULL) {
         free(contexto_a_eliminar->registros);
@@ -257,6 +300,7 @@ void recibir_finalizacion_hilo(int cliente_socket) {
         log_error(LOGGER_MEMORIA, "Error al finalizar el hilo - PID: %d, TID: %d", pid, tid);
         enviar_respuesta(cliente_socket, "ERROR");
     }
+    pthread_mutex_unlock(&mutex_hilos);
 }
 
 t_contexto_ejecucion* obtener_contexto(uint32_t pid) {
@@ -359,96 +403,56 @@ t_list* obtener_lista_instrucciones_por_tid(uint32_t tid) {
     return NULL;
 }
 
-// Enviar respuesta a la CPU
-void enviar_respuesta(int socket_cpu, char *mensaje) {
-    // Enviar el mensaje a través del socket de la CPU
-    send(socket_cpu, mensaje, strlen(mensaje) + 1, 0); // +1 para incluir el terminador nulo
-}
-
-void recibir_pedido_instruccion(uint32_t* pid, uint32_t* pc, int cliente_socket){
-    recv(cliente_socket, pid, sizeof(uint32_t), 0);
-    recv(cliente_socket, pc, sizeof(uint32_t), 0);
-
-}
-
-
-
-void enviar_instruccion(int cliente_socket, uint32_t pid, uint32_t tid, uint32_t pc) {
-    t_instruccion* instruccion = obtener_instruccion(tid, pc);
-    
+void recibir_solicitud_instruccion(int cliente_socket) {
+    uint32_t pid, tid, pc;
+    if (recv(cliente_socket, &pid, sizeof(uint32_t), 0) <= 0 ||
+        recv(cliente_socket, &tid, sizeof(uint32_t), 0) <= 0 ||
+        recv(cliente_socket, &pc, sizeof(uint32_t), 0) <= 0) {
+        log_error(logger, "Error al recibir solicitud de instrucción.");
+        enviar_respuesta(cliente_socket, "ERROR");
+        return;
+    }
+    t_instruccion *instruccion = obtener_instruccion(tid, pc);
     if (instruccion) {
         send(cliente_socket, instruccion, sizeof(t_instruccion), 0);
-        log_info(LOGGER_MEMORIA, "## Obtener instrucción - (PID:TID) - (%d:%d) - Instrucción: %s", pid, tid, instruccion->nombre);
+        log_info(logger, "Instrucción enviada - PID: %u, TID: %u, PC: %u.", pid, tid, pc);
     } else {
-        log_error(LOGGER_MEMORIA, "Error: Instrucción no encontrada para PID %d, TID %d en PC %d", pid, tid, pc);
+        enviar_respuesta(cliente_socket, "NO_INSTRUCCION");
     }
 }
 
-
-void recibir_solicitud_instruccion(int cliente_socket) {
-    uint32_t pid, tid, pc;
-    recv(cliente_socket, &pid, sizeof(uint32_t), 0);
-    recv(cliente_socket, &tid, sizeof(uint32_t), 0);
-    recv(cliente_socket, &pc, sizeof(uint32_t), 0);
-
-    enviar_instruccion(cliente_socket, pid, tid, pc);
-}
-
-void recibir_set(uint32_t* pid, uint32_t* registro, uint32_t* valor, int cliente_socket){
-    recv(cliente_socket, pid, sizeof(uint32_t), 0);
-    recv(cliente_socket, registro, sizeof(uint32_t), 0);
-    recv(cliente_socket, valor, sizeof(uint32_t), 0);
-}
-
-
-
 void recibir_read_mem(int cliente_socket) {
     uint32_t direccion_fisica;
-    recv(cliente_socket, &direccion_fisica, sizeof(uint32_t), 0);
-    uint32_t valor = leer_memoria(direccion_fisica);
+    if (recv(cliente_socket, &direccion_fisica, sizeof(uint32_t), 0) <= 0) {
+        log_error(logger, "Error al recibir dirección física.");
+        enviar_respuesta(cliente_socket, "ERROR");
+        return;
+    }
 
-    send(cliente_socket, &valor, sizeof(uint32_t), 0);
-    log_info(LOGGER_MEMORIA, "## Lectura - Dirección Física: %d - Tamaño: %lu bytes", direccion_fisica, sizeof(uint32_t));
+    uint32_t valor = leer_memoria(direccion_fisica);
+    if (valor != SEGF_FAULT) {
+        send(cliente_socket, &valor, sizeof(uint32_t), 0);
+        log_info(LOGGER_MEMORIA, "Lectura exitosa - Dirección: %u, Valor: %u.", direccion_fisica, valor);
+    } else {
+        enviar_respuesta(cliente_socket, "SEGMENTATION_FAULT");
+    }
 }
 
 void recibir_write_mem(int cliente_socket) {
     uint32_t direccion_fisica, valor;
-    recv(cliente_socket, &direccion_fisica, sizeof(uint32_t), 0);
-    recv(cliente_socket, &valor, sizeof(uint32_t), 0);
+    if (recv(cliente_socket, &direccion_fisica, sizeof(uint32_t), 0) <= 0 ||
+        recv(cliente_socket, &valor, sizeof(uint32_t), 0) <= 0) {
+        log_error(logger, "Error al recibir datos para escritura.");
+        enviar_respuesta(cliente_socket, "ERROR");
+        return;
+    }
 
     escribir_memoria(direccion_fisica, valor);
     send(cliente_socket, "OK", 2, 0);
     log_info(LOGGER_MEMORIA, "## Escritura - Dirección Física: %d - Valor: %d", direccion_fisica, valor);
 }
 
-
-void recibir_sub(uint32_t* pid, uint32_t* registro1, uint32_t* registro2, int cliente_socket){
-    recv(cliente_socket, pid, sizeof(uint32_t), 0);
-    recv(cliente_socket, registro1, sizeof(uint32_t), 0);
-    recv(cliente_socket, registro2, sizeof(uint32_t), 0);
-}
-
-void recibir_sum(uint32_t* pid,uint32_t* registro1, uint32_t* registro2, int cliente_socket){
-    recv(cliente_socket, pid, sizeof(uint32_t), 0);
-    recv(cliente_socket, registro1, sizeof(uint32_t), 0);
-    recv(cliente_socket, registro2, sizeof(uint32_t), 0);
-}
-
-void recibir_jnz(uint32_t* pid, uint32_t* pc_actual, uint32_t* valor_condicion, int cliente_socket){
-    recv(cliente_socket, pid, sizeof(uint32_t), 0);
-    recv(cliente_socket, pc_actual, sizeof(uint32_t), 0);
-    recv(cliente_socket, valor_condicion, sizeof(uint32_t), 0);
-}
-void cambiar_pc(uint32_t pid, uint32_t pc_actual){
-
-}
-
-void recibir_log(char mensaje[256], int cliente_socket){
-    recv(cliente_socket, mensaje, 256, 0);
-}
-
 // Lista de instrucciones es de tipo t_proceso_instruccion
-// NO SE USA POR AHORA
 t_instruccion* obtener_instruccion(uint32_t tid, uint32_t pc) {
     for(int i = 0; i < list_size(lista_instrucciones); i++) {
         t_hilo_instrucciones* instruccion_actual = list_get(lista_instrucciones, i);
@@ -461,8 +465,10 @@ t_instruccion* obtener_instruccion(uint32_t tid, uint32_t pc) {
 }
 
 
-//DESARROLLAARRRRRRRRRRRRRRRRRRRRR
-void recibir_solicitud_contexto(uint32_t pid, uint32_t tid) {
+void recibir_solicitud_contexto(int socket_cliente) {
+    uint32_t pid, tid;
+    recv(socket_cliente, &pid, sizeof(uint32_t), 0);
+    recv(socket_cliente, &tid, sizeof(uint32_t), 0);
     for (int i = 0; i < list_size(lista_contextos); i++) {
         t_contexto_proceso* contexto_proceso = list_get(lista_contextos, i);
         
@@ -529,7 +535,7 @@ uint32_t leer_memoria(uint32_t direccion_fisica) {
     }
 
     // Leer los primeros 4 bytes a partir de la dirección física
-    uint32_t valor = *((uint32_t*)(direccion_fisica));
+    uint32_t valor = *(uint32_t*)(uintptr_t)direccion_fisica;
 
     // Log de éxito
     log_info(LOGGER_MEMORIA, "Lectura exitosa: Dirección física %d, Valor %d", direccion_fisica, valor);
@@ -545,8 +551,8 @@ void escribir_memoria(uint32_t direccion_fisica, uint32_t valor) {
     }
 
     // Escribir los 4 bytes de `valor` a partir de `direccion_fisica`
-    *((uint32_t*)(direccion_fisica)) = valor;
-
+    *(uint32_t*)(uintptr_t)direccion_fisica = valor;
+    
     // Log de éxito y respuesta
     log_info(LOGGER_MEMORIA, "Escritura exitosa: Dirección física %d, Valor %d", direccion_fisica, valor);
     enviar_respuesta(socket_memoria_cpu_dispatch, "OK");  // Responder OK al cliente

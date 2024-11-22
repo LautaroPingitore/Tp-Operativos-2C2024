@@ -115,8 +115,7 @@ void pedir_instruccion_memoria(uint32_t pid, uint32_t pc, int socket)
     eliminar_paquete(paquete);
 }
 
-t_instruccion *deserializar_instruccion(int socket)
-{
+t_instruccion *deserializar_instruccion(int socket) {
     t_paquete* paquete = recibir_paquete_entero(socket);
     if (!paquete) {
         log_error(LOGGER_CPU, "Fallo al recibir paquete.");
@@ -127,8 +126,8 @@ t_instruccion *deserializar_instruccion(int socket)
     void *stream = paquete->buffer->stream;
     int offset = 0;
 
-    memcpy(&(instruccion->nombre), stream + offset, sizeof(nombre_instruccion));
-    offset += sizeof(nombre_instruccion);
+    memcpy(&(instruccion->nombre), stream + offset, sizeof(char*));
+    offset += sizeof(char*);
 
     uint32_t tamanio_parametro1;
     memcpy(&(tamanio_parametro1), stream + offset, sizeof(uint32_t));

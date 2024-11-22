@@ -1,5 +1,15 @@
 #include "include/gestor.h"
 
+int main() {
+    inicializar_programa();
+    manejar_conexiones();
+
+    // Ejecutar el servidor en un bucle principal, esperando solicitudes y procesando respuestas
+    int sockets[] = {socket_memoria, socket_memoria_cpu_dispatch, socket_memoria_cpu_interrupt, socket_memoria_kernel, socket_memoria_filesystem, -1};
+    terminar_programa(CONFIG_MEMORIA, LOGGER_MEMORIA, sockets);
+
+    return 0;
+}
 
 void inicializar_programa() {
     // Inicialización de configuración y logger
@@ -27,48 +37,21 @@ void inicializar_programa() {
 }
 
 void manejar_conexiones() {
-    // Esperar conexiones de Kernel y CPU
-    socket_memoria_kernel = esperar_cliente(socket_memoria, LOGGER_MEMORIA);
-    if (socket_memoria_kernel != -1) {
-        log_info(LOGGER_MEMORIA, "Conexión establecida con Kernel");
-        pthread_t hilo_kernel;
-        pthread_create(&hilo_kernel, NULL, (void*)procesar_conexion_memoria, (void*)&socket_memoria_kernel);
-    }
+    while(1) {
+        int socket_cliente = esperar_cliente(socket_memoria, LOGGER_MEMORIA);
+        if(socket_cliente == -1) continue;
 
-    socket_memoria_cpu_dispatch = esperar_cliente(socket_memoria, LOGGER_MEMORIA);
-    if (socket_memoria_cpu_dispatch != -1) {
-        log_info(LOGGER_MEMORIA, "Conexión establecida con CPU Dispatch");
-        pthread_t hilo_cpu_dispatch;
-        pthread_create(&hilo_cpu_dispatch, NULL, (void*)procesar_conexion_memoria, (void*)&socket_memoria_cpu_dispatch);
-    }
-
-    socket_memoria_cpu_interrupt = esperar_cliente(socket_memoria, LOGGER_MEMORIA);
-    if (socket_memoria_cpu_interrupt != -1) {
-        log_info(LOGGER_MEMORIA, "Conexión establecida con CPU Interrupt");
-        pthread_t hilo_cpu_interrupt;
-        pthread_create(&hilo_cpu_interrupt, NULL, (void*)procesar_conexion_memoria, (void*)&socket_memoria_cpu_interrupt);
+        pthread_t hilo_conexion;
+        // ERROR MEDIO QUILOMBO
+        if (pthread_create(&hilo_conexion, NULL, procesar_conexion_memoria, (void*)&socket_cliente) != 0) {
+            log_error(LOGGER_MEMORIA, "Error al crear hilo para conexión");
+            close(socket_cliente);
+        }
+        pthread_detach(hilo_conexion);
     }
 }
 
-int main() {
-    inicializar_programa();
-    manejar_conexiones();
-
-    // Ejecutar el servidor en un bucle principal, esperando solicitudes y procesando respuestas
-    int sockets[] = {socket_memoria, socket_memoria_cpu_dispatch, socket_memoria_cpu_interrupt, socket_memoria_kernel, socket_memoria_filesystem, -1};
-    terminar_programa(CONFIG_MEMORIA, LOGGER_MEMORIA, sockets);
-
-    return 0;
-}
-
-void inicializar_config(char *arg)
-{
-	/*
-	char config_path[256];
-	strcpy(config_path, "./config/");
-	strcat(config_path, arg);
-	strcat(config_path, ".config");
-	*/
+void inicializar_config(char *arg) {
 	
 	char config_path[256];
     strcpy(config_path, "../");

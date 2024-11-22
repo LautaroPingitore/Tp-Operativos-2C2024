@@ -1,8 +1,6 @@
 #ifndef COMUNICACIONES_H_
 #define COMUNICACIONES_H_
 
-
-
 void *memoriaUsuario;
 
 // Definición del tipo para los argumentos de la conexión
@@ -16,22 +14,17 @@ typedef struct
 void inicializar_datos();
 
 // Funciones para manejar el servidor y la comunicación con otros módulos
+void procesar_conexion_memoria(void *);
 int server_escuchar(t_log *, char *, int );
 void enviar_respuesta(int, char*); 
-void procesar_conexion_memoria(void *);
 
 void recibir_pedido_instruccion(uint32_t*, uint32_t*, int);
 t_instruccion* obtener_instruccion(uint32_t, uint32_t);
 void enviar_instruccion(int, uint32_t , uint32_t , uint32_t );
-void recibir_set(uint32_t*, uint32_t*, uint32_t*, int);
 t_contexto_ejecucion*  obtener_contexto(uint32_t);
 
 void recibir_read_mem(int);
 void recibir_write_mem(int);
-void recibir_sub(uint32_t*, uint32_t*, uint32_t*, int);
-void recibir_sum(uint32_t*, uint32_t*, uint32_t*, int);
-void recibir_jnz(uint32_t*, uint32_t* , uint32_t* , int);
-void cambiar_pc(uint32_t, uint32_t);
 void recibir_log(char [256], int);
 
 typedef struct {
@@ -78,8 +71,8 @@ t_list* obtener_lista_instrucciones_por_tid(uint32_t);
 
 // FALTA HACER
 int  mandar_solicitud(char*, char*, int);
-void recibir_solicitud_contexto();
-void recibir_actualizacion_contexto();
+void recibir_solicitud_contexto(int);
+void recibir_actualizacion_contexto(int);
 void agregar_instrucciones_a_lista(uint32_t, char*);
 uint32_t leer_memoria(uint32_t direccion_fisica);
 void escribir_memoria(uint32_t, uint32_t);

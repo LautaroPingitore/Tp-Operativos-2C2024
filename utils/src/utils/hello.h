@@ -55,13 +55,8 @@ typedef enum{
     CONEXION_INTERFAZ,
     DESCONEXION_INTERFAZ,
     FINALIZACION_INTERFAZ,
-    PEDIDO_SET,
     PEDIDO_READ_MEM,
     PEDIDO_WRITE_MEM,
-    PEDIDO_SUB,
-    PEDIDO_SUM,
-    PEDIDO_JNZ,
-    PEDIDO_LOG,
     ENVIAR_PAGINA,
     ENVIAR_DIRECCION_FISICA,
     ENVIAR_INTERFAZ_STDIN,
@@ -135,17 +130,6 @@ typedef struct
 	int size;
 	void* stream;
 } t_buffer;
-
-typedef enum {
-    SET,
-    READ_MEM,
-    WRITE_MEM,
-    SUM,
-    SUB,
-    JNZ,
-    LOG,
-    SEGMENTATION_FAULT //QUE ESTO ESTE ACA DA ERROR EN EL SWITH DE execute PERO SACARLO HABILITA OTROS ERRORES DE que esta undeclared
-} nombre_instruccion;
 
 typedef struct {
     char* nombre;  // Tipo de instrucción (SET, SUM, etc.)
