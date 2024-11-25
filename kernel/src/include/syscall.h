@@ -39,8 +39,7 @@ void syscall_thread_exit(t_pcb*, uint32_t);
 pthread_mutex_t* syscall_mutex_create();
 void syscall_mutex_lock(pthread_mutex_t*);
 void syscall_mutex_unlock(pthread_mutex_t*);
-void syscall_dump_memory();
-void dump_memory();
+void syscall_dump_memory(t_pcb*, uint32_t);
 void syscall_io(t_pcb*, uint32_t, int);
 void manejar_syscall(op_code, t_pcb*, char*, int, int, uint32_t, uint32_t, pthread_mutex_t*, int);
 

@@ -8,6 +8,9 @@ t_list* cola_ready;
 t_list* cola_exec;
 t_list* cola_blocked;
 t_list* cola_exit;
+t_list* cola_nivel_1;
+t_list* cola_nivel_2;
+t_list* cola_nivel_3;
 
 uint32_t pid_actual = 0;
 uint32_t tid_actual = 0;
@@ -73,7 +76,9 @@ t_pcb* crear_pcb(uint32_t pid, int tamanio, t_contexto_ejecucion* contexto_ejecu
     pcb->CONTEXTO = contexto_ejecucion;
     pcb->ESTADO = estado;
     pcb->MUTEXS = list_create();
-    pcb->CANTIDAD_RECURSOS = 0;
+    
+    // ACA PODRIAMOS AGREGAR EL ARCHIVO A LA TABLA DE PATHS
+    // EN LA POSICION DEL PID
 
     // OJO ACA PORQUE NO SABEMOS QUE PATH PASARLE AL HILO PRINCIPAL
     t_tcb* hilo_principal = crear_tcb(pid, asignar_tid(pcb), "", 0, NEW);
@@ -101,7 +106,7 @@ t_tcb* crear_tcb(uint32_t pid_padre, uint32_t tid, char* archivo_pseudocodigo, i
 // FUNCION QUE CREA UN PROCESO Y LO METE A LA COLA DE NEW
 void crear_proceso(char* path_proceso, int tamanio_proceso, int prioridad){
     archivo_pseudocodigo* archivo = leer_archivo_pseudocodigo(path_proceso);
-    t_pcb* pcb = crear_pcb(asignar_pid(), tamanio_proceso, inicializar_contexto(), NEW, asignar_mutexs());
+    t_pcb* pcb = crear_pcb(asignar_pid(), tamanio_proceso, inicializar_contexto(), NEW, asignar_mutexs(), path_proceso);
     obtener_recursos_del_proceso(archivo, pcb);
 
     char* path_hilo = "";
@@ -219,7 +224,16 @@ void intentar_inicializar_proceso_de_new() {
     pthread_mutex_lock(&mutex_cola_new);
     if (!list_is_empty(cola_new)) {
         t_pcb* pcb = list_remove(cola_new, 0); // Guarda con lo que retorna list_remove
-        inicializar_proceso(pcb, tabla_paths[pcb->PID]);
+
+        // COMENTARIO IMPORTANTE QUE NO ME ACORDABA
+        // LA TABLA DE PATHS ES UNA FORMA QUE NECONTRAMOS CON FELI PARA EVITAR QUE EL
+        // PROCESO TENGA ASIGNADO EL PATH DEL ARCHIVO EN SU STRUCT, SI NO QUE ESTEN
+        // TODOS LOS PATHS EN UNA LISTA DE TIP CHAR* DONDE CADA POSICION CORRESPONDE
+        // AL PID DE CADA PROCESO, PODRIAMOS HACER QUE LA TABLA DE PATHS SEA DE
+        // TIPO CHAR** O DE TIPO T_LIST
+
+        //inicializar_proceso(pcb, tabla_paths[pcb->PID]);
+        inicializar_proceso(pcb, "HOLA");
     }
     pthread_mutex_unlock(&mutex_cola_new);
 }

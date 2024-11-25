@@ -203,7 +203,6 @@ typedef struct {
 	t_contexto_ejecucion* CONTEXTO;
 	t_estado ESTADO;
 	t_list* MUTEXS; // char*
-    int CANTIDAD_RECURSOS;
     //char* ARCHIVO;
 } t_pcb;
 
