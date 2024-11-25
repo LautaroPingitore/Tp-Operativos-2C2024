@@ -1,5 +1,11 @@
 #include "include/gestor.h"
 
+// PASO A PASO DE LA EJECUCION
+/*
+
+*/
+
+
 //PLANIFICADOR LARGO PLAZO ==============================
     
 // COLAS QUE EN LAS CUALES SE GUARDARAN LOS PROCESOS
@@ -12,6 +18,7 @@ t_list* cola_nivel_1;
 t_list* cola_nivel_2;
 t_list* cola_nivel_3;
 
+t_list* tabl_paths;
 uint32_t pid_actual = 0;
 uint32_t tid_actual = 0;
 t_log* logger;
@@ -38,6 +45,8 @@ void inicializar_kernel() {
     cola_nivel_1 = list_create();
     cola_nivel_2 = list_create();
     cola_nivel_3 = list_create();
+
+    tabla_paths = list_create();
 
     pthread_mutex_init(&mutex_cola_new, NULL);
     pthread_mutex_init(&mutex_cola_ready, NULL);
@@ -79,15 +88,16 @@ t_pcb* crear_pcb(uint32_t pid, int tamanio, t_contexto_ejecucion* contexto_ejecu
     
     // ACA PODRIAMOS AGREGAR EL ARCHIVO A LA TABLA DE PATHS
     // EN LA POSICION DEL PID
+    agregar_path(pid, archivo);
 
     // OJO ACA PORQUE NO SABEMOS QUE PATH PASARLE AL HILO PRINCIPAL
-    t_tcb* hilo_principal = crear_tcb(pid, asignar_tid(pcb), "", 0, NEW);
+    t_tcb* hilo_principal = crear_tcb(pid, asignar_tid(pcb), archivo, 0, NEW);
     list_add(pcb->TIDS, hilo_principal);
 
     return pcb;
 }
 
-t_tcb* crear_tcb(uint32_t pid_padre, uint32_t tid, char* archivo_pseudocodigo, int prioridad, t_estado estado){
+t_tcb* crear_tcb(uint32_t pid_padre, uint32_t tid, char* archivo_pseudocodigo, int prioridad, t_estado estado,){
     t_tcb* tcb = malloc(sizeof(t_tcb));
     if (tcb == NULL) {
         perror("Error al asignar memoria para el TCB");
@@ -98,7 +108,7 @@ t_tcb* crear_tcb(uint32_t pid_padre, uint32_t tid, char* archivo_pseudocodigo, i
     tcb->TID = tid;
     tcb->PRIORIDAD = prioridad;
     tcb->ESTADO = estado;
-    tcb->archivo = "";
+    tcb->archivo = archivo_pseudocodigo;
 
     return tcb;
 }
@@ -225,6 +235,15 @@ void intentar_inicializar_proceso_de_new() {
     if (!list_is_empty(cola_new)) {
         t_pcb* pcb = list_remove(cola_new, 0); // Guarda con lo que retorna list_remove
 
+
+        char * path_proceso= obtener_path(pcb->PID);
+
+        if (path_proceso == NULL) {
+            log_error(LOGGER_KERNEL, "Error: No se encontró el path para el proceso %d", pcb->PID);
+            pthread_mutex_unlock(&mutex_cola_new);
+            return;
+        }
+
         // COMENTARIO IMPORTANTE QUE NO ME ACORDABA
         // LA TABLA DE PATHS ES UNA FORMA QUE NECONTRAMOS CON FELI PARA EVITAR QUE EL
         // PROCESO TENGA ASIGNADO EL PATH DEL ARCHIVO EN SU STRUCT, SI NO QUE ESTEN
@@ -232,8 +251,7 @@ void intentar_inicializar_proceso_de_new() {
         // AL PID DE CADA PROCESO, PODRIAMOS HACER QUE LA TABLA DE PATHS SEA DE
         // TIPO CHAR** O DE TIPO T_LIST
 
-        //inicializar_proceso(pcb, tabla_paths[pcb->PID]);
-        inicializar_proceso(pcb, "HOLA");
+        inicializar_proceso(pcb, path_proceso);
     }
     pthread_mutex_unlock(&mutex_cola_new);
 }
@@ -243,7 +261,9 @@ void process_exit(t_pcb* pcb) {
     mover_a_exit(pcb);
     liberar_recursos_proceso(pcb);
     enviar_proceso_memoria(socket_kernel_memoria, pcb, PROCESS_EXIT);
+    eliminar_path(pcb->PID)
     intentar_inicializar_proceso_de_new();
+    
 }
 
 void liberar_recursos_proceso(t_pcb* pcb) {
@@ -286,11 +306,7 @@ void thread_create(t_pcb *pcb, char* archivo_pseudocodigo, int prioridad) {
     log_info(LOGGER_KERNEL, "Hilo %d creado en el proceso %d", nuevo_tid, pcb->PID);
 }
 
-void cargar_archivo_pseudocodigo(t_tcb* tcb, char* archivo_pseudocodigo) {
-
-}
-
-//                         CUIDADO
+// CUIDADO
 // HACE QUE UN HILO ESPERE LA FINALIZACION DE OTRO HILO DEL MISMO PROCESO
 // PODRIA USAR UN SEMAFORO DE MUTEX COLAS PERO NO ESTOY SEGURO
 void thread_join(t_pcb* pcb, uint32_t tid_actual, uint32_t tid_esperado) {
@@ -414,47 +430,49 @@ void intentar_mover_a_execute() {
     pthread_mutex_lock(&mutex_cola_ready);
     if (list_is_empty(cola_ready)) {
         log_info(logger, "No hay procesos en READY para mover a EXECUTE");
+        pthread_mutex_unlock(&mutex_cola_ready);
         return;
     }
-    pthread_mutex_unlock(&mutex_cola_ready);
 
     if (!cpu_libre) {
         log_info(logger, "CPU ocupada, no se puede mover un proceso a EXECUTE");
+        pthread_mutex_unlock(&mutex_cola_ready);
         return;
     }
 
     // Obtener el primer proceso de la cola de READY
-    pthread_mutex_lock(&mutex_cola_ready);
     t_pcb* proceso_seleccionado = list_remove(cola_ready, 0);
-    pthread_mutex_lock(&mutex_cola_ready);
+    pthread_mutex_unlock(&mutex_cola_ready);
 
-    if (proceso_seleccionado == NULL) {
+    if (!proceso_seleccionado) {
         log_warning(logger, "Error al obtener un proceso de la cola READY");
         return;
     }
 
     // Cambiar el estado del proceso a EXECUTE
-    proceso_seleccionado->ESTADO = EXECUTE;
+    pthread_mutex_lock(&mutex_cola_exec);
+    list_add(cola_exec, proceso_seleccionado);
+    pthread_mutex_unlock(&mutex_cola_exec);
 
+    proceso_seleccionado->ESTADO = EXECUTE;
     cpu_libre = false;
 
     // Loggear la operacion
     log_info(logger, "Proceso %d movido a EXECUTE", proceso_seleccionado->PID);
 
     // Enviar el proceso a la CPU para su ejecucion
-
     int resultado = enviar_proceso_a_cpu(proceso_seleccionado);
 
-    if (resultado == 0) {
-        log_info(logger, "El proceso %d ha sido enviado a la CPU", proceso_seleccionado->PID);
-    } else {
+    if (resultado != 0) {
         log_error(logger, "Error al enviar el proceso %d a la CPU", proceso_seleccionado->PID);
-        // Si hubo un error, devolver el proceso a READY
         proceso_seleccionado->ESTADO = READY;
         cpu_libre = true;
-        pthread_mutex_lock(&mutex_cola_new);
+
+        pthread_mutex_lock(&mutex_cola_ready);
         list_add(cola_ready, proceso_seleccionado);
-        pthread_mutex_lock(&mutex_cola_new);
+        pthread_mutex_lock(&mutex_cola_ready);
+    } else {
+        log_info(logger, "El proceso %d ha sido enviado a la CPU", proceso_seleccionado->PID);
     }
 }
 
@@ -462,6 +480,7 @@ int enviar_hilo_a_cpu(t_tcb* hilo) {
     t_paquete* paquete = crear_paquete_con_codigo_operacion(HILO);
     agregar_a_paquete(paquete, &hilo->TID, sizeof(hilo->TID));
     agregar_a_paquete(paquete, &hilo->PRIORIDAD, sizeof(hilo->PRIORIDAD));
+    agregar_a_paquete(paquete, &hilo->PID_PADRE, sizeof(uint32_t));
     agregar_a_paquete(paquete, &hilo->ESTADO, sizeof(hilo->ESTADO));
     serializar_paquete(paquete, paquete->buffer->size);
 
@@ -478,6 +497,7 @@ int enviar_hilo_a_cpu(t_tcb* hilo) {
 }
 
 int enviar_proceso_a_cpu(t_pcb* proceso) {
+    
     return 1;
 }
 
@@ -556,40 +576,47 @@ t_tcb* seleccionar_hilo_multinivel() {
 }
 
 void ejecutar_hilo_rr(t_tcb* hilo, t_list* cola, int quantum) {
-    while(1) {
+    pthread_mutex_lock(&mutex_estado);
+    hilo->ESTADO = EXECUTE;
+    pthread_mutex_unlock(&mutex_estado);
 
-        hilo->ESTADO = EXECUTE;
-        log_info(LOGGER_KERNEL, "Ejecutando hilo TID %d del proceso por %d ms", hilo->TID, quantum);
+    log_info(LOGGER_KERNEL, "Ejecutando hilo TID %d del proceso por %d ms %d", hilo->TID, hilo->PID_PADRE, quantum);
 
+    struct timespec inicio, actual;
+    clock_gettime(CLOCK_MONOTONIC, &inicio);
 
-        struct timespec inicio, actual;
-        clock_gettime(CLOCK_MONOTONIC, &inicio);
+    int tiempo_transcurrido = 0;
+    while (tiempo_transcurrido < quantum) {
+        ejecutar_hilo(hilo);
 
-        int tiempo_transcurrido = 0;
-        while (tiempo_transcurrido < quantum) {
-            clock_gettime(CLOCK_MONOTONIC, &actual);
-            tiempo_transcurrido = (actual.tv_sec - inicio.tv_sec) * 1000 + 
-                                  (actual.tv_nsec - inicio.tv_nsec) / 1000000;
-            usleep(1000);
-        }
-
-        log_info(LOGGER_KERNEL, "Hilo TID %d ejecutado durante %d ms", hilo->TID, quantum);
-
-        
-        if(hilo->ESTADO != EXIT) {
-            pthread_mutex_lock(&mutex_cola_ready); 
-            hilo->ESTADO = READY;
-            list_add(cola, hilo);
-            pthread_mutex_unlock(&mutex_cola_ready);
-            log_info(LOGGER_KERNEL, "Hilo TID %d movido a READY después del quantum", hilo->TID);
-        } else {
-            log_info(LOGGER_KERNEL, "Hilo TID %d finalizado", hilo->TID);
-            liberar_recursos_hilo(hilo);
-        }
-
-        cpu_libre = true;
+        clock_gettime(CLOCK_MONOTONIC, &actual);
+        tiempo_transcurrido = (actual.tv_sec - inicio.tv_sec) * 1000 + 
+                                (actual.tv_nsec - inicio.tv_nsec) / 1000000;
+        usleep(1000);
     }
 
+    log_info(LOGGER_KERNEL, "Hilo TID %d ejecutado durante %d ms", hilo->TID, quantum);
+
+    pthread_mutex_lock(&mutex_estado);
+    if(hilo->ESTADO != EXIT) {
+        hilo->ESTADO = READY;
+        pthread_mutex_unlock(&mutex_estado);
+
+        pthread_mutex_lock(&mutex_cola_ready); 
+        list_add(cola, hilo);
+        pthread_mutex_unlock(&mutex_cola_ready);
+
+        log_info(LOGGER_KERNEL, "Hilo TID %d movido a READY después del quantum", hilo->TID);
+    } else {
+        pthread_mutex_unlock(&mutex_estado);
+
+        log_info(LOGGER_KERNEL, "Hilo TID %d finalizado", hilo->TID);
+        liberar_recursos_hilo(hilo);
+    }
+
+    pthread_mutex_lock(&mutex_estado);
+    cpu_libre = true;
+    pthread_mutex_unlock(&mutex_estado);
 }
 
 // ENTRADA Y SALIDA ====================
@@ -614,3 +641,17 @@ void io(t_pcb* pcb, uint32_t tid, int milisegundos) {
     log_info(LOGGER_KERNEL, "Hilo %d en proceso %d ha terminado IO y esta en READY", tid, pcb->PID);
 }
 
+// MANEJO DE TABLA PATHS
+agregar_path(uint32_t pid, char* archivo) {
+    char* path_copiado = strdup(archivo);
+    list_add_in_index(tabla_paths, pid, path_copiado);
+}
+
+char* obtener_path(uint32_t pid) {
+    return (char*) list_get(tabla_paths, pid);
+}
+
+void eliminar_path(uint32_t pid) {
+    char* path = list_remove(tabla_paths, pid);
+    if (path) free(path);
+}

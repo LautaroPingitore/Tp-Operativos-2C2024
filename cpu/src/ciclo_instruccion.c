@@ -6,6 +6,8 @@ int fd_cpu_memoria = -1;
 
 void ejecutar_ciclo_instruccion(int socket_cliente) {
     while (true) {
+        // OJO PORQUE PCB ACTUAL NUNCA SE LE ASIGNA UN VALOR
+        t_pcb* pcb_actual = recibir_proceso_kernel(socket_cliente);
         // Asegúrate de que pcb_actual esté inicializado antes de comenzar el ciclo
         if (!pcb_actual) {
             log_error(LOGGER_CPU, "No hay PCB actual. Terminando ciclo de instrucción.");
@@ -27,6 +29,11 @@ void ejecutar_ciclo_instruccion(int socket_cliente) {
 
         liberar_instruccion(instruccion);
     }
+}
+
+t_pcb* recibir_proceso_kernel(int socket_cliente) {
+    t_paquete* paquete = recibir_paquete(socket_cliente)
+    
 }
 
 // RECIBE LA PROXIMA EJECUCION A REALIZAR OBTENIDA DEL MODULO MEMORIA
@@ -99,14 +106,12 @@ void check_interrupt() {
 }
 
 // MUESTRA EN CONSOLA LA INSTRUCCION EJECUTADA Y LE SUMA 1 AL PC
-void loguear_y_sumar_pc(t_instruccion *instruccion)
-{
+void loguear_y_sumar_pc(t_instruccion *instruccion) {
     log_info(LOGGER_CPU, "PID: %d - Ejecutando: %s - Parametros: %s %s %d", pcb_actual->PID, instruccion->nombre, intruccion->parametro1, instruccion->parametro2, instruccion->parametro3);
     pcb_actual->CONTEXTO->registros->program_counter++;
 }
 
-void pedir_instruccion_memoria(uint32_t pid, uint32_t pc, int socket)
-{
+void pedir_instruccion_memoria(uint32_t pid, uint32_t pc, int socket) {
     t_paquete *paquete = crear_paquete_con_codigo_de_operacion(PEDIDO_INSTRUCCION);
     agregar_a_paquete(paquete, &pid, sizeof(uint32_t));
     agregar_a_paquete(paquete, &pc, sizeof(uint32_t));
