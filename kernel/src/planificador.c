@@ -1,7 +1,51 @@
 #include "include/gestor.h"
 
-// PASO A PASO DE LA EJECUCION
 /*
+=== PASO A PASO DE LA EJECUCION ===
+1) Al iniciar kernel se crea un proceso inicial y un hilo principal para dicho proceso
+donde el archivo de pseudocodigo del hilo 0 es el mismo que del proceso
+2) Al crearce un proceso este pasa a la cola NEW y se le manda un pedido a memoria para
+inicializar el mismo, en caso de que no haya espacio, este se queda en esta cola
+3) Al inicializarce un proceso, este pasa a la cola READY y se elige el hilo a ejecutar
+en base al algoritmo de planificacion que se este usando
+4) Una vez que se elige el hilo a ejecutar se lo pasa a la cola EXEC y se envia a CPU
+el TID y su PID asociado a travez de DISPATCH quedando a la espera de recibir
+otra vez el TID con el motivo de devolucion
+5) AL recibir el TID del hilo en ejecucion, si dicho motivo implica replanificar
+se seleccionara el siguiente hilo a ejecutar (PASO 3), durante este periodo la CPU
+queda esperando
+6) SYSCALLS: Esto podria estar metido dentro de CPU dentro de la funcion que maneja
+las instrucciones como caso aparte donde si ocurre una syscall se debe bloquear 
+al hilo ejectandose y devolver el control al kernel para que este vuelva a planificar todo (PASO 3)
+
+=== CONEXIONES USADAS ===
+- CPU: Una vez que se selecciono el hilo a ejecutar se le debe mandar a CPU
+       el TID y el PID padre asociado al hilo a travez de DISPATCH
+
+       Una vez que el hilo termino de ejecutarse (DISPATCH) o ocurrio 
+       una interrupcion (INTERRUPT), CPU le manda a KERNEL el TID para que
+       este elija el proximo hilo a ejecutar
+
+- MEMORIA: Al crear un proceso se le envia a MEMORIA el PCB para ver si puede
+           inicializarce o no el proceso
+
+           AL finalizar un proceso se le envia a MEMORIA el PCB para que este
+           lo libere de la memoria
+
+           Al crear un hilo, KERNEL le debe mandar a MEMORIA el TCB
+
+           Al finalizar un hilo KERNEL le debe mandar a MEMORIA el TCB, liberar
+           el TCB asociado y mover a READY todos los hilos bloqueados por ese TID
+
+=== LOGS OBLIGATORIOS (MARCAR CON X AQUELLOS QUE YA ESTEN) ===
+- Syscall recibida: ## (<PID>:<TID>) - Solicitó syscall: <NOMBRE_SYSCALL>
+- Creación de Proceso: ## (<PID>:0) Se crea el proceso - Estado: NEW
+- Creación de Hilo: ## (<PID>:<TID>) Se crea el Hilo - Estado: READY
+- Motivo de Bloqueo: ## (<PID>:<TID>) - Bloqueado por: <PTHREAD_JOIN / MUTEX / IO>
+- Fin de IO: ## (<PID>:<TID>) finalizó IO y pasa a READY
+- Fin de Quantum: ## (<PID>:<TID>) - Desalojado por fin de Quantum
+- Fin de Proceso: ## Finaliza el proceso <PID>
+- Fin de Hilo: ## (<PID>:<TID>) Finaliza el hilo
 
 */
 
