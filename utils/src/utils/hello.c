@@ -413,3 +413,24 @@ t_paquete* crear_paquete_con_codigo_operacion(op_code operacion) {
 	crear_buffer(paquete);
 	return paquete;
 }
+
+t_tcb* deserializar_paquete_tcb(void* stream, int size) {
+	t_tcb* tcb = malloc(sizeof(t_tcb));
+	int desplazamiento = 0;
+
+	memcpy(&tcb->TID, stream + desplazamiento, sizeof(uint32_t));
+    desplazamiento += sizeof(uint32_t);
+
+    memcpy(&tcb->PRIORIDAD, stream + desplazamiento, sizeof(uint32_t));
+    desplazamiento += sizeof(uint32_t);
+
+    memcpy(&tcb->PID_PADRE, stream + desplazamiento, sizeof(uint32_t));
+    desplazamiento += sizeof(uint32_t);
+
+    memcpy(&tcb->ESTADO, stream + desplazamiento, sizeof(uint32_t));
+	desplazamiento += sizeof(uint32_t);
+
+	memccpy(&tcb->PC, stream + desplazamiento, sizeof(uint32_t));
+
+	return tcb;
+}

@@ -23,6 +23,9 @@
 * @return No devuelve nada
 */
 
+// DATOS DE LAS CONFIGS QUE SE REPITEN O SE NECESITAN
+extern char* ALGORITMO_PLANIFICACION;
+
 typedef enum{
     HANDSHAKE_consola,
     HANDSHAKE_kernel,
@@ -108,7 +111,7 @@ typedef enum {
 } finalizacion_proceso;
 
 typedef struct {
-    uint32_t program_counter; // Contador de programa (PC)
+    //uint32_t program_counter; // Contador de programa (PC)
     uint32_t AX;
     uint32_t BX;
     uint32_t CX;
@@ -168,6 +171,7 @@ t_paquete* crear_paquete_con_codigo_operacion(op_code);
 void* serializar_paquete(t_paquete*, int);
 t_paquete* recibir_paquete_entero(int);
 int gestionarConexiones(int, t_log*);
+t_tcb* deserializar_paquete_tcb(void*, int);
 
 typedef enum {
     NEW,
@@ -183,7 +187,7 @@ typedef struct {
 	t_estado ESTADO;
     uint32_t PID_PADRE;
     char* archivo;
-    //uint32_t PC;
+    uint32_t PC;
 }t_tcb;
 
 typedef struct {

@@ -1,20 +1,21 @@
 #include "include/gestor.h"
 
 // VARIABLES GLOBALES
-t_pcb *pcb_actual = NULL;
+t_pcb *hilo_actual = NULL;
 int fd_cpu_memoria = -1;
 
 void ejecutar_ciclo_instruccion(int socket_cliente) {
     while (true) {
         // OJO PORQUE PCB ACTUAL NUNCA SE LE ASIGNA UN VALOR
-        t_pcb* pcb_actual = recibir_proceso_kernel(socket_cliente);
+        hilo_actual = recibir_hilo_kernel(socket_cliente);
         // Asegúrate de que pcb_actual esté inicializado antes de comenzar el ciclo
-        if (!pcb_actual) {
-            log_error(LOGGER_CPU, "No hay PCB actual. Terminando ciclo de instrucción.");
+        if (!hilo_actual) {
+            log_error(LOGGER_CPU, "No hay Hilo actual. Terminando ciclo de instrucción.");
             break;
         }
 
-        t_instruccion *instruccion = fetch(pcb_actual->PID, pcb_actual->CONTEXTO->registros->program_counter);
+        // CUIDADO ACA, HAY QUE VOLVER A HACER CASI TODO CPU
+        t_instruccion *instruccion = fetch(hilo_actual->TID, hilo_actual->PC);
         
         if (!instruccion) {
             log_error(LOGGER_CPU, "Error al obtener la instrucción. Terminando ciclo.");
@@ -31,15 +32,32 @@ void ejecutar_ciclo_instruccion(int socket_cliente) {
     }
 }
 
-t_pcb* recibir_proceso_kernel(int socket_cliente) {
-    t_paquete* paquete = recibir_paquete(socket_cliente)
-    
+t_tcb* recibir_hilo_kernel(int socket_cliente) {
+    t_paquete* paquete = recibir_paquete_entero(socket_cliente);
+    if(paquete == NULL) {
+        log_error(logger, "Error al recibir el paquete del hilo.");
+        return;
+    }
+
+    if (paquete->codigo_operacion != HILO) {
+        log_warning(logger, "Código de operación inesperado: %d", paquete->codigo_operacion);
+        eliminar_paquete(paquete);
+        return;
+    }
+
+    t_tcb* hilo = deserializar_paquete_tcb(paquete->buffer->stream, paquete->buffer->size);
+
+    log_info(logger, "Hilo recibido: <%d>, PRIORIDAD=%d, PID_PADRE=%d, ESTADO=%d",
+             hilo->TID, hilo->PRIORIDAD, hilo->PID_PADRE, hilo->ESTADO);
+
+    liminar_paquete(paquete);
+    return hilo;
 }
 
 // RECIBE LA PROXIMA EJECUCION A REALIZAR OBTENIDA DEL MODULO MEMORIA
-t_instruccion *fetch(uint32_t pid, uint32_t pc)
+t_instruccion *fetch(uint32_t tid, uint32_t pc)
 {
-    pedir_instruccion_memoria(pid, pc, fd_cpu_memoria);
+    pedir_instruccion_memoria(tid, pc, fd_cpu_memoria);
 
     op_code codigo_op = recibir_operacion(fd_cpu_memoria);
     if (codigo_op != INSTRUCCION) {
@@ -53,7 +71,7 @@ t_instruccion *fetch(uint32_t pid, uint32_t pc)
         return NULL;
     }
 
-    log_info(LOGGER_CPU, "PID: %d - FETCH - Program Counter: %d", pid, pc);
+    log_info(LOGGER_CPU, "TID: %d - FETCH - Program Counter: %d", tid, pc);
 
     return instruccion;
 }
@@ -89,6 +107,9 @@ void execute(t_instruccion *instruccion, int socket)
         case "LOG":
             loguear_y_sumar_pc(instruccion);
             break;
+        // PODEMOS AGREGAR LAS SYSCALLS Y QUE CUANDO OCURRE ALGUNA
+        // HAY UNA INTERRUPCION Y SE DEVUELVE EL CONROL A KERNEL
+        // AUNQUE DICE QUE KERNEL LE MANDA LA INTERRUPCION
         default:
             log_warning(LOGGER_CPU, "Instrucción desconocida.");
             break;
@@ -107,13 +128,13 @@ void check_interrupt() {
 
 // MUESTRA EN CONSOLA LA INSTRUCCION EJECUTADA Y LE SUMA 1 AL PC
 void loguear_y_sumar_pc(t_instruccion *instruccion) {
-    log_info(LOGGER_CPU, "PID: %d - Ejecutando: %s - Parametros: %s %s %d", pcb_actual->PID, instruccion->nombre, intruccion->parametro1, instruccion->parametro2, instruccion->parametro3);
-    pcb_actual->CONTEXTO->registros->program_counter++;
+    log_info(LOGGER_CPU, "TID: %d - Ejecutando: %s - Parametros: %s %s %d", hilo_actual->TID, instruccion->nombre, intruccion->parametro1, instruccion->parametro2, instruccion->parametro3);
+    hilo_actual->PC++;
 }
 
-void pedir_instruccion_memoria(uint32_t pid, uint32_t pc, int socket) {
+void pedir_instruccion_memoria(uint32_t tid, uint32_t pc, int socket) {
     t_paquete *paquete = crear_paquete_con_codigo_de_operacion(PEDIDO_INSTRUCCION);
-    agregar_a_paquete(paquete, &pid, sizeof(uint32_t));
+    agregar_a_paquete(paquete, &tid, sizeof(uint32_t));
     agregar_a_paquete(paquete, &pc, sizeof(uint32_t));
 
     enviar_paquete(paquete, socket);

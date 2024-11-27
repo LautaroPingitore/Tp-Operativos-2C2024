@@ -155,6 +155,7 @@ t_tcb* crear_tcb(uint32_t pid_padre, uint32_t tid, char* archivo_pseudocodigo, i
     tcb->PRIORIDAD = prioridad;
     tcb->ESTADO = estado;
     tcb->archivo = archivo_pseudocodigo;
+    tcb->PC = 0;
 
     return tcb;
 }
