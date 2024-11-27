@@ -40,12 +40,12 @@ al hilo ejectandose y devolver el control al kernel para que este vuelva a plani
 === LOGS OBLIGATORIOS (MARCAR CON X AQUELLOS QUE YA ESTEN) ===
 - Syscall recibida: ## (<PID>:<TID>) - Solicitó syscall: <NOMBRE_SYSCALL>
 X Creación de Proceso: ## (<PID>:0) Se crea el proceso - Estado: NEW 
-- Creación de Hilo: ## (<PID>:<TID>) Se crea el Hilo - Estado: READY
+X Creación de Hilo: ## (<PID>:<TID>) Se crea el Hilo - Estado: READY
 - Motivo de Bloqueo: ## (<PID>:<TID>) - Bloqueado por: <PTHREAD_JOIN / MUTEX / IO>
-- Fin de IO: ## (<PID>:<TID>) finalizó IO y pasa a READY
+X Fin de IO: ## (<PID>:<TID>) finalizó IO y pasa a READY
 - Fin de Quantum: ## (<PID>:<TID>) - Desalojado por fin de Quantum
-- Fin de Proceso: ## Finaliza el proceso <PID>
-- Fin de Hilo: ## (<PID>:<TID>) Finaliza el hilo
+X Fin de Proceso: ## Finaliza el proceso <PID>
+X Fin de Hilo: ## (<PID>:<TID>) Finaliza el hilo
 
 */
 
@@ -352,7 +352,7 @@ void thread_create(t_pcb *pcb, char* archivo_pseudocodigo, int prioridad) {
     list_add(cola_ready, nuevo_tcb);
     pthread_mutex_unlock(&mutex_cola_ready);
 
-    log_info(LOGGER_KERNEL, "Hilo %d creado en el proceso %d", nuevo_tid, pcb->PID);
+    log_info(LOGGER_KERNEL, "(<%d>:<%d>) Se crea el Hilo - Estado: READY", nuevo_tcb->PID_PADRE, nuevo_tcb->TID);
 }
 
 // CUIDADO
@@ -473,7 +473,7 @@ void thread_exit(t_pcb* pcb, uint32_t tid) {
     // MARCA EL HILO COMO FINALIZADO
     tcb->ESTADO = EXIT;
     liberar_recursos_hilo(tcb);
-    log_info(LOGGER_KERNEL, "Hilo %d ha finalizado en el proceso %d", tid, pcb->PID);
+    log_info(LOGGER_KERNEL, "(<%d>:<%d>) Finaliza el Hilo", tcb->PID_PADRE, tcb->TID);
 
     if(list_size(pcb->TIDS) == 0) {
         process_exit(pcb);
@@ -672,7 +672,7 @@ void io(t_pcb* pcb, uint32_t tid, int milisegundos) {
     list_add(cola_ready, tcb);
     pthread_mutex_unlock(&mutex_cola_ready);
 
-    log_info(LOGGER_KERNEL, "Hilo %d en proceso %d ha terminado IO y esta en READY", tid, pcb->PID);
+    log_info(LOGGER_KERNEL, "(<%d>:<%d>) Finalizó IO y pasa a READY", tcb->PID_PADRE, tcb->TID);
 }
 
 // MANEJO DE TABLA PATHS
