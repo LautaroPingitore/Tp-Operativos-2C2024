@@ -342,6 +342,9 @@ void thread_create(t_pcb *pcb, char* archivo_pseudocodigo, int prioridad) {
 
     // CARGA PSEUDOGODIO A EJECUTAR
     nuevo_tcb->archivo = archivo_pseudocodigo;
+    
+    // INFORMA A MEMORIA DE LA CREACION DEL HILO
+    envio_hilo_crear(socket_kernel_memoria, nuevo_tcb, THREAD_CREATE);
 
     // MUEVE EL HILO A LA COLA DE READY SI PUEDE
     nuevo_tcb->ESTADO = READY;
@@ -513,8 +516,11 @@ void intentar_mover_a_execute() {
 
     log_info(LOGGER_KERNEL, "(<%d>:<%d>) Movido a Excecute", hilo_a_ejecutar->PID_PADRE, hilo_a_ejecutar->TID);
 
-    // Enviar el hilo a la CPU para su ejecucion
-    int resultado = enviar_hilo_a_cpu(hilo_a_ejecutar);
+    if(strcmp(ALGORITMO_PLANIFICACION, "COLAS_MULTINIVEL") == 0) {
+        int resultado = enviar_hilo_a_cpu(hilo_a_ejecutar, ALGORITMO_PLANIFICACION);
+    } else {
+        int resultado = enviar_hilo_a_cpu(hilo_a_ejecutar, "SIN QUANTUM");
+    }
 
     if (resultado != 0) {
         log_error(logger, "Error al enviar el hilo %d a la CPU", hilo_a_ejecutar->TID);
@@ -528,27 +534,6 @@ void intentar_mover_a_execute() {
         log_info(logger, "El hilo %d ha sido enviado a la CPU", hilo_a_ejecutar->TID);
     }
 }
-
-int enviar_hilo_a_cpu(t_tcb* hilo) {
-    t_paquete* paquete = crear_paquete_con_codigo_operacion(HILO);
-    agregar_a_paquete(paquete, &hilo->TID, sizeof(hilo->TID));
-    agregar_a_paquete(paquete, &hilo->PRIORIDAD, sizeof(hilo->PRIORIDAD));
-    agregar_a_paquete(paquete, &hilo->PID_PADRE, sizeof(uint32_t));
-    agregar_a_paquete(paquete, &hilo->ESTADO, sizeof(hilo->ESTADO));
-    serializar_paquete(paquete, paquete->buffer->size);
-
-    int resultado = enviar_paquete(paquete, socket_kernel_cpu_dispatch);
-    if(resultado == -1) {
-        eliminar_paquete(paquete);
-        return resultado;
-    }
-
-    log_info(LOGGER_KERNEL, "El TID %d se envio a CPU", hilo->TID);
-    eliminar_paquete(paquete);
-
-    return resultado;
-}
-
 
 // PLANIFICADOR A CORTO PLAZO ===============
 t_tcb* seleccionar_hilo_por_algoritmo() {
@@ -623,49 +608,50 @@ t_tcb* seleccionar_hilo_multinivel() {
     return siguiente_hilo;  // Este hilo sera movido a EXECUTE
 }
 
-void ejecutar_hilo_rr(t_tcb* hilo, t_list* cola, int quantum) {
-    pthread_mutex_lock(&mutex_estado);
-    hilo->ESTADO = EXECUTE;
-    pthread_mutex_unlock(&mutex_estado);
+// OJO PORQUE ACA LA EJECUCION LA HACE KERNEL Y NO CPU
+// void ejecutar_hilo_rr(t_tcb* hilo, t_list* cola, int quantum) {
+//     pthread_mutex_lock(&mutex_estado);
+//     hilo->ESTADO = EXECUTE;
+//     pthread_mutex_unlock(&mutex_estado);
 
-    log_info(LOGGER_KERNEL, "Ejecutando hilo TID %d del proceso por %d ms %d", hilo->TID, hilo->PID_PADRE, quantum);
+//     log_info(LOGGER_KERNEL, "Ejecutando hilo TID %d del proceso por %d ms %d", hilo->TID, hilo->PID_PADRE, quantum);
 
-    struct timespec inicio, actual;
-    clock_gettime(CLOCK_MONOTONIC, &inicio);
+//     struct timespec inicio, actual;
+//     clock_gettime(CLOCK_MONOTONIC, &inicio);
 
-    int tiempo_transcurrido = 0;
-    while (tiempo_transcurrido < quantum) {
-        ejecutar_hilo(hilo);
+//     int tiempo_transcurrido = 0;
+//     while (tiempo_transcurrido < quantum) {
+//         ejecutar_hilo(hilo);
 
-        clock_gettime(CLOCK_MONOTONIC, &actual);
-        tiempo_transcurrido = (actual.tv_sec - inicio.tv_sec) * 1000 + 
-                                (actual.tv_nsec - inicio.tv_nsec) / 1000000;
-        usleep(1000);
-    }
+//         clock_gettime(CLOCK_MONOTONIC, &actual);
+//         tiempo_transcurrido = (actual.tv_sec - inicio.tv_sec) * 1000 + 
+//                                 (actual.tv_nsec - inicio.tv_nsec) / 1000000;
+//         usleep(1000);
+//     }
 
-    log_info(LOGGER_KERNEL, "Hilo TID %d ejecutado durante %d ms", hilo->TID, quantum);
+//     log_info(LOGGER_KERNEL, "Hilo TID %d ejecutado durante %d ms", hilo->TID, quantum);
 
-    pthread_mutex_lock(&mutex_estado);
-    if(hilo->ESTADO != EXIT) {
-        hilo->ESTADO = READY;
-        pthread_mutex_unlock(&mutex_estado);
+//     pthread_mutex_lock(&mutex_estado);
+//     if(hilo->ESTADO != EXIT) {
+//         hilo->ESTADO = READY;
+//         pthread_mutex_unlock(&mutex_estado);
 
-        pthread_mutex_lock(&mutex_cola_ready); 
-        list_add(cola, hilo);
-        pthread_mutex_unlock(&mutex_cola_ready);
+//         pthread_mutex_lock(&mutex_cola_ready); 
+//         list_add(cola, hilo);
+//         pthread_mutex_unlock(&mutex_cola_ready);
 
-        log_info(LOGGER_KERNEL, "Hilo TID %d movido a READY después del quantum", hilo->TID);
-    } else {
-        pthread_mutex_unlock(&mutex_estado);
+//         log_info(LOGGER_KERNEL, "Hilo TID %d movido a READY después del quantum", hilo->TID);
+//     } else {
+//         pthread_mutex_unlock(&mutex_estado);
 
-        log_info(LOGGER_KERNEL, "Hilo TID %d finalizado", hilo->TID);
-        liberar_recursos_hilo(hilo);
-    }
+//         log_info(LOGGER_KERNEL, "Hilo TID %d finalizado", hilo->TID);
+//         liberar_recursos_hilo(hilo);
+//     }
 
-    pthread_mutex_lock(&mutex_estado);
-    cpu_libre = true;
-    pthread_mutex_unlock(&mutex_estado);
-}
+//     pthread_mutex_lock(&mutex_estado);
+//     cpu_libre = true;
+//     pthread_mutex_unlock(&mutex_estado);
+// }
 
 // ENTRADA Y SALIDA ====================
 

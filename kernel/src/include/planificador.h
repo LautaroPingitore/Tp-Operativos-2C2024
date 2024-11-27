@@ -64,6 +64,5 @@ void eliminar_pcb_lista(t_list*, uint32_t);
 void esperar_a_que_termine(t_tcb*, t_tcb*);
 void bloquear_hilo_actual(t_tcb*);
 void desbloquear_hilo_actual(t_tcb*);
-int enviar_proceso_a_cpu(t_pcb*);
 
 #endif /* PLANIFICADOR_H_ */
