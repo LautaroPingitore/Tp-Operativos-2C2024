@@ -1,6 +1,8 @@
 #ifndef CICLO_INSTRUCCION_H_
 #define CICLO_INSTRUCCION_H_
 
+extern t_tcb* hilo_actual;
+
 typedef struct {
     uint32_t direccion_fisica;
     uint32_t tamanio;

@@ -206,7 +206,7 @@ typedef struct {
     int TAMANIO;
 	t_contexto_ejecucion* CONTEXTO;
 	t_estado ESTADO;
-	t_list* MUTEXS; // char*
+	t_list* MUTEXS; // t_recurso
     //char* ARCHIVO;
 } t_pcb;
 

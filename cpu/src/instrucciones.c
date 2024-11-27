@@ -137,6 +137,7 @@ void sub_registros(char* destino, char* origen) {
     }
     
     *dest -= *orig;
+}
 
 //Si el valor del registro es distinto de cero, actualiza el program counter
 //al numero de instruccion pasada por parametro.

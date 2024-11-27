@@ -23,7 +23,7 @@ const int INT_MAX = 200;
 
 // PLANIFICADOR LARGO PLAZO
 void inicializar_kernel();
-t_pcb* crear_pcb(uint32_t, int, t_contexto_ejecucion*, t_estado, pthread_mutex_t*, char*);
+t_pcb* crear_pcb(uint32_t, int, t_contexto_ejecucion*, t_estado, char*);
 t_tcb* crear_tcb(uint32_t, uint32_t, char*, int, t_estado);
 void crear_proceso(char*, int, int);
 t_contexto_ejecucion* inicializar_contexto();

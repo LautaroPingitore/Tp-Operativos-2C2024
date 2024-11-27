@@ -7,5 +7,6 @@
 #include "planificador.h"
 #include "syscall.h"
 #include "comunicacionesKernel.h"
+#include "../../../cpu/src/include/ciclo_instruccion.h"
 
 #endif //GESTOR_H_

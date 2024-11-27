@@ -116,7 +116,7 @@ uint32_t asignar_tid(t_pcb* pcb) {
     return nuevo_tid;
 } 
 
-t_pcb* crear_pcb(uint32_t pid, int tamanio, t_contexto_ejecucion* contexto_ejecucion, t_estado estado, pthread_mutex_t* mutexs, char* archivo){
+t_pcb* crear_pcb(uint32_t pid, int tamanio, t_contexto_ejecucion* contexto_ejecucion, t_estado estado, char* archivo){
 
     t_pcb* pcb = malloc(sizeof(t_pcb));
     if(pcb == NULL) {
@@ -163,23 +163,8 @@ t_tcb* crear_tcb(uint32_t pid_padre, uint32_t tid, char* archivo_pseudocodigo, i
 // FUNCION QUE CREA UN PROCESO Y LO METE A LA COLA DE NEW
 void crear_proceso(char* path_proceso, int tamanio_proceso, int prioridad){
     archivo_pseudocodigo* archivo = leer_archivo_pseudocodigo(path_proceso);
-    t_pcb* pcb = crear_pcb(asignar_pid(), tamanio_proceso, inicializar_contexto(), NEW, asignar_mutexs(), path_proceso);
+    t_pcb* pcb = crear_pcb(asignar_pid(), tamanio_proceso, inicializar_contexto(), NEW, path_proceso);
     obtener_recursos_del_proceso(archivo, pcb);
-
-    // char* path_hilo = "";
-    // for(int i=0; i < list_size(archivo->instrucciones); i++) {
-    //     t_instruccion* inst = list_get(archivo->instrucciones, i);
-    //     if(strcmp(inst->nombre, "THREAD_CREATE") == 0) {
-    //         path_hilo = inst->parametro1;
-    //         break;
-    //     }
-    // }
-    // if(strcmp(path_hilo, "") == 0) {
-    //     log_error(LOGGER_KERNEL, "Error");
-    //     return;
-    // }
-
-    // thread_create(pcb, path_hilo, prioridad);
 
     // EN LA LISTA DE NEW, READY, ETC TENDRIAN QUE SER HILOS, NO PROCESOS
     pthread_mutex_lock(&mutex_cola_new);
@@ -313,22 +298,18 @@ void process_exit(t_pcb* pcb) {
 }
 
 void liberar_recursos_proceso(t_pcb* pcb) {
-    if(pcb->TIDS != NULL) {
-        list_destroy_and_destroy_elements(pcb->TIDS);
+    if (pcb->TIDS != NULL) {
+        list_destroy_and_destroy_elements(pcb->TIDS, liberar_recursos_hilo);
+    }
+    if (pcb->MUTEXS != NULL) {
+        list_destroy_and_destroy_elements(pcb->MUTEXS, free);
     }
 
-    if(pcb->MUTEXS != NULL) {
-        list_destroy_and_destroy_elements(pcb->MUTEXS)
-    }
-
-    cpu_libre = true;
-
+    // Liberar PCB
     free(pcb);
 
-    // No es necesario liberar PID y ESTADO
-    // Simplemente son variables que se almacenan en la estructura, y se liberan junto con el PCB.
+    log_info(LOGGER_KERNEL, "Recursos del proceso %d liberados.", pcb->PID);
 }
-
 
 // MANEJO DE HILOS ==============================
 
@@ -595,19 +576,63 @@ t_tcb* seleccionar_hilo_multinivel() {
     pthread_mutex_lock(&mutex_cola_ready);
     t_tcb* siguiente_hilo = NULL;
 
-    // Revisamos la cola de mayor prioridad primero
     if (!list_is_empty(cola_nivel_1)) {
-        siguiente_hilo = list_remove(cola_nivel_1, 0);  // Removemos el primer hilo de la cola 1
+        siguiente_hilo = list_remove(cola_nivel_1, 0);
     } else if (!list_is_empty(cola_nivel_2)) {
-        siguiente_hilo = list_remove(cola_nivel_2, 0);  // Removemos el primer hilo de la cola 2
+        siguiente_hilo = list_remove(cola_nivel_2, 0);
     } else if (!list_is_empty(cola_nivel_3)) {
-        siguiente_hilo = list_remove(cola_nivel_3, 0);  // Removemos el primer hilo de la cola 3
+        siguiente_hilo = list_remove(cola_nivel_3, 0);
     }
-
     pthread_mutex_unlock(&mutex_cola_ready);
 
-    return siguiente_hilo;  // Este hilo sera movido a EXECUTE
+    // Si no hay hilos en ninguna cola, verificar tabla de procesos
+    if (siguiente_hilo == NULL) {
+        pthread_mutex_lock(&mutex_cola_ready);
+        if (list_is_empty(tabla_procesos)) {
+            log_info(LOGGER_KERNEL, "Todos los procesos han finalizado. Deteniendo sistema.");
+            exit(EXIT_SUCCESS);
+        }
+        pthread_mutex_unlock(&mutex_cola_ready);
+    }
+    return siguiente_hilo;
 }
+
+
+void ejecutar_hilo_rr(t_tcb* hilo, int quantum) {
+    log_info(LOGGER_KERNEL, "(<%d>:<%d>) Ejecutando hilo con quantum %d", hilo->PID_PADRE, hilo->TID, quantum);
+
+    struct timespec inicio, actual;
+    clock_gettime(CLOCK_MONOTONIC, &inicio);
+
+    int tiempo_transcurrido = 0;
+    while (tiempo_transcurrido < quantum) {
+        ejecutar_hilo(hilo);  // Llamada a función ficticia para ejecutar una instrucción
+        clock_gettime(CLOCK_MONOTONIC, &actual);
+        tiempo_transcurrido = (actual.tv_sec - inicio.tv_sec) * 1000 +
+                              (actual.tv_nsec - inicio.tv_nsec) / 1000000;
+
+        if (check_interrupt()) {
+            log_info(LOGGER_KERNEL, "(<%d>:<%d>) Interrupción recibida. Devolviendo control al Kernel.", hilo->PID_PADRE, hilo->TID);
+            hilo->ESTADO = READY;
+            pthread_mutex_lock(&mutex_cola_ready);
+            list_add(cola_ready, hilo);
+            pthread_mutex_unlock(&mutex_cola_ready);
+            return;
+        }
+    }
+    // Si termina quantum sin salir, mover a READY
+    log_info(LOGGER_KERNEL, "(<%d>:<%d>) Finalizó quantum. Desalojado por fin de Quantum.", hilo->PID_PADRE, hilo->TID);
+    hilo->ESTADO = READY;
+    pthread_mutex_lock(&mutex_cola_ready);
+    list_add(cola_ready, hilo);
+    pthread_mutex_unlock(&mutex_cola_ready);
+
+    cpu_libre = true;
+}
+
+
+
+
 
 // OJO PORQUE ACA LA EJECUCION LA HACE KERNEL Y NO CPU
 // void ejecutar_hilo_rr(t_tcb* hilo, t_list* cola, int quantum) {
