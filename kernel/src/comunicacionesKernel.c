@@ -58,13 +58,11 @@ void envio_hilo_crear(int socket_cliente, t_tcb* tcb, op_code codigo) {
 
 int enviar_hilo_a_cpu(t_tcb* hilo, char* algoritmo) {
     t_paquete* paquete = crear_paquete_con_codigo_operacion(HILO);
-    agregar_a_paquete(paquete, &hilo->TID, sizeof(hilo->TID));
+    agregar_a_paquete(paquete, &hilo->TID, sizeof(uint32_t));
     agregar_a_paquete(paquete, &hilo->PRIORIDAD, sizeof(hilo->PRIORIDAD));
     agregar_a_paquete(paquete, &hilo->PID_PADRE, sizeof(uint32_t));
     agregar_a_paquete(paquete, &hilo->ESTADO, sizeof(hilo->ESTADO));
-    if(strcmp(algortimo, "COLAS_MULTINIVEL") == 0) {
-        agregar_a_paquete(paquete, &algortimo, sizeof(char*));
-    }
+    agregar_a_paquete(paquete, &hilo->PC, sizeof(uint32_t))
     serializar_paquete(paquete, paquete->buffer->size);
 
     int resultado = enviar_paquete(paquete, socket_kernel_cpu_dispatch);
