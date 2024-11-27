@@ -39,7 +39,7 @@ al hilo ejectandose y devolver el control al kernel para que este vuelva a plani
 
 === LOGS OBLIGATORIOS (MARCAR CON X AQUELLOS QUE YA ESTEN) ===
 - Syscall recibida: ## (<PID>:<TID>) - Solicitó syscall: <NOMBRE_SYSCALL>
-- Creación de Proceso: ## (<PID>:0) Se crea el proceso - Estado: NEW
+X Creación de Proceso: ## (<PID>:0) Se crea el proceso - Estado: NEW 
 - Creación de Hilo: ## (<PID>:<TID>) Se crea el Hilo - Estado: READY
 - Motivo de Bloqueo: ## (<PID>:<TID>) - Bloqueado por: <PTHREAD_JOIN / MUTEX / IO>
 - Fin de IO: ## (<PID>:<TID>) finalizó IO y pasa a READY
@@ -62,7 +62,8 @@ t_list* cola_nivel_1;
 t_list* cola_nivel_2;
 t_list* cola_nivel_3;
 
-t_list* tabl_paths;
+t_list* tabla_paths;
+t_list* tabla_procesos;
 uint32_t pid_actual = 0;
 uint32_t tid_actual = 0;
 t_log* logger;
@@ -119,7 +120,7 @@ t_pcb* crear_pcb(uint32_t pid, int tamanio, t_contexto_ejecucion* contexto_ejecu
 
     t_pcb* pcb = malloc(sizeof(t_pcb));
     if(pcb == NULL) {
-        perror("Error al asignar memoria para el PCB");
+        log_error(LOGGER_KERNEL, "Error al asignar memoria para el PCB");
         exit(EXIT_FAILURE);
     }
 
@@ -133,8 +134,9 @@ t_pcb* crear_pcb(uint32_t pid, int tamanio, t_contexto_ejecucion* contexto_ejecu
     // ACA PODRIAMOS AGREGAR EL ARCHIVO A LA TABLA DE PATHS
     // EN LA POSICION DEL PID
     agregar_path(pid, archivo);
+    list_add(tabla_procesos, pcb);
 
-    // OJO ACA PORQUE NO SABEMOS QUE PATH PASARLE AL HILO PRINCIPAL
+    // EL HILO PRINCIPAL SERIA MAS O MENOS LO MISMO QUE EL PROCESO EN SI
     t_tcb* hilo_principal = crear_tcb(pid, asignar_tid(pcb), archivo, 0, NEW);
     list_add(pcb->TIDS, hilo_principal);
 
@@ -144,7 +146,7 @@ t_pcb* crear_pcb(uint32_t pid, int tamanio, t_contexto_ejecucion* contexto_ejecu
 t_tcb* crear_tcb(uint32_t pid_padre, uint32_t tid, char* archivo_pseudocodigo, int prioridad, t_estado estado,){
     t_tcb* tcb = malloc(sizeof(t_tcb));
     if (tcb == NULL) {
-        perror("Error al asignar memoria para el TCB");
+        log_error(LOGGER_KERNEL, "Error al asignar memoria para el TCB");
         exit(EXIT_FAILURE);
     }
 
@@ -163,32 +165,30 @@ void crear_proceso(char* path_proceso, int tamanio_proceso, int prioridad){
     t_pcb* pcb = crear_pcb(asignar_pid(), tamanio_proceso, inicializar_contexto(), NEW, asignar_mutexs(), path_proceso);
     obtener_recursos_del_proceso(archivo, pcb);
 
-    char* path_hilo = "";
-    for(int i=0; i < list_size(archivo->instrucciones); i++) {
-        t_instruccion* inst = list_get(archivo->instrucciones, i);
-        if(strcmp(inst->nombre, "THREAD_CREATE") == 0) {
-            path_hilo = inst->parametro1;
-            break;
-        }
-    }
-    if(strcmp(path_hilo, "") == 0) {
-        log_error(LOGGER_KERNEL, "Error");
-        return;
-    }
+    // char* path_hilo = "";
+    // for(int i=0; i < list_size(archivo->instrucciones); i++) {
+    //     t_instruccion* inst = list_get(archivo->instrucciones, i);
+    //     if(strcmp(inst->nombre, "THREAD_CREATE") == 0) {
+    //         path_hilo = inst->parametro1;
+    //         break;
+    //     }
+    // }
+    // if(strcmp(path_hilo, "") == 0) {
+    //     log_error(LOGGER_KERNEL, "Error");
+    //     return;
+    // }
 
-    thread_create(pcb, path_hilo, prioridad);
+    // thread_create(pcb, path_hilo, prioridad);
 
+    // EN LA LISTA DE NEW, READY, ETC TENDRIAN QUE SER HILOS, NO PROCESOS
     pthread_mutex_lock(&mutex_cola_new);
     list_add(cola_new, pcb);
     pthread_mutex_unlock(&mutex_cola_new);
 
-    log_info(LOGGER_KERNEL, "Proceso %d creado en NEW", pcb->PID);
+    log_info(LOGGER_KERNEL, "## (<%d>:0) Se crea el proceso - Estado: NEW", pcb->PID);
 
     inicializar_proceso(pcb, path_proceso);
-    
 }
-
-
 
 t_contexto_ejecucion* inicializar_contexto() {
     t_contexto_ejecucion* contexto = malloc(sizeof(t_contexto_ejecucion));
@@ -217,7 +217,7 @@ void inicializar_proceso(t_pcb* pcb, char* path_proceso) {
         log_info(logger, "Proceso %d inicializado y movido a READY", pcb->PID);
         mover_a_ready(pcb);
     } else {
-        log_warning(logger, "Error al enviar el proceso");
+        log_warning(logger, "No hay espacio en memoria, se mantiene en new");
     }
 }
 
@@ -229,11 +229,14 @@ void mover_a_ready(t_pcb* pcb) {
     pthread_mutex_unlock(&mutex_cola_new);
 
     pcb->ESTADO = READY;
+    // MANDA AL HILO 0 A LA COLA DE READY
+    t_tcb* hilo_cero = list_get(pcb->TIDS, 0);
+    hilo_cero->ESTADO = READY;
     pthread_mutex_lock(&mutex_cola_ready);
-    list_add(cola_ready, pcb);
+    list_add(cola_ready, hilo_cero);
     pthread_mutex_unlock(&mutex_cola_ready);
     
-    log_info(logger, "Proceso %d movido a READY ", pcb->PID);
+    log_info(logger, "Hilo %d movido a READY ", hilo_cero->TID);
 }
 
 void eliminar_pcb_lista(t_list* lista, uint32_t pid) {
@@ -258,19 +261,18 @@ void eliminar_tcb_lista(t_list* lista, uint32_t tid) {
 
 
 void mover_a_exit(t_pcb* pcb) {
+    // NO HACE FALTA PORQUE LOS HILOS ESTAN EL COLA READY, NO LOS PROCESOS
     // REMUEVE EL PROCESO DE LA COLA READY
-    pthread_mutex_lock(&mutex_cola_ready);
-    eliminar_pcb_lista(cola_ready, pcb->PID);
-    pthread_mutex_unlock(&mutex_cola_ready);
-
-    // PODRIA NECESITARSE QUE SE ELIMINACE DE LA COLA EXEC Y BLOCKED SI ES NECESARIO
+    // pthread_mutex_lock(&mutex_cola_ready);
+    // eliminar_pcb_lista(cola_ready, pcb->PID);
+    // pthread_mutex_unlock(&mutex_cola_ready);
 
     pcb->ESTADO = EXIT;
     pthread_mutex_lock(&mutex_cola_exit);
     list_add(cola_exit, pcb);
     pthread_mutex_unlock(&mutex_cola_exit);
     
-    log_info(logger, "Proceso %d movido a EXIT ", pcb->PID);
+    log_info(logger, "## Finaliza el proceso <%d>", pcb->PID);
 }
 
 // INTENTA INICIALIZAR EL SIGUIENTE PROCESO EN LA COLA NEW SI HAY UNO DISPONIBLE
@@ -279,8 +281,7 @@ void intentar_inicializar_proceso_de_new() {
     if (!list_is_empty(cola_new)) {
         t_pcb* pcb = list_remove(cola_new, 0); // Guarda con lo que retorna list_remove
 
-
-        char * path_proceso= obtener_path(pcb->PID);
+        char* path_proceso= obtener_path(pcb->PID);
 
         if (path_proceso == NULL) {
             log_error(LOGGER_KERNEL, "Error: No se encontró el path para el proceso %d", pcb->PID);
@@ -306,17 +307,17 @@ void process_exit(t_pcb* pcb) {
     liberar_recursos_proceso(pcb);
     enviar_proceso_memoria(socket_kernel_memoria, pcb, PROCESS_EXIT);
     eliminar_path(pcb->PID)
+    eliminar_pcb_lista(tabla_procesos, pcb);
     intentar_inicializar_proceso_de_new();
-    
 }
 
 void liberar_recursos_proceso(t_pcb* pcb) {
     if(pcb->TIDS != NULL) {
-        free(pcb->TIDS);
+        list_destroy_and_destroy_elements(pcb->TIDS);
     }
 
     if(pcb->MUTEXS != NULL) {
-        free(pcb->MUTEXS);
+        list_destroy_and_destroy_elements(pcb->MUTEXS)
     }
 
     cpu_libre = true;
@@ -340,9 +341,10 @@ void thread_create(t_pcb *pcb, char* archivo_pseudocodigo, int prioridad) {
     list_add(pcb->TIDS, &nuevo_tid);
 
     // CARGA PSEUDOGODIO A EJECUTAR
-    cargar_archivo_pseudocodigo(nuevo_tcb, archivo_pseudocodigo);
+    nuevo_tcb->archivo = archivo_pseudocodigo;
 
     // MUEVE EL HILO A LA COLA DE READY SI PUEDE
+    nuevo_tcb->ESTADO = READY;
     pthread_mutex_lock(&mutex_cola_ready);
     list_add(cola_ready, nuevo_tcb);
     pthread_mutex_unlock(&mutex_cola_ready);
@@ -371,49 +373,40 @@ void thread_join(t_pcb* pcb, uint32_t tid_actual, uint32_t tid_esperado) {
     // VE SI EL HILO ESTA EJECUTANDOSE O EN READY, EN DICHO CASO BLOQUEA EL HILO ACTUAL
     if (tcb_esperado->ESTADO == EXIT) {
         log_info(LOGGER_KERNEL, "El hilo %d ya terminado, no es necesario hacer el join", tid_esperado);
-    } else {
-        log_info(LOGGER_KERNEL, "EL hilo %d esperara al hilo %d", tid_actual, tid_esperado);
-        esperar_a_que_termine(tcb_esperado, tcb_actual);
+        return;
     }
+
+    log_info(LOGGER_KERNEL, "EL hilo %d esperara al hilo %d", tid_actual, tid_esperado);
+    esperar_a_que_termine(tcb_esperado, tcb_actual);
 }
 
 void esperar_a_que_termine(t_tcb* esperado,  t_tcb* actual) {
-    bloquear_hilo_actual(actual);
+    pthread_mutex_lock(&mutex_estado);
 
-    while(esperado->ESTADO != EXIT) {
-        usleep(100);
+    actual->ESTADO = BLOCK;
+    
+    while (esperado->ESTADO != EXIT) {
+        pthread_cond_wait(&cond_estado, &mutex_estado);
     }
 
     desbloquear_hilo_actual(actual);
-}
-
-
-void bloquear_hilo_actual(t_tcb* actual) {
-
-    pthread_mutex_lock(&mutex_estado);
-
-    // Cambiar el estado del hilo a BLOCK
-    actual->ESTADO = BLOCK;
-    log_info(LOGGER_KERNEL, "Hilo %d bloqueado.", actual->TID);
-
-    // Esperar hasta que se despierte el hilo (la condición se cumple)
-    pthread_cond_wait(&cond_estado, &mutex_estado);
 
     pthread_mutex_unlock(&mutex_estado);
 }
 
 void desbloquear_hilo_actual(t_tcb* actual) {
 
-    pthread_mutex_lock(&mutex_estado);  // Bloquea el mutex
+    pthread_mutex_lock(&mutex_estado);
 
     // Cambiar el estado del hilo a READY
     actual->ESTADO = READY;
     log_info(LOGGER_KERNEL, "Hilo %d desbloqueado.", actual->TID);
 
-    // Enviar señal para despertar al hilo que está esperando en la condición
-    pthread_cond_signal(&cond_estado);
+    // Enviar señal para despertar a todos los hilos bloqueados en esta condición
+    // FUNCION RARA
+    pthread_cond_broadcast(&cond_estado);
 
-    pthread_mutex_unlock(&mutex_estado);  // Desbloquea el mutex
+    pthread_mutex_unlock(&mutex_estado);
 }
 
 t_tcb* buscar_hilo_por_tid(t_pcb* pcb, uint32_t tid) {
@@ -426,6 +419,15 @@ t_tcb* buscar_hilo_por_tid(t_pcb* pcb, uint32_t tid) {
     return NULL;
 }
 
+t_pcb* obtener_pcb_padre_de_hilo(uint32_t pid) {
+    for(int i=0; i < list_size(tabla_procesos); i++) {
+        t_pcb* pcb_actual = list_get(tabla_procesos, i);
+        if(pcb_actual->PID == pid) {
+            return pcb_actual;
+        }
+    }
+    return NULL;
+}
 
 // FINALIZA LA EJECUCION DE UN HILO ANTES DE QUE TERMINE
 void thread_cancel(t_pcb* pcb, uint32_t tid) {
@@ -442,8 +444,13 @@ void thread_cancel(t_pcb* pcb, uint32_t tid) {
     liberar_recursos_hilo(tcb);
     log_info(LOGGER_KERNEL, "Hilo %d cancelado en el proceso %d", tid, pcb->PID);
 
+    if(list_size(pcb->TIDS) == 0) {
+        process_exit(pcb);
+    }
+
     // PUEDE HABER UNA FUNCION QUE MUEVA OTRO A EXECUTE SI ES NECESARIO
-    // intentar_mover_a_execute();
+    cpu_libre = true;
+    intentar_mover_a_execute();
 }
 
 void liberar_recursos_hilo(t_tcb* tcb) {
@@ -465,6 +472,11 @@ void thread_exit(t_pcb* pcb, uint32_t tid) {
     liberar_recursos_hilo(tcb);
     log_info(LOGGER_KERNEL, "Hilo %d ha finalizado en el proceso %d", tid, pcb->PID);
 
+    if(list_size(pcb->TIDS) == 0) {
+        process_exit(pcb);
+    }
+
+    cpu_libre = true;
     intentar_mover_a_execute(); //Intenta a mover a execute el proximo hilo, no el que finalizo
 }
 
@@ -484,39 +496,36 @@ void intentar_mover_a_execute() {
         return;
     }
 
-    // Obtener el primer proceso de la cola de READY
-    t_pcb* proceso_seleccionado = list_remove(cola_ready, 0);
-    pthread_mutex_unlock(&mutex_cola_ready);
+    // Obtener el proximo hilo a ejecutar en base al planificador
+    t_tcb* hilo_a_ejecutar = seleccionar_hilo_por_algoritmo();
+    t_pcb* pcb_padre = obtener_pcb_padre_de_hilo(hilo_a_ejecutar->PID_PADRE);
+    hilo_a_ejecutar->ESTADO = EXECUTE;
+    pcb_padre->ESTADO = EXECUTE;
+    pthread_mutex_lock(&mutex_exec);
+    list_add(cola_exec, hilo_a_ejecutar);
+    cpu_libre = false;
+    pthread_mutex_unlock(&mutex_exec);
 
-    if (!proceso_seleccionado) {
-        log_warning(logger, "Error al obtener un proceso de la cola READY");
+    if(!hilo_a_ejecutar) {
+        log_error(LOGGER_KERNEL, "Error al obtener el proximo hilo a ejecutar");
         return;
     }
 
-    // Cambiar el estado del proceso a EXECUTE
-    pthread_mutex_lock(&mutex_cola_exec);
-    list_add(cola_exec, proceso_seleccionado);
-    pthread_mutex_unlock(&mutex_cola_exec);
+    log_info(LOGGER_KERNEL, "(<%d>:<%d>) Movido a Excecute", hilo_a_ejecutar->PID_PADRE, hilo_a_ejecutar->TID);
 
-    proceso_seleccionado->ESTADO = EXECUTE;
-    cpu_libre = false;
-
-    // Loggear la operacion
-    log_info(logger, "Proceso %d movido a EXECUTE", proceso_seleccionado->PID);
-
-    // Enviar el proceso a la CPU para su ejecucion
-    int resultado = enviar_proceso_a_cpu(proceso_seleccionado);
+    // Enviar el hilo a la CPU para su ejecucion
+    int resultado = enviar_hilo_a_cpu(hilo_a_ejecutar);
 
     if (resultado != 0) {
-        log_error(logger, "Error al enviar el proceso %d a la CPU", proceso_seleccionado->PID);
-        proceso_seleccionado->ESTADO = READY;
+        log_error(logger, "Error al enviar el hilo %d a la CPU", hilo_a_ejecutar->TID);
+        hilo_a_ejecutar->ESTADO = READY;
+        pcb_padre->ESTADO = READY;
         cpu_libre = true;
-
         pthread_mutex_lock(&mutex_cola_ready);
-        list_add(cola_ready, proceso_seleccionado);
+        list_add(cola_ready, hilo_a_ejecutar);
         pthread_mutex_lock(&mutex_cola_ready);
     } else {
-        log_info(logger, "El proceso %d ha sido enviado a la CPU", proceso_seleccionado->PID);
+        log_info(logger, "El hilo %d ha sido enviado a la CPU", hilo_a_ejecutar->TID);
     }
 }
 
@@ -538,11 +547,6 @@ int enviar_hilo_a_cpu(t_tcb* hilo) {
     eliminar_paquete(paquete);
 
     return resultado;
-}
-
-int enviar_proceso_a_cpu(t_pcb* proceso) {
-    
-    return 1;
 }
 
 

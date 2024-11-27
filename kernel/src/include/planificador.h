@@ -59,6 +59,7 @@ void ejecutar_hilo(t_tcb*);
 // ENTRADA SALIDA
 void io(t_pcb*, uint32_t, int);
 
+t_pcb* obtener_pcb_padre_de_hilo(uint32_t);
 void eliminar_pcb_lista(t_list*, uint32_t);
 void esperar_a_que_termine(t_tcb*, t_tcb*);
 void bloquear_hilo_actual(t_tcb*);
