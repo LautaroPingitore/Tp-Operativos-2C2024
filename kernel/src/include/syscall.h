@@ -42,5 +42,6 @@ void syscall_mutex_unlock(uint32_t, char*);
 void syscall_dump_memory(t_pcb*, uint32_t);
 void syscall_io(t_pcb*, uint32_t, int);
 void manejar_syscall(op_code, t_pcb*, char*, int, int, uint32_t, uint32_t, pthread_mutex_t*, int);
+void log_syscall(char*, t_tcb*);
 
 #endif /* SYSCALL_H_ */

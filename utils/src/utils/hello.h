@@ -93,7 +93,8 @@ typedef enum{
     THREAD_EXIT,
     PROCESO,
     HILO,
-    CREAR_ARCHIVO
+    CREAR_ARCHIVO,
+    FINALIZACION_QUANTUM
 } op_code;
 
 
@@ -124,12 +125,10 @@ typedef struct {
 
 typedef struct {
     t_registros *registros;
-    motivo_desalojo motivo_desalojo;
     finalizacion_proceso motivo_finalizacion;
 } t_contexto_ejecucion;
 
-typedef struct
-{
+typedef struct {
 	int size;
 	void* stream;
 } t_buffer;
@@ -177,7 +176,9 @@ typedef enum {
     NEW,
     READY,
     EXECUTE,
-    BLOCK,
+    BLOCK_PTHREAD_JOIN,
+    BLOCK_MUTEX,
+    BLOCK_IO,
     EXIT
 } t_estado;
 
@@ -188,12 +189,14 @@ typedef struct {
     uint32_t PID_PADRE;
     char* archivo;
     uint32_t PC;
+    motivo_desalojo motivo_desalojo;
 }t_tcb;
 
 typedef struct {
     char* nombre_recurso;
     pthread_mutex_t mutex;
-    //uint32_t procesos_bloqueados; // Cantidad de procesos bloqueados en este recurso
+    t_list* hilos_bloqueados; // Cantidad de hilos bloqueados en este recurso
+    pthread_cond_t cond_mutex;
 } t_recurso;
 
 typedef struct {

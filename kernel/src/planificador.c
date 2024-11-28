@@ -38,12 +38,12 @@ al hilo ejectandose y devolver el control al kernel para que este vuelva a plani
            el TCB asociado y mover a READY todos los hilos bloqueados por ese TID
 
 === LOGS OBLIGATORIOS (MARCAR CON X AQUELLOS QUE YA ESTEN) ===
-- Syscall recibida: ## (<PID>:<TID>) - Solicitó syscall: <NOMBRE_SYSCALL>
+X Syscall recibida: ## (<PID>:<TID>) - Solicitó syscall: <NOMBRE_SYSCALL>
 X Creación de Proceso: ## (<PID>:0) Se crea el proceso - Estado: NEW 
 X Creación de Hilo: ## (<PID>:<TID>) Se crea el Hilo - Estado: READY
 - Motivo de Bloqueo: ## (<PID>:<TID>) - Bloqueado por: <PTHREAD_JOIN / MUTEX / IO>
 X Fin de IO: ## (<PID>:<TID>) finalizó IO y pasa a READY
-- Fin de Quantum: ## (<PID>:<TID>) - Desalojado por fin de Quantum
+X Fin de Quantum: ## (<PID>:<TID>) - Desalojado por fin de Quantum
 X Fin de Proceso: ## Finaliza el proceso <PID>
 X Fin de Hilo: ## (<PID>:<TID>) Finaliza el hilo
 
@@ -66,12 +66,12 @@ t_list* tabla_paths;
 t_list* tabla_procesos;
 // uint32_t pid_actual = 0;
 // uint32_t tid_actual = 0;
-t_log* logger;
 
 // SEMAFOFOS QUE PROTEGEN EL ACCESO A CADA COLA
 pthread_mutex_t mutex_cola_new;
 pthread_mutex_t mutex_cola_ready;
 pthread_mutex_t mutex_cola_exit;
+pthread_mutex_t mutex_cola_blocked;
 pthread_mutex_t mutex_pid;
 pthread_mutex_t mutex_tid;
 pthread_mutex_t mutex_estado;
@@ -110,8 +110,10 @@ uint32_t asignar_pid() {
 
 uint32_t asignar_tid(t_pcb* pcb) {
     pthread_mutex_lock(&mutex_tid); 
-    uint32_t nuevo_tid = contador_tid;
-    contador_tid++;
+    uint32_t nuevo_tid = list_size(pcb->TIDS);
+
+    // uint32_t nuevo_tid = contador_tid;
+    // contador_tid++;
     pthread_mutex_unlock(&mutex_tid);
 
     return nuevo_tid;
@@ -157,6 +159,7 @@ t_tcb* crear_tcb(uint32_t pid_padre, uint32_t tid, char* archivo_pseudocodigo, i
     tcb->ESTADO = estado;
     tcb->archivo = archivo_pseudocodigo;
     tcb->PC = 0;
+    tcb->motivo_desalojo = ESTADO_INICIAL;
 
     return tcb;
 }
@@ -188,8 +191,7 @@ t_contexto_ejecucion* inicializar_contexto() {
     contexto->registros = malloc(sizeof(t_registros));
     memset(contexto->registros, 0, sizeof(t_registros));
     
-    
-    contexto->motivo_desalojo = ESTADO_INICIAL;
+    // contexto->motivo_desalojo = ESTADO_INICIAL;
     contexto->motivo_finalizacion = INCIAL;
 
     return contexto;
@@ -283,9 +285,13 @@ void intentar_inicializar_proceso_de_new() {
         // AL PID DE CADA PROCESO, PODRIAMOS HACER QUE LA TABLA DE PATHS SEA DE
         // TIPO CHAR** O DE TIPO T_LIST
 
+        // SOLO MUEVE EL PROCESO A READY SI PUEDE
+        // NO TRATA DE EJECUTAR EL PROXIMO
         inicializar_proceso(pcb, path_proceso);
     }
     pthread_mutex_unlock(&mutex_cola_new);
+
+    intentar_mover_a_execute();
 }
 
 // MUEVE UN PROCESO A EXIT LIBERANDO SUS RECURSOS E INTENTA INICIALIZAR OTRO A NEW
@@ -294,7 +300,7 @@ void process_exit(t_pcb* pcb) {
     liberar_recursos_proceso(pcb);
     enviar_proceso_memoria(socket_kernel_memoria, pcb, PROCESS_EXIT);
     eliminar_path(pcb->PID)
-    eliminar_pcb_lista(tabla_procesos,pid);
+    eliminar_pcb_lista(tabla_procesos, pcb->PID);
     intentar_inicializar_proceso_de_new();
 }
 
@@ -363,6 +369,7 @@ void thread_join(t_pcb* pcb, uint32_t tid_actual, uint32_t tid_esperado) {
     }
 
     log_info(LOGGER_KERNEL, "EL hilo %d esperara al hilo %d", tid_actual, tid_esperado);
+
     esperar_a_que_termine(tcb_esperado, tcb_actual);
 }
 
@@ -371,6 +378,10 @@ void esperar_a_que_termine(t_tcb* esperado,  t_tcb* actual) {
 
     actual->ESTADO = BLOCK;
     
+    pthread_mutex_lock(&mutex_cola_blocked);
+    list_add(cola_blocked, actual);
+    pthread_mutex_unlock(&mutex_cola_blocked);
+
     while (esperado->ESTADO != EXIT) {
         pthread_cond_wait(&cond_estado, &mutex_estado);
     }
@@ -386,6 +397,14 @@ void desbloquear_hilo_actual(t_tcb* actual) {
 
     // Cambiar el estado del hilo a READY
     actual->ESTADO = READY;
+    pthread_mutex_lock(&mutex_cola_blocked);
+    eliminar_tcb_lista(cola_blocked, actual);
+    pthread_mutex_unlock(&mutex_cola_blocked);
+
+    pthread_mutex_lock(&mutex_cola_ready);
+    list_add(cola_ready, actual);
+    pthread_mutex_unlock(&mutex_cola_ready);
+
     log_info(LOGGER_KERNEL, "Hilo %d desbloqueado.", actual->TID);
 
     // Enviar señal para despertar a todos los hilos bloqueados en esta condición
@@ -433,13 +452,12 @@ void thread_cancel(t_pcb* pcb, uint32_t tid) {
     if(list_size(pcb->TIDS) == 0) {
         process_exit(pcb);
     }
-
-    // PUEDE HABER UNA FUNCION QUE MUEVA OTRO A EXECUTE SI ES NECESARIO
-    cpu_libre = true;
-    intentar_mover_a_execute();
 }
 
 void liberar_recursos_hilo(t_tcb* tcb) {
+    // REMUEVE EL HILO EJECUTANDOSE
+    list_remove(cola_exec, 0);
+
     free(tcb);
 }
 
@@ -461,9 +479,6 @@ void thread_exit(t_pcb* pcb, uint32_t tid) {
     if(list_size(pcb->TIDS) == 0) {
         process_exit(pcb);
     }
-
-    cpu_libre = true;
-    intentar_mover_a_execute(); //Intenta a mover a execute el proximo hilo, no el que finalizo
 }
 
 // A CHEQUEAR
@@ -490,10 +505,8 @@ void intentar_mover_a_execute() {
     t_pcb* pcb_padre = obtener_pcb_padre_de_hilo(hilo_a_ejecutar->PID_PADRE);
     hilo_a_ejecutar->ESTADO = EXECUTE;
     pcb_padre->ESTADO = EXECUTE;
-    pthread_mutex_lock(&mutex_exec);
     list_add(cola_exec, hilo_a_ejecutar);
     cpu_libre = false;
-    pthread_mutex_unlock(&mutex_exec);
 
     if(!hilo_a_ejecutar) {
         log_error(LOGGER_KERNEL, "Error al obtener el proximo hilo a ejecutar");
@@ -502,11 +515,7 @@ void intentar_mover_a_execute() {
 
     log_info(LOGGER_KERNEL, "(<%d>:<%d>) Movido a Excecute", hilo_a_ejecutar->PID_PADRE, hilo_a_ejecutar->TID);
 
-    if(strcmp(ALGORITMO_PLANIFICACION, "COLAS_MULTINIVEL") == 0) {
-        int resultado = enviar_hilo_a_cpu(hilo_a_ejecutar, ALGORITMO_PLANIFICACION);
-    } else {
-        int resultado = enviar_hilo_a_cpu(hilo_a_ejecutar, "SIN QUANTUM");
-    }
+    int resultado = enviar_hilo_a_cpu(hilo_a_ejecutar);
 
     if (resultado != 0) {
         log_error(logger, "Error al enviar el hilo %d a la CPU", hilo_a_ejecutar->TID);
@@ -718,8 +727,10 @@ void io(t_pcb* pcb, uint32_t tid, int milisegundos) {
         return;
     }
 
-    tcb->ESTADO = BLOCK;
+    tcb->ESTADO = BLOCK_IO;
     log_info(LOGGER_KERNEL, "Hilo %d en proceso %d ha iniciado IO por %d ms", tid, pcb->PID, milisegundos);
+
+    intentar_mover_a_execute();
 
     usleep(milisegundos * 1000);
 

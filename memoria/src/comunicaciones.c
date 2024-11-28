@@ -341,7 +341,8 @@ int solicitar_archivo_filesystem(uint32_t pid, uint32_t tid) {
     char nombre_archivo[256];
     time_t t = time(NULL);
     struct tm* tiempo = localtime(&t);
-    sprintf(nombre_archivo, "%d-%d-%d", pid, tid, tiempo->tm_sec);
+    sprintf(nombre_archivo, "<%d>-<%d>-<%d>", pid, tid, tiempo->tm_sec);
+    
     char* contenido_proceso = obtener_contenido_proceso(tid);
     int tamanio = strlen(contenido_proceso);
 

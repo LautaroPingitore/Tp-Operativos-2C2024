@@ -10,13 +10,16 @@ extern t_list* cola_blocked;
 extern t_list* cola_exit;
 extern uint32_t pid_actual;
 extern uint32_t tid_actual;
+bool bool cpu_libre;
 
 // Sincronización
-extern pthread_mutex_t mutex_new;
-extern pthread_mutex_t mutex_ready;
-extern pthread_mutex_t mutex_exec;
-extern pthread_mutex_t mutex_blocked;
-extern pthread_mutex_t mutex_exit;
+extern pthread_mutex_t mutex_cola_new;
+extern pthread_mutex_t mutex_cola_ready;
+extern pthread_mutex_t mutex_cola_exit;
+extern pthread_mutex_t mutex_cola_blocked;
+extern pthread_mutex_t mutex_pid;
+extern pthread_mutex_t mutex_tid;
+extern pthread_mutex_t mutex_estado;
 extern sem_t sem_ready; // Controla los procesos listos para ejecutar
 
 const int INT_MAX = 200;
