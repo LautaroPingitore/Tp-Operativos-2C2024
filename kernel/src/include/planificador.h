@@ -10,7 +10,7 @@ extern t_list* cola_blocked;
 extern t_list* cola_exit;
 extern uint32_t pid_actual;
 extern uint32_t tid_actual;
-bool bool cpu_libre;
+extern bool cpu_libre;
 
 // Sincronización
 extern pthread_mutex_t mutex_cola_new;
@@ -43,6 +43,11 @@ t_contexto_ejecucion* asignar_contexto();
 pthread_mutex_t* asignar_mutexs();
 int asignar_prioridad();
 
+// MANEJO TABLA PATHS
+void agregar_path(uint32_t, char*);
+char* obtener_path(uint32_t);
+void eliminar_path(uint32_t);
+
 // MANEJO HILOS
 void thread_create(t_pcb*, char*, int);
 void thread_join(t_pcb*, uint32_t, uint32_t);
@@ -64,6 +69,7 @@ void io(t_pcb*, uint32_t, int);
 
 t_pcb* obtener_pcb_padre_de_hilo(uint32_t);
 void eliminar_pcb_lista(t_list*, uint32_t);
+void eliminar_tcb_lista(t_list*, uint32_t);
 void esperar_a_que_termine(t_tcb*, t_tcb*);
 void bloquear_hilo_actual(t_tcb*);
 void desbloquear_hilo_actual(t_tcb*);

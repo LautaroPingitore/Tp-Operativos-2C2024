@@ -14,7 +14,7 @@ void syscall_process_create(char* path_proceso, int tamanio_proceso, int priorid
 }
 
 void syscall_process_exit(uint32_t pid) {
-    if (pid == NULL) {
+    if (!pid) {
         log_error(LOGGER_KERNEL, "Syscall PROCESS_EXIT: Argumento PCB nulo");
         return;
     }
@@ -24,11 +24,14 @@ void syscall_process_exit(uint32_t pid) {
 }
 
 
-void syscall_thread_create(t_pcb* pcb, char* archivo_pseudocodigo, int prioridad){
-    if (pcb == NULL || archivo_pseudocodigo == NULL || prioridad < 0) {
+void syscall_thread_create(uint32_t pid, char* archivo_pseudocodigo, int prioridad){
+    if (!pid || !archivo_pseudocodigo || prioridad < 0) {
         log_error(LOGGER_KERNEL, "Syscall THREAD_CREATE: Argumentos inválidos");
         return;
     }
+    
+    t_pcb* pcb = obtener_pcb_padre_de_hilo(pid);
+
     log_info(LOGGER_KERNEL, "Syscall THREAD_CREATE ejecutada en proceso %d con prioridad %d", pcb->PID, prioridad);
     thread_create(pcb, archivo_pseudocodigo, prioridad);
 
@@ -37,49 +40,58 @@ void syscall_thread_create(t_pcb* pcb, char* archivo_pseudocodigo, int prioridad
     pthread_mutex_unlock(&mutex_cola_ready);
 }
 
-void syscall_thread_join(t_pcb* pcb, uint32_t tid_actual, uint32_t tid_esperado) {
-    if (pcb == NULL) {
+void syscall_thread_join(uint32_t pid, uint32_t tid_actual, uint32_t tid_esperado) {
+    if (!pid) {
         log_error(LOGGER_KERNEL, "Syscall THREAD_JOIN: PCB nulo");
         return;
     }
+
+    t_pcb* pcb = obtener_pcb_padre_de_hilo(pid);
+
     log_info(LOGGER_KERNEL, "Syscall THREAD_JOIN ejecutada en proceso %d: hilo %d espera a hilo %d", pcb->PID, tid_actual, tid_esperado);
     thread_join(pcb, tid_actual, tid_esperado);
 }
 
-void syscall_thread_cancel(t_pcb* pcb, uint32_t tid) {
-    if (pcb == NULL) {
+void syscall_thread_cancel(uint32_t pid, uint32_t tid) {
+    if (!pid) {
         log_error(LOGGER_KERNEL, "Syscall THREAD_CANCEL: PCB nulo");
         return;
     }
+
+    t_pcb* pcb = obtener_pcb_padre_de_hilo(pid);
+
     log_info(LOGGER_KERNEL, "Syscall THREAD_CANCEL ejecutada en proceso %d para hilo %d", pcb->PID, tid);
     thread_cancel(pcb, tid);
 }
 
-void syscall_thread_exit(t_pcb* pcb, uint32_t tid) {
-    if (pcb == NULL) {
+void syscall_thread_exit(uint32_t pid, uint32_t tid) {
+    if (!pid) {
         log_error(LOGGER_KERNEL, "Syscall THREAD_EXIT: PCB nulo");
         return;
     }
+
+    t_pcb* pcb = obtener_pcb_padre_de_hilo(pid);
+
     log_info(LOGGER_KERNEL, "Syscall THREAD_EXIT ejecutada por hilo %d en proceso %d", tid, pcb->PID);
     thread_exit(pcb, tid);
 }
 
 void syscall_mutex_create(uint32_t pid, char* nombre) {
     t_pcb* pcb = obtener_pcb_padre_de_hilo(pid);
-    t_recurso* recurso = buscar_recurso_proceso(pid, nombre);
+    t_recurso* recurso = buscar_recurso_proceso(pcb, nombre);
 
-    if(recuros == NULL) {
-        pthread_mutex_t* mutex = malloc(sizeof(pthread_mutex_t));
+    if(recurso == NULL) {
         t_recurso* recurso_nuevo = malloc(sizeof(t_recurso));
-        recurso->nombre_recurso = nombre;
-        recurso->mutex = mutex;
-        pthread_mutex_init(mutex, NULL);
+        recurso_nuevo->nombre_recurso = strdup(nombre);
+        recurso_nuevo->hilos_bloqueados = list_create();
+
+        pthread_mutex_init(&recurso_nuevo->mutex, NULL);
 
         list_add(pcb->MUTEXS, recurso_nuevo);
 
         log_info(LOGGER_KERNEL, "Syscall MUTEX_CREATE ejecutada, nuevo mutex creado.");
     } else {
-        log_ifo(LOGGER_KERNEL, "EL mutex %s ya se encuentra creado en el proceso %d", nombre, pid);
+        log_info(LOGGER_KERNEL, "EL mutex %s ya se encuentra creado en el proceso %d", nombre, pcb->PID);
     }
 
     pthread_mutex_lock(&mutex_cola_ready);
@@ -88,7 +100,8 @@ void syscall_mutex_create(uint32_t pid, char* nombre) {
 }
 
 void syscall_mutex_lock(uint32_t pid, char* nombre) {
-    t_recurso* recurso = buscar_recurso_proceso(pid, nombre);
+    t_pcb* pcb = obtener_pcb_padre_de_hilo(pid);
+    t_recurso* recurso = buscar_recurso_proceso(pcb, nombre);
 
     int resultado = pthread_mutex_trylock(&recurso->mutex);
     t_tcb* hilo_bloqueado = hilo_actual;
@@ -109,7 +122,7 @@ void syscall_mutex_lock(uint32_t pid, char* nombre) {
         pthread_cond_wait(&recurso->cond_mutex, &recurso->mutex);
 
         pthread_mutex_lock(&mutex_cola_blocked);
-        eliminar_tcb_lista(recurso->hilos_bloqueados, hilo_bloqueado);
+        eliminar_tcb_lista(recurso->hilos_bloqueados, hilo_bloqueado->TID);
         pthread_mutex_unlock(&mutex_cola_blocked);
 
         log_info(LOGGER_KERNEL, "(<%d>:<%d>) Desbloqueado del Mutex: %s", hilo_bloqueado->PID_PADRE, hilo_bloqueado->TID, recurso->nombre_recurso);
@@ -124,7 +137,8 @@ void syscall_mutex_lock(uint32_t pid, char* nombre) {
 }
 
 void syscall_mutex_unlock(uint32_t pid, char* nombre) {
-    t_recurso* recurso = buscar_recurso_proceso(pid, nombre);
+    t_pcb* pcb = obtener_pcb_padre_de_hilo(pid);
+    t_recurso* recurso = buscar_recurso_proceso(pcb, nombre);
 
     if(recurso->hilos_bloqueados > 0) {
         pthread_cond_signal(&recurso->cond_mutex);
@@ -138,8 +152,10 @@ void syscall_mutex_unlock(uint32_t pid, char* nombre) {
     pthread_mutex_unlock(&mutex_cola_ready);
 }
 
-void syscall_dump_memory(t_pcb* pcb, uint32_t tid) {
+void syscall_dump_memory(uint32_t pid, uint32_t tid) {
     log_info(LOGGER_KERNEL, "Syscall DUMP_MEMORY ejecutandose...");
+
+    t_pcb* pcb = obtener_pcb_padre_de_hilo(pid);
 
     enviar_memory_dump(pcb, tid);
 
@@ -175,7 +191,9 @@ void syscall_dump_memory(t_pcb* pcb, uint32_t tid) {
     }
 }
 
-void syscall_io(t_pcb* pcb, uint32_t tid, int milisegundos) {
+void syscall_io(uint32_t pid, uint32_t tid, int milisegundos) {
+    t_pcb* pcb =obtener_pcb_padre_de_hilo(pid);
+
     if (pcb == NULL || milisegundos <= 0) {
         log_error(LOGGER_KERNEL, "Syscall IO: Argumentos inválidos");
         return;
@@ -185,7 +203,7 @@ void syscall_io(t_pcb* pcb, uint32_t tid, int milisegundos) {
 }
 
 void manejar_syscall(t_paquete* paquete) {
-    t_instruccion* inst = deserializar_instruccion(paquete->buffer->stream, paquete.buffer.size);
+    t_instruccion* inst = deserializar_instruccion(paquete->buffer->stream, paquete->buffer->size);
     switch (paquete->codigo_operacion) {
         case PROCESS_CREATE:
             int tamanio = atoi(inst->parametro2);
@@ -227,12 +245,12 @@ void manejar_syscall(t_paquete* paquete) {
             break;
         case MUTEX_LOCK:
             log_syscall("MUTEX_LOCK", hilo_actual);
-            syscall_mutex_lock(inst->parametro1);
+            syscall_mutex_lock(hilo_actual->PID_PADRE, inst->parametro1);
             intentar_mover_a_execute();
             break;
         case MUTEX_UNLOCK:
             log_syscall("MUTEX_UNLOCK", hilo_actual);
-            syscall_mutex_unlock(inst->parametro1);
+            syscall_mutex_unlock(hilo_actual->PID_PADRE, inst->parametro1);
             intentar_mover_a_execute();
             break;
         case DUMP_MEMORY:
@@ -261,4 +279,18 @@ void manejar_syscall(t_paquete* paquete) {
 
 void log_syscall(char* syscall, t_tcb* tcb) {
     log_info(LOGGER_KERNEL, "## (<%d>:<%d>) - Solicitó syscall: <%s>", tcb->PID_PADRE, tcb->TID, syscall);
+}
+
+t_recurso* buscar_recurso_proceso(t_pcb* pcb, char* nombre) {
+    for(int i=0; i < list_size(pcb->MUTEXS); i++) {
+        t_recurso* rec = list_get(pcb->MUTEXS, i);
+        if(strcmp(rec->nombre_recurso, nombre) == 0) {
+            return rec;
+        }
+    }
+    return NULL;
+}
+
+void reiniciar_quantum() {
+    
 }

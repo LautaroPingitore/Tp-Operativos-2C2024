@@ -146,7 +146,7 @@ t_pcb* crear_pcb(uint32_t pid, int tamanio, t_contexto_ejecucion* contexto_ejecu
     return pcb;
 }
 
-t_tcb* crear_tcb(uint32_t pid_padre, uint32_t tid, char* archivo_pseudocodigo, int prioridad, t_estado estado,){
+t_tcb* crear_tcb(uint32_t pid_padre, uint32_t tid, char* archivo_pseudocodigo, int prioridad, t_estado estado){
     t_tcb* tcb = malloc(sizeof(t_tcb));
     if (tcb == NULL) {
         log_error(LOGGER_KERNEL, "Error al asignar memoria para el TCB");
@@ -299,14 +299,14 @@ void process_exit(t_pcb* pcb) {
     mover_a_exit(pcb);
     liberar_recursos_proceso(pcb);
     enviar_proceso_memoria(socket_kernel_memoria, pcb, PROCESS_EXIT);
-    eliminar_path(pcb->PID)
+    eliminar_path(pcb->PID);
     eliminar_pcb_lista(tabla_procesos, pcb->PID);
     intentar_inicializar_proceso_de_new();
 }
 
 void liberar_recursos_proceso(t_pcb* pcb) {
     if (pcb->TIDS != NULL) {
-        list_destroy_and_destroy_elements(pcb->TIDS, liberar_recursos_hilo);
+        list_destroy_and_destroy_elements(pcb->TIDS, free);
     }
     if (pcb->MUTEXS != NULL) {
         list_destroy_and_destroy_elements(pcb->MUTEXS, free);
@@ -376,7 +376,7 @@ void thread_join(t_pcb* pcb, uint32_t tid_actual, uint32_t tid_esperado) {
 void esperar_a_que_termine(t_tcb* esperado,  t_tcb* actual) {
     pthread_mutex_lock(&mutex_estado);
 
-    actual->ESTADO = BLOCK;
+    actual->ESTADO = BLOCK_PTHREAD_JOIN;
     
     pthread_mutex_lock(&mutex_cola_blocked);
     list_add(cola_blocked, actual);
@@ -398,7 +398,7 @@ void desbloquear_hilo_actual(t_tcb* actual) {
     // Cambiar el estado del hilo a READY
     actual->ESTADO = READY;
     pthread_mutex_lock(&mutex_cola_blocked);
-    eliminar_tcb_lista(cola_blocked, actual);
+    eliminar_tcb_lista(cola_blocked, actual->TID);
     pthread_mutex_unlock(&mutex_cola_blocked);
 
     pthread_mutex_lock(&mutex_cola_ready);
@@ -499,7 +499,7 @@ void intentar_mover_a_execute() {
 
     // Obtener el proximo hilo a ejecutar en base al planificador
     t_tcb* hilo_a_ejecutar = seleccionar_hilo_por_algoritmo();
-    eliminar_tcb_lista(cola_ready,hilo_a_ejecutar);
+    eliminar_tcb_lista(cola_ready, hilo_a_ejecutar->TID);
     pthread_mutex_unlock(&mutex_cola_ready);
 
     t_pcb* pcb_padre = obtener_pcb_padre_de_hilo(hilo_a_ejecutar->PID_PADRE);
@@ -636,37 +636,37 @@ void ejecutar_hilo_rr(t_tcb* hilo, int quantum) {
 
 */
 
-void ejecutar_hilo_rr(t_tcb* hilo, int quantum) {
-    log_info(LOGGER_KERNEL, "(<%d>:<%d>) Ejecutando hilo con quantum %d", hilo->PID_PADRE, hilo->TID, quantum);
+// void ejecutar_hilo_rr(t_tcb* hilo, int quantum) {
+//     log_info(LOGGER_KERNEL, "(<%d>:<%d>) Ejecutando hilo con quantum %d", hilo->PID_PADRE, hilo->TID, quantum);
 
-    struct timespec inicio, actual;
-    clock_gettime(CLOCK_MONOTONIC, &inicio);
+//     struct timespec inicio, actual;
+//     clock_gettime(CLOCK_MONOTONIC, &inicio);
 
-    int tiempo_transcurrido = 0;
-    while (tiempo_transcurrido < quantum) {
-        ejecutar_hilo(hilo);  // Llamada a función ficticia para ejecutar una instrucción
-        clock_gettime(CLOCK_MONOTONIC, &actual);
-        tiempo_transcurrido = (actual.tv_sec - inicio.tv_sec) * 1000 +
-                              (actual.tv_nsec - inicio.tv_nsec) / 1000000;
+//     int tiempo_transcurrido = 0;
+//     while (tiempo_transcurrido < quantum) {
+//         ejecutar_hilo(hilo);  // Llamada a función ficticia para ejecutar una instrucción
+//         clock_gettime(CLOCK_MONOTONIC, &actual);
+//         tiempo_transcurrido = (actual.tv_sec - inicio.tv_sec) * 1000 +
+//                               (actual.tv_nsec - inicio.tv_nsec) / 1000000;
 
-        if (check_interrupt()) {
-            log_info(LOGGER_KERNEL, "(<%d>:<%d>) Interrupción recibida. Devolviendo control al Kernel.", hilo->PID_PADRE, hilo->TID);
-            hilo->ESTADO = READY;
-            pthread_mutex_lock(&mutex_cola_ready);
-            list_add(cola_ready, hilo);
-            pthread_mutex_unlock(&mutex_cola_ready);
-            return;
-        }
-    }
-    // Si termina quantum sin salir, mover a READY
-    log_info(LOGGER_KERNEL, "(<%d>:<%d>) Finalizó quantum. Desalojado por fin de Quantum.", hilo->PID_PADRE, hilo->TID);
-    hilo->ESTADO = READY;
-    pthread_mutex_lock(&mutex_cola_ready);
-    list_add(cola_ready, hilo);
-    pthread_mutex_unlock(&mutex_cola_ready);
+//         if (check_interrupt()) {
+//             log_info(LOGGER_KERNEL, "(<%d>:<%d>) Interrupción recibida. Devolviendo control al Kernel.", hilo->PID_PADRE, hilo->TID);
+//             hilo->ESTADO = READY;
+//             pthread_mutex_lock(&mutex_cola_ready);
+//             list_add(cola_ready, hilo);
+//             pthread_mutex_unlock(&mutex_cola_ready);
+//             return;
+//         }
+//     }
+//     // Si termina quantum sin salir, mover a READY
+//     log_info(LOGGER_KERNEL, "(<%d>:<%d>) Finalizó quantum. Desalojado por fin de Quantum.", hilo->PID_PADRE, hilo->TID);
+//     hilo->ESTADO = READY;
+//     pthread_mutex_lock(&mutex_cola_ready);
+//     list_add(cola_ready, hilo);
+//     pthread_mutex_unlock(&mutex_cola_ready);
 
-    cpu_libre = true;
-}
+//     cpu_libre = true;
+// }
 
 
 
@@ -743,7 +743,7 @@ void io(t_pcb* pcb, uint32_t tid, int milisegundos) {
 }
 
 // MANEJO DE TABLA PATHS
-agregar_path(uint32_t pid, char* archivo) {
+void agregar_path(uint32_t pid, char* archivo) {
     char* path_copiado = strdup(archivo);
     list_add_in_index(tabla_paths, pid, path_copiado);
 }

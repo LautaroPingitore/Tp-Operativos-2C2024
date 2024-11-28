@@ -23,25 +23,20 @@
 // } t_syscall;
 
 // Prototipos de funciones syscalls
-int sys_thread_create(char* path, int priority);
-int sys_thread_join(int tid);
-int sys_thread_cancel(int tid);
-void sys_thread_exit();
-void sys_io(int milliseconds);
-
-
 void syscall_process_create(char*, int, int);
-void syscall_process_exit(t_pcb*);
-void syscall_thread_create(t_pcb*, char*, int);
-void syscall_thread_join(t_pcb*, uint32_t, uint32_t);
-void syscall_thread_cancel(t_pcb*, uint32_t);
-void syscall_thread_exit(t_pcb*, uint32_t);
+void syscall_process_exit(uint32_t);
+void syscall_thread_create(uint32_t, char*, int);
+void syscall_thread_join(uint32_t, uint32_t, uint32_t);
+void syscall_thread_cancel(uint32_t, uint32_t);
+void syscall_thread_exit(uint32_t, uint32_t);
 void syscall_mutex_create(uint32_t, char*);
 void syscall_mutex_lock(uint32_t, char*);
 void syscall_mutex_unlock(uint32_t, char*);
-void syscall_dump_memory(t_pcb*, uint32_t);
-void syscall_io(t_pcb*, uint32_t, int);
-void manejar_syscall(op_code, t_pcb*, char*, int, int, uint32_t, uint32_t, pthread_mutex_t*, int);
+void syscall_dump_memory(uint32_t, uint32_t);
+void syscall_io(uint32_t, uint32_t, int);
+void manejar_syscall(t_paquete*);
 void log_syscall(char*, t_tcb*);
+t_recurso* buscar_recurso_proceso(t_pcb*, char*);
+void reiniciar_quantum();
 
 #endif /* SYSCALL_H_ */

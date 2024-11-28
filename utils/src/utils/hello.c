@@ -430,7 +430,7 @@ t_tcb* deserializar_paquete_tcb(void* stream, int size) {
     memcpy(&tcb->ESTADO, stream + desplazamiento, sizeof(uint32_t));
 	desplazamiento += sizeof(uint32_t);
 
-	memccpy(&tcb->PC, stream + desplazamiento, sizeof(uint32_t));
+	memcpy(&tcb->PC, stream + desplazamiento, sizeof(uint32_t));
 
 	return tcb;
 }

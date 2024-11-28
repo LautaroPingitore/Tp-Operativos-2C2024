@@ -24,14 +24,15 @@ int main(int argc, char* argv[]) {
     // INICIAR LOS SEMAFOROS Y COLAS
     inicializar_kernel();
 
-    // CREAR PROCESOS INICIAL
+    // CREAR PROCESOS INICIAL Y LO EJECUTA
     crear_proceso(archivo_pseudocodigo, tamanio_proceso, 0);
+    intentar_mover_a_execute();
 
-    while(1) {
-        // LOGICA PARA LA CREACION DE MAS PROCESOS Y USO DE LOS PLANIIFICADORES
-        // IMPLEMENTAR UNA VEZ QUE SE TENGA EL ARCHIVO DEL PSEUDOCODIGO
-        
-    }
+    // NO SE SI HACE FALTA ESTE WHILE, YA QUE CUANDO HACES EL
+    // INTENTAR MOVER EXECUTE, YA EJECUTAS ABSOLUTAMENTE TODO
+    // while(list_size(tabla_procesos) > 0) {
+
+    // }
 
     terminar_programa(CONFIG_KERNEL, LOGGER_KERNEL, sockets);
 

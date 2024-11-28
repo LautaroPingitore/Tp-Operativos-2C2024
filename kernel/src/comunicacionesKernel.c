@@ -62,7 +62,7 @@ int enviar_hilo_a_cpu(t_tcb* hilo) {
     agregar_a_paquete(paquete, &hilo->PRIORIDAD, sizeof(hilo->PRIORIDAD));
     agregar_a_paquete(paquete, &hilo->PID_PADRE, sizeof(uint32_t));
     agregar_a_paquete(paquete, &hilo->ESTADO, sizeof(hilo->ESTADO));
-    agregar_a_paquete(paquete, &hilo->PC, sizeof(uint32_t))
+    agregar_a_paquete(paquete, &hilo->PC, sizeof(uint32_t));
     serializar_paquete(paquete, paquete->buffer->size);
 
     int resultado = enviar_paquete(paquete, socket_kernel_cpu_dispatch);
@@ -78,7 +78,7 @@ int enviar_hilo_a_cpu(t_tcb* hilo) {
 }
 
 // RECIBE EL HILO DE CPU CON SU MOTIVO DE FINALIZACION
-t_tcb* recibir_hilo_cpu() {
+void manejar_hilo_cpu() {
     t_paquete* paquete = recibir_paquete_entero(socket_kernel_cpu_interrupt);
     t_tcb* hilo = deserializar_paquete_tcb(paquete->buffer->stream, paquete->buffer->size);
 
