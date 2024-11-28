@@ -64,8 +64,8 @@ t_list* cola_nivel_3;
 
 t_list* tabla_paths;
 t_list* tabla_procesos;
-uint32_t pid_actual = 0;
-uint32_t tid_actual = 0;
+// uint32_t pid_actual = 0;
+// uint32_t tid_actual = 0;
 t_log* logger;
 
 // SEMAFOFOS QUE PROTEGEN EL ACCESO A CADA COLA
@@ -79,7 +79,7 @@ pthread_cond_t cond_estado = PTHREAD_COND_INITIALIZER;
 
 // VARIABLES DE CONTROL
 uint32_t pid = 0;
-int contador_tid = 0;
+uint32_t contador_tid = 0;
 bool cpu_libre = true;
 
 void inicializar_kernel() {
@@ -92,6 +92,7 @@ void inicializar_kernel() {
     cola_nivel_3 = list_create();
 
     tabla_paths = list_create();
+    tabla_procesos = list_create();
 
     pthread_mutex_init(&mutex_cola_new, NULL);
     pthread_mutex_init(&mutex_cola_ready, NULL);
@@ -186,7 +187,7 @@ t_contexto_ejecucion* inicializar_contexto() {
     // Inicializacion de registros y estado del proceso
     contexto->registros = malloc(sizeof(t_registros));
     memset(contexto->registros, 0, sizeof(t_registros));
-    contexto->registros->program_counter = 0;
+    
     
     contexto->motivo_desalojo = ESTADO_INICIAL;
     contexto->motivo_finalizacion = INCIAL;
@@ -245,7 +246,7 @@ void eliminar_tcb_lista(t_list* lista, uint32_t tid) {
     }
 }
 
-
+//OJO CON ESTA FUNCION
 void mover_a_exit(t_pcb* pcb) {
     // NO HACE FALTA PORQUE LOS HILOS ESTAN EL COLA READY, NO LOS PROCESOS
     // REMUEVE EL PROCESO DE LA COLA READY
@@ -293,7 +294,7 @@ void process_exit(t_pcb* pcb) {
     liberar_recursos_proceso(pcb);
     enviar_proceso_memoria(socket_kernel_memoria, pcb, PROCESS_EXIT);
     eliminar_path(pcb->PID)
-    eliminar_pcb_lista(tabla_procesos, pcb);
+    eliminar_pcb_lista(tabla_procesos,pid);
     intentar_inicializar_proceso_de_new();
 }
 
@@ -483,6 +484,9 @@ void intentar_mover_a_execute() {
 
     // Obtener el proximo hilo a ejecutar en base al planificador
     t_tcb* hilo_a_ejecutar = seleccionar_hilo_por_algoritmo();
+    eliminar_tcb_lista(cola_ready,hilo_a_ejecutar);
+    pthread_mutex_unlock(&mutex_cola_ready);
+
     t_pcb* pcb_padre = obtener_pcb_padre_de_hilo(hilo_a_ejecutar->PID_PADRE);
     hilo_a_ejecutar->ESTADO = EXECUTE;
     pcb_padre->ESTADO = EXECUTE;
@@ -597,6 +601,31 @@ t_tcb* seleccionar_hilo_multinivel() {
     return siguiente_hilo;
 }
 
+/*
+void ejecutar_hilo_rr(t_tcb* hilo, int quantum) {
+    log_info(LOGGER_KERNEL, "(<%d>:<%d>) Enviando hilo a CPU para ejecución con quantum %d", 
+             hilo->PID_PADRE, hilo->TID, quantum);
+
+    hilo->ESTADO = EXECUTE;
+    enviar_hilo_a_cpu(hilo, quantum);  // Enviar hilo a la CPU para ejecución
+
+    // Esperar retorno desde CPU
+    t_retorno_cpu* retorno = recibir_mensaje_cpu();  // Función ficticia para recibir mensajes desde CPU
+
+    if (retorno == NULL) {
+        log_error(LOGGER_KERNEL, "Error al recibir respuesta de la CPU. Reiniciando planificación.");
+        hilo->ESTADO = READY;
+        pthread_mutex_lock(&mutex_cola_ready);
+        list_add(cola_ready, hilo);
+        pthread_mutex_unlock(&mutex_cola_ready);
+        return;
+    }
+
+    manejar_retorno_cpu(hilo, retorno);  // Manejar el motivo de retorno
+    free(retorno);
+}
+
+*/
 
 void ejecutar_hilo_rr(t_tcb* hilo, int quantum) {
     log_info(LOGGER_KERNEL, "(<%d>:<%d>) Ejecutando hilo con quantum %d", hilo->PID_PADRE, hilo->TID, quantum);
@@ -629,6 +658,7 @@ void ejecutar_hilo_rr(t_tcb* hilo, int quantum) {
 
     cpu_libre = true;
 }
+
 
 
 
