@@ -23,9 +23,6 @@
 * @return No devuelve nada
 */
 
-// DATOS DE LAS CONFIGS QUE SE REPITEN O SE NECESITAN
-extern char* ALGORITMO_PLANIFICACION;
-
 typedef enum{
     HANDSHAKE_consola,
     HANDSHAKE_kernel,
@@ -212,5 +209,6 @@ void* serializar_paquete(t_paquete*, int);
 t_paquete* recibir_paquete_entero(int);
 int gestionarConexiones(int, t_log*);
 t_tcb* deserializar_paquete_tcb(void*, int);
+t_instruccion *deserializar_instruccion(void*, int);
 
 #endif

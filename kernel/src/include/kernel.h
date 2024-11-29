@@ -11,6 +11,7 @@ extern char* PUERTO_CPU_DISPATCH;
 extern char* PUERTO_CPU_INTERRUPT;
 extern int QUANTUM;
 extern char* LOG_LEVEL;
+extern char* ALGORITMO_PLANIFICACION;
 
 extern int socket_kernel_memoria;
 extern int socket_kernel_cpu_dispatch;

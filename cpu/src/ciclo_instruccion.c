@@ -205,42 +205,6 @@ void pedir_instruccion_memoria(uint32_t tid, uint32_t pc, int socket) {
     eliminar_paquete(paquete);
 }
 
-t_instruccion* deserializar_instruccion(void* stream, int offset) {
-
-    t_instruccion* instruccion = malloc(sizeof(t_instruccion));
-
-    memcpy(&(instruccion->nombre), stream + offset, sizeof(char*));
-    offset += sizeof(char*);
-
-    uint32_t tamanio_parametro1;
-    memcpy(&(tamanio_parametro1), stream + offset, sizeof(uint32_t));
-    offset += sizeof(uint32_t);
-
-    uint32_t tamanio_parametro2;
-    memcpy(&(tamanio_parametro2), stream + offset, sizeof(uint32_t));
-    offset += sizeof(uint32_t);
-
-    uint32_t tamanio_parametro3;
-    memcpy(&(tamanio_parametro3), stream + offset, sizeof(uint32_t));
-    offset += sizeof(uint32_t);
-
-    instruccion->parametro1 = malloc(tamanio_parametro1);
-    memcpy(instruccion->parametro1, stream + offset, tamanio_parametro1);
-    offset += tamanio_parametro1;
-
-    instruccion->parametro2 = malloc(tamanio_parametro2);
-    memcpy(instruccion->parametro2, stream + offset, tamanio_parametro2);
-    offset += tamanio_parametro2;
-
-    instruccion->parametro3 = malloc(tamanio_parametro3);
-    memcpy(instruccion->parametro3, stream + offset, tamanio_parametro3);
-    offset += tamanio_parametro3;
-
-    eliminar_paquete(paquete);
-
-    return instruccion;
-}
-
 void liberar_instruccion(t_instruccion *instruccion) {
     free(instruccion->parametro1);
     free(instruccion->parametro2);

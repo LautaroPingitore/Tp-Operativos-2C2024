@@ -96,7 +96,7 @@ void manejar_hilo_cpu() {
     default:
         list_remove(cola_exec, 0);
         cpu_libre = true;
-        manejar_syscall(paquete);
+        manejar_syscall(paquete, hilo);
         break;
     }
 }

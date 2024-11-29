@@ -203,10 +203,10 @@ void inicializar_proceso(t_pcb* pcb, char* path_proceso) {
     int resultado = respuesta_memoria_creacion(socket_kernel_memoria);
 
     if (resultado == 1) {
-        log_info(logger, "Proceso %d inicializado y movido a READY", pcb->PID);
+        log_info(LOGGER_KERNEL, "Proceso %d inicializado y movido a READY", pcb->PID);
         mover_a_ready(pcb);
     } else {
-        log_warning(logger, "No hay espacio en memoria, se mantiene en new");
+        log_warning(LOGGER_KERNEL, "No hay espacio en memoria, se mantiene en new");
     }
 }
 
@@ -225,7 +225,7 @@ void mover_a_ready(t_pcb* pcb) {
     list_add(cola_ready, hilo_cero);
     pthread_mutex_unlock(&mutex_cola_ready);
     
-    log_info(logger, "Hilo %d movido a READY ", hilo_cero->TID);
+    log_info(LOGGER_KERNEL, "Hilo %d movido a READY ", hilo_cero->TID);
 }
 
 void eliminar_pcb_lista(t_list* lista, uint32_t pid) {
@@ -261,7 +261,7 @@ void mover_a_exit(t_pcb* pcb) {
     list_add(cola_exit, pcb);
     pthread_mutex_unlock(&mutex_cola_exit);
     
-    log_info(logger, "## Finaliza el proceso <%d>", pcb->PID);
+    log_info(LOGGER_KERNEL, "## Finaliza el proceso <%d>", pcb->PID);
 }
 
 // INTENTA INICIALIZAR EL SIGUIENTE PROCESO EN LA COLA NEW SI HAY UNO DISPONIBLE
@@ -486,13 +486,13 @@ void intentar_mover_a_execute() {
     // Verificar si hay algun proceso en READY y si la CPU esta libre
     pthread_mutex_lock(&mutex_cola_ready);
     if (list_is_empty(cola_ready)) {
-        log_info(logger, "No hay procesos en READY para mover a EXECUTE");
+        log_info(LOGGER_KERNEL, "No hay procesos en READY para mover a EXECUTE");
         pthread_mutex_unlock(&mutex_cola_ready);
         return;
     }
 
     if (!cpu_libre) {
-        log_info(logger, "CPU ocupada, no se puede mover un proceso a EXECUTE");
+        log_info(LOGGER_KERNEL, "CPU ocupada, no se puede mover un proceso a EXECUTE");
         pthread_mutex_unlock(&mutex_cola_ready);
         return;
     }
@@ -518,7 +518,7 @@ void intentar_mover_a_execute() {
     int resultado = enviar_hilo_a_cpu(hilo_a_ejecutar);
 
     if (resultado != 0) {
-        log_error(logger, "Error al enviar el hilo %d a la CPU", hilo_a_ejecutar->TID);
+        log_error(LOGGER_KERNEL, "Error al enviar el hilo %d a la CPU", hilo_a_ejecutar->TID);
         hilo_a_ejecutar->ESTADO = READY;
         pcb_padre->ESTADO = READY;
         cpu_libre = true;
@@ -526,7 +526,7 @@ void intentar_mover_a_execute() {
         list_add(cola_ready, hilo_a_ejecutar);
         pthread_mutex_lock(&mutex_cola_ready);
     } else {
-        log_info(logger, "El hilo %d ha sido enviado a la CPU", hilo_a_ejecutar->TID);
+        log_info(LOGGER_KERNEL, "El hilo %d ha sido enviado a la CPU", hilo_a_ejecutar->TID);
     }
 }
 
@@ -568,7 +568,7 @@ t_tcb* obtener_hilo_x_prioridad() {
     }
 
     t_tcb* hilo_a_ejecutar = NULL;
-    int prioridad_max = INT_MAX; // INICIALIZA EN UN VALOR GRANDE ASI SIEMPRE PASA 1 VEZ POR EL IF DEL FOR
+    int prioridad_max = 100000; // INICIALIZA EN UN VALOR GRANDE ASI SIEMPRE PASA 1 VEZ POR EL IF DEL FOR
 
     for(int i=0; i < list_size(cola_ready); i++) {
         t_tcb* hilo_actual = list_get(cola_ready, i); // OBTIENE EL HILO EN LA POSICION i DE LA COLA

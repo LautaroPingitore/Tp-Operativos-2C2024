@@ -1,5 +1,21 @@
 #include "include/gestor.h"
 
+t_log* LOGGER_KERNEL;
+t_config* CONFIG_KERNEL;
+
+char* IP_MEMORIA;
+char* PUERTO_MEMORIA;
+char* IP_CPU;
+char* PUERTO_CPU_DISPATCH;
+char* PUERTO_CPU_INTERRUPT;
+int QUANTUM;
+char* LOG_LEVEL;
+char* ALGORITMO_PLANIFICACION;
+
+int socket_kernel_memoria;
+int socket_kernel_cpu_dispatch;
+int socket_kernel_cpu_interrupt;
+lista_recursos recursos_globales;
 
 int main(int argc, char* argv[]) {
     // VERIFICACIÓN DE QUE SE PASARON AL MENOS 3 ARGUMENTOS (programa, archivo pseudocódigo, tamaño proceso)

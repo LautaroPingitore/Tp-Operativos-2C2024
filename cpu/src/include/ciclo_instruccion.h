@@ -17,7 +17,6 @@ void check_interrupt();
 void loguear_y_sumar_pc(t_instruccion*);
 
 void pedir_instruccion_memoria(uint32_t, uint32_t, int);
-t_instruccion *deserializar_instruccion(void*, int);
 void liberar_instruccion(t_instruccion*);
 
 bool recibir_interrupcion(int);

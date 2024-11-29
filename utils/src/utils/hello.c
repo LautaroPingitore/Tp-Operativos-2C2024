@@ -434,3 +434,52 @@ t_tcb* deserializar_paquete_tcb(void* stream, int size) {
 
 	return tcb;
 }
+
+t_instruccion* deserializar_instruccion(void* stream, int offset) {
+
+    // Reservar memoria para la instrucción
+    t_instruccion* instruccion = malloc(sizeof(t_instruccion));
+    if (!instruccion) {
+        fprintf(stderr, "Error: No se pudo asignar memoria para t_instruccion\n");
+        return NULL;
+    }
+
+    // Deserializar nombre
+    memcpy(&instruccion->nombre, (char*)stream + offset, sizeof(char*));
+    offset += sizeof(char*);
+
+    // Deserializar parametro1
+    uint32_t tamanio_parametro1;
+    memcpy(&tamanio_parametro1, (char*)stream + offset, sizeof(uint32_t));
+    offset += sizeof(uint32_t);
+
+    instruccion->parametro1 = malloc(tamanio_parametro1);
+    if (!instruccion->parametro1) {
+        fprintf(stderr, "Error: No se pudo asignar memoria para parametro1\n");
+        free(instruccion);
+        return NULL;
+    }
+    memcpy(instruccion->parametro1, (char*)stream + offset, tamanio_parametro1);
+    offset += tamanio_parametro1;
+
+    // Deserializar parametro2
+    uint32_t tamanio_parametro2;
+    memcpy(&tamanio_parametro2, (char*)stream + offset, sizeof(uint32_t));
+    offset += sizeof(uint32_t);
+
+    instruccion->parametro2 = malloc(tamanio_parametro2);
+    if (!instruccion->parametro2) {
+        fprintf(stderr, "Error: No se pudo asignar memoria para parametro2\n");
+        free(instruccion->parametro1);
+        free(instruccion);
+        return NULL;
+    }
+    memcpy(instruccion->parametro2, (char*)stream + offset, tamanio_parametro2);
+    offset += tamanio_parametro2;
+
+    // Deserializar parametro3 (entero)
+    memcpy(&instruccion->parametro3, (char*)stream + offset, sizeof(int));
+    offset += sizeof(int);
+
+    return instruccion;
+}

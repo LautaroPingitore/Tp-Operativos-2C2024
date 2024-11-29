@@ -1,18 +1,22 @@
 #ifndef PLANIFICADOR_H_
 #define PLANIFICADOR_H_
 
-
-// Variables globales
+// COLAS QUE EN LAS CUALES SE GUARDARAN LOS PROCESOS
 extern t_list* cola_new;
 extern t_list* cola_ready;
 extern t_list* cola_exec;
 extern t_list* cola_blocked;
 extern t_list* cola_exit;
-extern uint32_t pid_actual;
-extern uint32_t tid_actual;
-extern bool cpu_libre;
+extern t_list* cola_nivel_1;
+extern t_list* cola_nivel_2;
+extern t_list* cola_nivel_3;
 
-// Sincronización
+extern t_list* tabla_paths;
+extern t_list* tabla_procesos;
+// uint32_t pid_actual = 0;
+// uint32_t tid_actual = 0;
+
+// SEMAFOFOS QUE PROTEGEN EL ACCESO A CADA COLA
 extern pthread_mutex_t mutex_cola_new;
 extern pthread_mutex_t mutex_cola_ready;
 extern pthread_mutex_t mutex_cola_exit;
@@ -20,9 +24,12 @@ extern pthread_mutex_t mutex_cola_blocked;
 extern pthread_mutex_t mutex_pid;
 extern pthread_mutex_t mutex_tid;
 extern pthread_mutex_t mutex_estado;
-extern sem_t sem_ready; // Controla los procesos listos para ejecutar
+extern pthread_cond_t cond_estado;
 
-const int INT_MAX = 200;
+// VARIABLES DE CONTROL
+extern uint32_t pid;
+extern uint32_t contador_tid;
+extern bool cpu_libre;
 
 // PLANIFICADOR LARGO PLAZO
 void inicializar_kernel();

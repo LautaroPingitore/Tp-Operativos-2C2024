@@ -1,6 +1,6 @@
 #include "include/gestor.h"
 
-void syscall_process_create(char* path_proceso, int tamanio_proceso, int prioridad) {
+void syscall_process_create(t_tcb* hilo_actual, char* path_proceso, int tamanio_proceso, int prioridad) {
     if (path_proceso == NULL || tamanio_proceso <= 0 || prioridad < 0) {
         log_error(LOGGER_KERNEL, "Syscall PROCESS_CREATE: Argumentos inválidos");
         return;
@@ -24,7 +24,7 @@ void syscall_process_exit(uint32_t pid) {
 }
 
 
-void syscall_thread_create(uint32_t pid, char* archivo_pseudocodigo, int prioridad){
+void syscall_thread_create(t_tcb* hilo_actual, uint32_t pid, char* archivo_pseudocodigo, int prioridad){
     if (!pid || !archivo_pseudocodigo || prioridad < 0) {
         log_error(LOGGER_KERNEL, "Syscall THREAD_CREATE: Argumentos inválidos");
         return;
@@ -76,7 +76,7 @@ void syscall_thread_exit(uint32_t pid, uint32_t tid) {
     thread_exit(pcb, tid);
 }
 
-void syscall_mutex_create(uint32_t pid, char* nombre) {
+void syscall_mutex_create(t_tcb* hilo_actual, uint32_t pid, char* nombre) {
     t_pcb* pcb = obtener_pcb_padre_de_hilo(pid);
     t_recurso* recurso = buscar_recurso_proceso(pcb, nombre);
 
@@ -99,7 +99,7 @@ void syscall_mutex_create(uint32_t pid, char* nombre) {
     pthread_mutex_unlock(&mutex_cola_ready);
 }
 
-void syscall_mutex_lock(uint32_t pid, char* nombre) {
+void syscall_mutex_lock(t_tcb* hilo_actual, uint32_t pid, char* nombre) {
     t_pcb* pcb = obtener_pcb_padre_de_hilo(pid);
     t_recurso* recurso = buscar_recurso_proceso(pcb, nombre);
 
@@ -136,7 +136,7 @@ void syscall_mutex_lock(uint32_t pid, char* nombre) {
 
 }
 
-void syscall_mutex_unlock(uint32_t pid, char* nombre) {
+void syscall_mutex_unlock(t_tcb* hilo_actual, uint32_t pid, char* nombre) {
     t_pcb* pcb = obtener_pcb_padre_de_hilo(pid);
     t_recurso* recurso = buscar_recurso_proceso(pcb, nombre);
 
@@ -202,13 +202,13 @@ void syscall_io(uint32_t pid, uint32_t tid, int milisegundos) {
     io(pcb, tid, milisegundos);  // Invoca la funcion que gestiona la operacion IO
 }
 
-void manejar_syscall(t_paquete* paquete) {
+void manejar_syscall(t_paquete* paquete, t_tcb* hilo_actual) {
     t_instruccion* inst = deserializar_instruccion(paquete->buffer->stream, paquete->buffer->size);
     switch (paquete->codigo_operacion) {
         case PROCESS_CREATE:
             int tamanio = atoi(inst->parametro2);
             log_syscall("PROCESS_CREATE", hilo_actual);
-            syscall_process_create(inst->parametro1, tamanio, inst->parametro3);
+            syscall_process_create(hilo_actual, inst->parametro1, tamanio, inst->parametro3);
             intentar_mover_a_execute();
             break;
         case PROCESS_EXIT:
@@ -219,7 +219,7 @@ void manejar_syscall(t_paquete* paquete) {
         case THREAD_CREATE:
             int prioridad = atoi(inst->parametro2);
             log_syscall("THREAD_CREATE", hilo_actual);
-            syscall_thread_create(hilo_actual->PID_PADRE, inst->parametro1, prioridad);
+            syscall_thread_create(hilo_actual, hilo_actual->PID_PADRE, inst->parametro1, prioridad);
             intentar_mover_a_execute();
             break;
         case THREAD_JOIN:
@@ -240,17 +240,17 @@ void manejar_syscall(t_paquete* paquete) {
             break;
         case MUTEX_CREATE:
             log_syscall("MUTEX_CREATE", hilo_actual);
-            syscall_mutex_create(hilo_actual->PID_PADRE, inst->parametro1);
+            syscall_mutex_create(hilo_actual, hilo_actual->PID_PADRE, inst->parametro1);
             intentar_mover_a_execute();
             break;
         case MUTEX_LOCK:
             log_syscall("MUTEX_LOCK", hilo_actual);
-            syscall_mutex_lock(hilo_actual->PID_PADRE, inst->parametro1);
+            syscall_mutex_lock(hilo_actual, hilo_actual->PID_PADRE, inst->parametro1);
             intentar_mover_a_execute();
             break;
         case MUTEX_UNLOCK:
             log_syscall("MUTEX_UNLOCK", hilo_actual);
-            syscall_mutex_unlock(hilo_actual->PID_PADRE, inst->parametro1);
+            syscall_mutex_unlock(hilo_actual, hilo_actual->PID_PADRE, inst->parametro1);
             intentar_mover_a_execute();
             break;
         case DUMP_MEMORY:
