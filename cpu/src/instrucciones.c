@@ -67,9 +67,12 @@ void read_mem(char* reg_datos, char* reg_direccion, int socket) {
         return;
     }
 
-    // Leer el valor de memoria desde la direccion fisica
-    uint32_t valor_leido = recibir_valor_de_memoria(socket, direccion_fisica);
-    if (valor == (uint32_t)-1) {
+    enviar_solicitud_memoria(socket, direccion_fisica);
+    uint32_t valor_leido;
+
+    // Leer el valor de memoria desde la direccion fisica y se lo asigna al valor leido
+    recibir_valor_de_memoria(socket, valor_leido, direccion_fisica);
+    if (!valor_leido) {
         log_warning(LOGGER_CPU, "Error al leer memoria en read_mem.");
         return;
     }
@@ -164,78 +167,4 @@ void log_registro(char* registro) {
     }
 
     log_info(LOGGER_CPU, "LOG - Registro %s: %d (PID: %d, PC: %d)", registro, *reg, pcb_actual->PID, pcb_actual->CONTEXTO->registros->program_counter);
-}
-
-
-
-//FUNCIONES DE ABAJO A REVISAR:
-void enviar_interrupcion_segfault(uint32_t pid, int socket) {
-    // Crear el paquete de interrupcion
-    t_paquete* paquete = crear_paquete_con_codigo_de_operacion(SEGF_FAULT);
-    
-    // Agregar el PID al paquete
-    agregar_a_paquete(paquete, &pid, sizeof(uint32_t));
-    
-    // Enviar el paquete al socket de la memoria o kernel
-    if (enviar_paquete(paquete, socket) < 0) {
-        log_error(LOGGER_CPU, "Error al enviar interrupción de Segmentation Fault para PID: %d", pid);
-    } else {
-        log_info(LOGGER_CPU, "Interrupción de Segmentation Fault enviada correctamente (PID: %d)", pid);
-    }
-    
-    // Liberar el paquete
-    eliminar_paquete(paquete);
-}
-
-uint32_t recibir_valor_de_memoria(int socket_cliente, uint32_t direccion_fisica) {
-    if (socket < 0) {
-        log_error(LOGGER_CPU, "Socket inválido al intentar recibir valor de memoria.");
-        return VALOR_ERROR;
-    }
-
-    t_paquete *paquete = crear_paquete_con_codigo_de_operacion(PEDIR_VALOR_MEMORIA);
-    agregar_a_paquete(paquete, &direccion_fisica, sizeof(uint32_t));
-
-    if (enviar_paquete(paquete, socket) < 0) {
-        log_error(LOGGER_CPU, "Error al enviar solicitud de valor desde memoria.");
-        eliminar_paquete(paquete);
-        return VALOR_ERROR;
-    }
-
-    eliminar_paquete(paquete);
-
-    uint32_t valor_leido;
-    ssize_t bytes_recibidos = recv(socket_cliente, &valor_leido, sizeof(uint32_t), MSG_WAITALL); 
-    // ssize_t es un tipo de dato utilizado para almacenar el número de bytes recibidos por recv
-    // MSG_WAITALL indica que la función no debe retornar hasta haber recibido exactamente la cantidad de bytes solicitados en sizeof
-
-    if(bytes_recibidos <= 0) {
-        log_error(LOGGER_CPU, "Error al recibir valor desde memoria en la direccion fisica %d.", direccion_fisica);
-        return VALOR_ERROR;
-    }
-
-    log_info(LOGGER_CPU, "Valor recibido de Memoria: Dirección Física %d - Valor %d", direccion_fisica, valor_leido);
-    return valor_leido;
-}
-
-void enviar_valor_a_memoria(int socket_cliente, uint32_t dire_fisica, uint32_t valor) {
-    if (socket < 0) {
-        log_error(LOGGER_CPU, "Socket inválido al intentar enviar valor a memoria.");
-        return;
-    }
-
-    t_paquete *paquete = crear_paquete_con_codigo_de_operacion(ESCRIBIR_VALOR_MEMORIA);
-
-    // Agregar la dirección física y el valor del registro de datos al paquete
-    agregar_a_paquete(paquete, &dire_fisica, sizeof(uint32_t));
-    agregar_a_paquete(paquete, &valor, sizeof(uint32_t));
-
-    if (enviar_paquete(paquete, socket) < 0) {
-        log_error(LOGGER_CPU, "Error al enviar valor a memoria: Dirección Física %d - Valor %d", direccion_fisica, valor);
-    } else {
-        log_info(LOGGER_CPU, "Valor enviado a Memoria: Dirección Física %d - Valor %d", direccion_fisica, valor);
-    }
-    
-    // Eliminar el paquete para liberar memoria
-    eliminar_paquete(paquete);
 }

@@ -52,28 +52,3 @@ uint32_t consultar_limite_particion(uint32_t pid) {
     log_info(LOGGER_CPU, "Limite de la particion obtenida para PID: %d - Limite: %d", pid, limite_particion);
     return limite_particion;
 }
-
-void enviar_solicitud_memoria(uint32_t pid, op_code codigo, const char* descripcion) {
-    t_paquete* paquete = crear_paquete_con_codigo_operacion(codigo);
-    agregar_a_paquete(paquete, &pid, sizeof(uint32_t));
-
-    if (enviar_paquete(paquete, socket_cpu_dispatch_memoria) < 0) {
-        log_error(LOGGER_CPU, "Error al enviar solicitud de %s para PID: %d", descripcion, pid);
-    } else {
-        log_info(LOGGER_CPU, "Solicitud de %s enviada para PID: %d", descripcion, pid);
-    }
-
-    eliminar_paquete(paquete);
-}
-
-uint32_t recibir_entero(int socket, const char* mensaje_error) {
-    uint32_t valor;
-    ssize_t bytes_recibidos = recv(socket, &valor, sizeof(uint32_t), MSG_WAITALL);
-
-    if (bytes_recibidos <= 0) {
-        log_error(LOGGER_CPU, "Error al recibir datos: %s", mensaje_error);
-        return (uint32_t)-1;
-    }
-
-    return valor;
-}
