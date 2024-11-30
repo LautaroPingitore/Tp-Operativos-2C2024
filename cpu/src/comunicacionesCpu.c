@@ -130,9 +130,9 @@ void enviar_valor_a_memoria(int socket, uint32_t dire_fisica, uint32_t valor) {
     serializar_paquete(paquete);
 
     if (enviar_paquete(paquete, socket) < 0) {
-        log_error(LOGGER_CPU, "Error al enviar valor a memoria: Dirección Física %d - Valor %d", direccion_fisica, valor);
+        log_error(LOGGER_CPU, "Error al enviar valor a memoria: Dirección Física %d - Valor %d", dire_fisica, valor);
     } else {
-        log_info(LOGGER_CPU, "Valor enviado a Memoria: Dirección Física %d - Valor %d", direccion_fisica, valor);
+        log_info(LOGGER_CPU, "Valor enviado a Memoria: Dirección Física %d - Valor %d", dire_fisica, valor);
     }
     
     // Eliminar el paquete para liberar memoria
