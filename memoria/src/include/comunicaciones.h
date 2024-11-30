@@ -4,8 +4,7 @@
 void *memoriaUsuario;
 
 // Definición del tipo para los argumentos de la conexión
-typedef struct
-{
+typedef struct {
     t_log *log;          // Logger para registrar eventos
     int fd;              // Descriptor de archivo del socket del cliente
     char *server_name;   // Nombre del servidor para logging
@@ -55,11 +54,24 @@ t_list* lista_hilos; // TIPO t_hilo_memoria
 t_list* lista_contextos; // TIPO t_contexto_proceso
 t_list* lista_instrucciones; // TIPO t_hilo_instrucciones
 
-t_proceso_memoria* recibir_proceso_kernel(int);
+// FUNCIONES MEJORADAS 2.0247234214321473216487537826432
+t_proceso_memoria* deserializar_proceso(int, void*, int);
+t_hilo_memoria* deserializar_hilo_memoria(int, void*, int);
+int eliminar_espacio_hilo(int, t_hilo_memoria*, t_contexto_ejecucion*);
+void deserializar_dump_memory(uint32_t, uint32_t, void*, int);
+void deserializar_solicitud_instruccion(uint32_t, uint32_t, uint32_t, void*, int);
+int enviar_instruccion(int, t_instruccion*);
+void enviar_valor_leido_cpu(int, uint32_t, uint32_t);
+void procesar_solicitud_contexto(int, uint32_t, uint32_t);
+int enviar_contexto_cpu(t_contexto_proceso*);
+void procesar_actualizacion_contexto(int, uint32_t, uint32_t, t_contexto_ejecucion*)
+int  mandar_solicitud_dump_memory(char*, char*, int);
+
+//t_proceso_memoria* recibir_proceso_kernel(int);
 void eliminar_proceso_de_lista(uint32_t);
 void inicializar_datos();
-void recibir_creacion_hilo(int);
-void recibir_finalizacion_hilo(int);
+//void recibir_creacion_hilo(int);
+//void recibir_finalizacion_hilo(int);
 t_contexto_ejecucion* obtener_contexto(uint32_t);
 void eliminar_instrucciones_hilo(uint32_t);
 void liberar_hilo(uint32_t);
@@ -70,9 +82,6 @@ t_list* obtener_lista_instrucciones_por_tid(uint32_t);
 
 
 // FALTA HACER
-int  mandar_solicitud(char*, char*, int);
-void recibir_solicitud_contexto(int);
-void recibir_actualizacion_contexto(int);
 void agregar_instrucciones_a_lista(uint32_t, char*);
 uint32_t leer_memoria(uint32_t direccion_fisica);
 void escribir_memoria(uint32_t, uint32_t);
