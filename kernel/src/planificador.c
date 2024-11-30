@@ -611,6 +611,17 @@ t_tcb* seleccionar_hilo_multinivel() {
 }
 
 /*
+void empezar_quantum(int quantum) {
+    // LOGICA DE CONTEO DE QUANTUM
+
+    if(tiempo_actual >= quantum * 1000) {
+        enviar_interrupcion_cpu(FINALIZACION_QUANTUM, quantum);
+    }
+}
+*/
+
+
+/*
 void ejecutar_hilo_rr(t_tcb* hilo, int quantum) {
     log_info(LOGGER_KERNEL, "(<%d>:<%d>) Enviando hilo a CPU para ejecución con quantum %d", 
              hilo->PID_PADRE, hilo->TID, quantum);

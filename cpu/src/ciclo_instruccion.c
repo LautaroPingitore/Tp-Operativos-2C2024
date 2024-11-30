@@ -6,7 +6,6 @@ int fd_cpu_memoria = -1;
 
 void ejecutar_ciclo_instruccion(int socket_cliente) {
     while (true) {
-        // OJO PORQUE PCB ACTUAL NUNCA SE LE ASIGNA UN VALOR
         hilo_actual = recibir_hilo_kernel(socket_cliente);
 
         if (!hilo_actual) {
@@ -32,41 +31,18 @@ void ejecutar_ciclo_instruccion(int socket_cliente) {
     }
 }
 
-t_tcb* recibir_hilo_kernel(int socket_cliente) {
-    t_paquete* paquete = recibir_paquete_entero(socket_cliente);
-    if(paquete == NULL) {
-        log_error(logger, "Error al recibir el paquete del hilo.");
-        return;
-    }
-
-    if (paquete->codigo_operacion != HILO) {
-        log_warning(logger, "Código de operación inesperado: %d", paquete->codigo_operacion);
-        eliminar_paquete(paquete);
-        return;
-    }
-
-    t_tcb* hilo = deserializar_paquete_tcb(paquete->buffer->stream, paquete->buffer->size);
-
-    log_info(logger, "Hilo recibido: <%d>, PRIORIDAD=%d, PID_PADRE=%d, ESTADO=%d",
-             hilo->TID, hilo->PRIORIDAD, hilo->PID_PADRE, hilo->ESTADO);
-
-    liminar_paquete(paquete);
-    return hilo;
-}
-
 // RECIBE LA PROXIMA EJECUCION A REALIZAR OBTENIDA DEL MODULO MEMORIA
 t_instruccion *fetch(uint32_t tid, uint32_t pc) {
     pedir_instruccion_memoria(tid, pc, fd_cpu_memoria);
-
-    op_code codigo_op = recibir_operacion(fd_cpu_memoria);
-    if (codigo_op != INSTRUCCION) {
-        log_warning(LOGGER_CPU, "Operación desconocida al obtener la instrucción de memoria.");
+    
+    t_paquete* paquete = recibir_paquete_entero(socket_cpu_dispatch_memoria);
+    if (!paquete) {
+        log_error(LOGGER_CPU, "Fallo al recibir paquete.");
         return NULL;
     }
 
-    t_paquete* paquete = recibir_paquete_entero(socket);
-    if (!paquete) {
-        log_error(LOGGER_CPU, "Fallo al recibir paquete.");
+    if (paquete->codigo_operacion != INSTRUCCION) {
+        log_warning(LOGGER_CPU, "Operación desconocida al obtener la instrucción de memoria.");
         return NULL;
     }
 
@@ -82,8 +58,7 @@ t_instruccion *fetch(uint32_t tid, uint32_t pc) {
 }
 
 // EJECUTA LA INSTRUCCION OBTENIDA, Y TAMBIEN HACE EL DECODE EN CASO DE NECESITARLO
-void execute(t_instruccion *instruccion, int socket)
-{
+void execute(t_instruccion *instruccion, int socket) {
     switch (instruccion->nombre) {
         case "SUM":
             loguear_y_sumar_pc(instruccion);
@@ -168,24 +143,10 @@ void execute(t_instruccion *instruccion, int socket)
 // VERIFICA SI SE RECIBIO UNA INTERRUPCION POR PARTE DE KERNEL
 // PODRIA RECIBIR UN PAQUETE CON EL NOMBRE DE LA INTERRUPCCION
 void check_interrupt() {
-    t_paquete* paquete = recibir_paquete_entero(socket_cpu_interrupt_kernel);
-    bool respuesta = deserializar_interrupcion(paquete->buffer->stream, paquete->buffer->size);
-    if(respuesta == INTERRUPCION) {
+    bool respuesta = recibir_interrupcion(socket_cpu_dispatch_kernel);
+    if(respuesta) {
         log_info(LOGGER_CPU, "Interrupción recibida. Actualizando contexto y devolviendo control al Kernel.");
         actualizar_contexto_memoria(respuesta);
-        devolver_control_al_kernel();
-    }
-    free(paquete);
-}
-
-bool deserializar_interrupcion(void* stream, int size) {
-
-}
-
-void check_interrupt() {
-    if (recibir_interrupcion(socket_cpu_interrupt_kernel)) {
-        log_info(LOGGER_CPU, "Interrupción recibida. Actualizando contexto y devolviendo control al Kernel.");
-        actualizar_contexto_memoria();
         devolver_control_al_kernel();
     }
 }
@@ -196,15 +157,6 @@ void loguear_y_sumar_pc(t_instruccion *instruccion) {
     hilo_actual->PC++;
 }
 
-void pedir_instruccion_memoria(uint32_t tid, uint32_t pc, int socket) {
-    t_paquete *paquete = crear_paquete_con_codigo_de_operacion(PEDIDO_INSTRUCCION);
-    agregar_a_paquete(paquete, &tid, sizeof(uint32_t));
-    agregar_a_paquete(paquete, &pc, sizeof(uint32_t));
-
-    enviar_paquete(paquete, socket);
-    eliminar_paquete(paquete);
-}
-
 void liberar_instruccion(t_instruccion *instruccion) {
     free(instruccion->parametro1);
     free(instruccion->parametro2);
@@ -212,40 +164,21 @@ void liberar_instruccion(t_instruccion *instruccion) {
     free(instruccion);
 }
 
-bool recibir_interrupcion(int socket_cliente) {
-    int interrupcion = 0;
-
-    if (recv(socket_cliente, &interrupcion, sizeof(int), 0) <= 0) {
-        log_error(LOGGER_CPU, "Error al recibir interrupción del Kernel.");
-        return false;
-    }
-
-    return interrupcion == 1;
-}
-
 void actualizar_contexto_memoria() {
     // Se puede suponer que la actualización del contexto implica actualizar los registros y el PC
     log_info(LOGGER_CPU, "Actualizando el contexto de la CPU en memoria...");
-    if (!pcb_actual) {
-        log_error(LOGGER_CPU, "No hay PCB actual. No se puede actualizar contexto.");
+    if (!hilo_actual) {
+        log_error(LOGGER_CPU, "No hay Hilo actual. No se puede actualizar contexto.");
         return;
     }
+
+    t_tcb* pcb = obtener_pcb_padre_de_hilo(hilo_actual->PID_PADRE);
+
     // Enviar los registros y el program counter a memoria
     // A través de la memoria se actualizaría el PCB
-    enviar_contexto_memoria(pcb_actual->PID, pcb_actual->CONTEXTO->registros, pcb_actual->contexto_ejecucion->registros->program_counter, fd_cpu_memoria);
+    enviar_contexto_memoria(hilo_actual->PID_PADRE, hilo_actual->TID, pcb->CONTEXTO->registros, hilo_actual->PC, socket_cpu_dispatch_memoria);
 
     log_info(LOGGER_CPU, "Contexto de la CPU actualizado en memoria.");
-}
-
-void enviar_contexto_memoria(uint32_t pid, t_registros* registros, uint32_t program_counter, int socket_memoria) {
-    t_paquete *paquete = crear_paquete_con_codigo_de_operacion(ACTUALIZAR_CONTEXTO);
-
-    agregar_a_paquete(paquete, &pid, sizeof(uint32_t));
-    agregar_a_paquete(paquete, registros, sizeof(t_registros));
-    agregar_a_paquete(paquete, &program_counter, sizeof(uint32_t));
-
-    enviar_paquete(paquete, socket_memoria);
-    eliminar_paquete(paquete);
 }
 
 void devolver_control_al_kernel() {
@@ -260,20 +193,4 @@ void devolver_control_al_kernel() {
     eliminar_paquete(paquete);
 
     log_info(LOGGER_CPU, "Control devuelto al Kernel.");
-}
-
-void enviar_syscall_kernel(t_instruccion* instruccion, op_code syscall) {
-    t_paquete* paquete = crear_paquete_con_codigo_operacion(syscall);
-    agregar_a_paquete(paquete, &instruccion->nombre, sizeof(char*));
-    agregar_a_paquete(paquete, &instruccion->parametro1, sizeof(char*));
-    agregar_a_paquete(paquete, &instruccion->parametro2, sizeof(char*));
-    agregar_a_paquete(paquete, &instruccion->parametro3, sizeof(int));
-
-    if(enviar_paquete(paquete, socket_cliente) == 0) {
-        log_info(LOGGER_CPU, "Syscall notificada a KERNEL");
-    } else {
-        eliminar_paquete(paquete);
-        log_error(LOGGER_CPU, "Error al enviar la notificacion");
-    }
-    eliminar_paquete(paquete);
 }
