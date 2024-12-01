@@ -1,5 +1,26 @@
 #include "include/gestor.h"
 
+char* PUERTO_ESCUCHA;
+char* IP_FILESYSTEM;
+char* PUERTO_FILESYSTEM;
+int TAM_MEMORIA;
+char* PATH_INSTRUCCIONES;
+int RETARDO_RESPUESTA;
+char* ESQUEMA;
+char* ALGORITMO_BUSQUEDA;
+char** PARTICIONES_FIJAS;
+char* LOG_LEVEL; 
+char* IP_MEMORIA;
+
+int socket_memoria;
+int socket_memoria_kernel;
+int socket_memoria_cpu_dispatch;
+int socket_memoria_cpu_interrupt;
+int socket_memoria_filesystem;
+
+t_log* LOGGER_MEMORIA;
+t_config* CONFIG_MEMORIA;
+
 int main() {
     inicializar_programa();
     manejar_conexiones();
@@ -37,19 +58,34 @@ void inicializar_programa() {
 }
 
 void manejar_conexiones() {
-    while(1) {
+    while (1) {
         int socket_cliente = esperar_cliente(socket_memoria, LOGGER_MEMORIA);
-        if(socket_cliente == -1) continue;
+        if (socket_cliente == -1) continue;
 
         pthread_t hilo_conexion;
-        // ERROR MEDIO QUILOMBO
-        if (pthread_create(&hilo_conexion, NULL, procesar_conexion_memoria, (void*)&socket_cliente) != 0) {
-            log_error(LOGGER_MEMORIA, "Error al crear hilo para conexión");
+        t_procesar_conexion_args* args = malloc(sizeof(t_procesar_conexion_args));
+        if (!args) {
+            log_error(LOGGER_MEMORIA, "Error al asignar memoria para los argumentos del hilo");
             close(socket_cliente);
+            continue;
         }
-        pthread_detach(hilo_conexion);
+
+        args->log = LOGGER_MEMORIA;
+        args->fd = socket_cliente;
+        args->server_name = "Servidor Memoria";
+
+        if (pthread_create(&hilo_conexion, NULL, procesar_conexion_memoria, (void*)args) != 0) {
+            log_error(LOGGER_MEMORIA, "Error al crear el hilo para conexión");
+            free(args); // Liberar la memoria en caso de error
+            close(socket_cliente);
+            continue;
+        }
+
+        pthread_detach(hilo_conexion); // Separar el hilo para evitar bloqueo
     }
 }
+
+
 
 void inicializar_config(char *arg) {
 	
