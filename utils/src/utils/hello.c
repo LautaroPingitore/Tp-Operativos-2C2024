@@ -444,8 +444,8 @@ t_instruccion* deserializar_instruccion(void* stream, int offset) {
     }
 
     // Deserializar nombre
-    memcpy(&instruccion->nombre, (char*)stream + offset, sizeof(char*));
-    offset += sizeof(char*);
+    memcpy(&instruccion->nombre, (char*)stream + offset, sizeof(instruccion->nombre));
+    offset += sizeof(instruccion->nombre);
 
     // Deserializar parametro1
     uint32_t tamanio_parametro1;

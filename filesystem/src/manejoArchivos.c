@@ -11,7 +11,7 @@ void cargar_bitmap() {
     }
 
     // Reservar memoria para el bitmap
-    bitmap_memoria = malloc((BLOCK_COUNT + 7) / 8);
+    bitmap_memoria = malloc((BLOCK_COUNT + 7) / 8);// bitmap_memoria de donde sale??? Y pq la cuenta de +7 / 8 ???
     if (!bitmap_memoria) {
         log_error(LOGGER_FILESYSTEM, "Error al asignar memoria para el bitmap.");
         fclose(bitmap);

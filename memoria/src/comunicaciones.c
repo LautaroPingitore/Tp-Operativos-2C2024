@@ -338,7 +338,8 @@ t_hilo_memoria* deserializar_hilo_memoria(int socket, void* stream, int size) {
     size += sizeof(uint32_t);
 
     // ERROR YA QUE NO ESTA BIEN HACER UN SIZEOF(CHAR*)
-    memcpy(&hilo->archivo, stream + size, sizeof(char));
+    memcpy(&hilo->archivo, stream + size, sizeof(hilo->archivo));
+    //size += sizeof(hilo->archivo); ESTO LO PONEMOS O NO? PQ NO ESTABA ANTES
 
     return hilo;
 }
@@ -349,7 +350,7 @@ t_hilo_memoria* deserializar_hilo_memoria(int socket, void* stream, int size) {
 //     char* archivo;
 //     recv(cliente_socket, &pid, sizeof(uint32_t), 0);
 //     recv(cliente_socket, &tid, sizeof(uint32_t), 0);
-//     recv(cliente_socket, &archivo, sizeof(char*), 0);
+//     recv(cliente_socket, &archivo, sizeof(archivo), 0);
 
 //     t_contexto_ejecucion* nuevo_contexto = malloc(sizeof(t_contexto_ejecucion));
 //     nuevo_contexto->registros = malloc(sizeof(t_registros));
@@ -843,8 +844,8 @@ void procesar_actualizacion_contexto(int socket_cliente, uint32_t pid, uint32_t 
 int mandar_solicitud_dump_memory(char* nombre_archivo, char* contenido_proceso, int tamanio) {
     t_paquete* paquete = crear_paquete_con_codigo_operacion(DUMP_MEMORY);
     // ERROR YA QUE NO ESTA BIEN HACER UN SIZEOF(CHAR*)
-    agregar_a_paquete(paquete, &nombre_archivo, sizeof(char*));
-    agregar_a_paquete(paquete, &contenido_proceso, sizeof(char*));
+    agregar_a_paquete(paquete, &nombre_archivo, sizeof(nombre_archivo)); //
+    agregar_a_paquete(paquete, &contenido_proceso, sizeof(contenido_proceso));// 
     agregar_a_paquete(paquete, &tamanio, sizeof(int));
     serializar_paquete(paquete, paquete->buffer->size);
 

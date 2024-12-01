@@ -43,7 +43,7 @@ void envio_hilo_crear(int socket_cliente, t_tcb* tcb, op_code codigo) {
 
     agregar_a_paquete(paquete, &tcb->TID, sizeof(uint32_t));
     agregar_a_paquete(paquete, &tcb->PID_PADRE, sizeof(uint32_t));
-    agregar_a_paquete(paquete, &tcb->archivo, sizeof(char*));
+    agregar_a_paquete(paquete, &tcb->archivo, sizeof(tcb->archivo));
     serializar_paquete(paquete, paquete->buffer->size);
 
     if (enviar_paquete(paquete, socket_cliente) == -1) {

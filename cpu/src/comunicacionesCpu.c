@@ -84,10 +84,10 @@ void enviar_contexto_memoria(uint32_t pid, uint32_t tid, t_registros* registros,
 
 void enviar_syscall_kernel(t_instruccion* instruccion, op_code syscall) {
     t_paquete* paquete = crear_paquete_con_codigo_operacion(syscall);
-    agregar_a_paquete(paquete, &instruccion->nombre, sizeof(char*));
-    agregar_a_paquete(paquete, &instruccion->parametro1, sizeof(char*));
-    agregar_a_paquete(paquete, &instruccion->parametro2, sizeof(char*));
-    agregar_a_paquete(paquete, &instruccion->parametro3, sizeof(int));
+    agregar_a_paquete(paquete, &instruccion->nombre, sizeof(instruccion->nombre));
+    agregar_a_paquete(paquete, &instruccion->parametro1, sizeof(instruccion->parametro1));
+    agregar_a_paquete(paquete, &instruccion->parametro2, sizeof(instruccion->parametro2));
+    agregar_a_paquete(paquete, &instruccion->parametro3, sizeof(instruccion->parametro3));
 
     if(enviar_paquete(paquete, socket_cpu_interrupt_kernel) == 0) {
         log_info(LOGGER_CPU, "Syscall notificada a KERNEL");
