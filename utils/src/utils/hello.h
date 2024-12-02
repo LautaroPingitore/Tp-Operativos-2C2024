@@ -23,6 +23,13 @@
 * @return No devuelve nada
 */
 
+// Definición del tipo para los argumentos de la conexión
+typedef struct {
+    t_log *log;          // Logger para registrar eventos
+    int fd;              // Descriptor de archivo del socket del cliente
+    char *server_name;   // Nombre del servidor para logging
+} t_procesar_conexion_args;
+
 typedef enum{
     HANDSHAKE_consola,
     HANDSHAKE_kernel,

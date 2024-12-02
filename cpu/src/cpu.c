@@ -1,29 +1,94 @@
 #include "include/gestor.h"
 
-int main(int argc, char* argv[]) {
-	if (argc != 2) {
-        printf("Uso: %s <config_path>\n", argv[0]);
-        return EXIT_FAILURE;
-    }
+char* IP_MEMORIA;
+char* PUERTO_MEMORIA;
+char* PUERTO_ESCUCHA_DISPATCH;
+char* PUERTO_ESCUCHA_INTERRUPT;
+char* LOG_LEVEL;
+char* IP_CPU;
 
-	inicializar_config(argv[1]); // ("cpu");
+t_log *LOGGER_CPU;
+t_config *CONFIG_CPU;
 
-	// INICIALIZA LAS CONEXIONES
-	if (iniciar_conexion_con_kernel(&socket_cpu_dispatch, PUERTO_ESCUCHA_DISPATCH, "DISPATCH") < 0 ||
-        iniciar_conexion_con_kernel(&socket_cpu_interrupt, PUERTO_ESCUCHA_INTERRUPT, "INTERRUPT") < 0) {
+int socket_cpu_dispatch;
+int socket_cpu_interrupt;
+int socket_cpu_dispatch_kernel;
+int socket_cpu_interrupt_kernel;
+int socket_cpu_memoria;
+
+int main() {
+    inicializar_config("cpu");
+
+    socket_cpu_memoria = crear_conexion(IP_MEMORIA, PUERTO_MEMORIA);
+    if(socket_cpu_memoria < 0) {
+        log_error(LOGGER_CPU, "No se pudo conectar con el módulo Memoria");
         cerrar_conexiones();
         return EXIT_FAILURE;
     }
+    log_info(LOGGER_CPU, "Conexión establecida con Memoria");
 
-	// GESTIONA LAS CONEXIONES
-	if (gestionar_conexion(socket_cpu_dispatch, "DISPATCH") < 0 ||
-        gestionar_conexion(socket_cpu_interrupt, "INTERRUPT") < 0) {
-        cerrar_conexiones();
-        return EXIT_FAILURE;
+    manejar_conexion_kernel_dispatch();
+    manejar_conexion_kernel_interrupt();
+
+    int sockets[] = {socket_cpu_dispatch_kernel, socket_cpu_interrupt_kernel, socket_cpu_memoria, -1};
+    terminar_programa(CONFIG_CPU, LOGGER_CPU, sockets);
+    return 0;
+}
+
+void manejar_conexion_kernel_dispatch() {
+    while(1) {
+        int socket_cliente = esperar_cliente(socket_cpu_dispatch_kernel, LOGGER_CPU);
+        if(socket_cliente != -1) continue;
+
+        pthread_t hilo_conexion;
+        t_procesar_conexion_args* args = malloc(sizeof(t_procesar_conexion_args));
+        if (!args) {
+            log_error(LOGGER_CPU, "Error al asignar memoria para los argumentos del hilo");
+            close(socket_cliente);
+            continue;
+        }
+
+        args->log = LOGGER_CPU;
+        args->fd = socket_cliente;
+        strcpy(args->server_name, "DISPATCH");
+
+        if(pthread_create(&hilo_conexion, NULL, ejecutar_ciclo_instruccion, (void*) args) != 0) {
+            log_error(LOGGER_CPU, "Error al crear el hilo para conexión");
+            free(args); // Liberar la memoria en caso de error
+            close(socket_cliente);
+            continue;
+        }
+
+        pthread_detach(hilo_conexion);
     }
+}
 
-	cerrar_conexiones();
-	return EXIT_SUCCESS;
+void manejar_conexion_kernel_interrupt() {
+    while(1) {
+        int socket_cliente = esperar_cliente(socket_cpu_interrupt_kernel, LOGGER_CPU);
+        if(socket_cliente != -1) continue;
+
+        pthread_t hilo_conexion;
+        t_procesar_conexion_args* args = malloc(sizeof(t_procesar_conexion_args));
+        if (!args) {
+            log_error(LOGGER_CPU, "Error al asignar memoria para los argumentos del hilo");
+            close(socket_cliente);
+            continue;
+        }
+
+        args->log = LOGGER_CPU;
+        args->fd = socket_cliente;
+        strcpy(args->server_name, "INTERRUPT");        
+
+        if(pthread_create(&hilo_conexion, NULL, recibir_interrupcion, (void*) args) != 0) {
+            log_error(LOGGER_CPU, "Error al crear el hilo para conexión");
+            free(args); // Liberar la memoria en caso de error
+            close(socket_cliente);
+            continue;
+        }
+
+        pthread_detach(hilo_conexion);
+    }
 }
 
 void inicializar_config(char* arg){
@@ -50,50 +115,4 @@ void inicializar_config(char* arg){
     LOG_LEVEL = config_get_string_value(CONFIG_CPU, "LOG_LEVEL");
 
     IP_CPU = config_get_string_value(CONFIG_CPU,"IP_CPU");
-}
-
-int iniciar_conexion_con_kernel(int socket_cliente, char* puerto, char* tipo) {
-	socket_cliente = iniciar_servidor(puerto, LOGGER_CPU, IP_CPU, tipo);
-	if(*socket < 0) {
-		log_error(LOGGER_CPU, "Error al iniciar conexión para %s", tipo);
-        return -1;
-	}
-	log_info(LOGGER_CPU, "Conexión iniciada para %s en puerto %s.", tipo, puerto);
-    return 0;
-}
-
-int gestionar_conexion(int socket_cliente, const char* tipo) {
-	while(1) {
-		int cod_op = recibir_operacion(socket_cliente);
-		if (cod_op < 0) {
-            log_error(LOGGER_CPU, "%s desconectado.", tipo);
-            return -1;
-        }
-		switch (cod_op) {
-            case MENSAJE:
-                recibir_mensaje(socket_kernel, LOGGER_CPU);
-                break;
-            case PAQUETE:
-                t_list* lista = recibir_paquete(socket_kernel);
-                log_info(LOGGER_CPU, "%s: Operación recibida.", tipo);
-                list_destroy_and_destroy_elements(lista, free);
-                break;
-            default:
-                log_warning(LOGGER_CPU, "%s: Operación desconocida.", tipo);
-                break;
-        }
-	}
-	return 0;
-}
-
-void cerrar_conexiones() {
-    if (socket_cpu_dispatch >= 0) close(socket_cpu_dispatch);
-    if (socket_cpu_dispatch_kernel >= 0) close(socket_cpu_dispatch_kernel);
-    if (socket_cpu_interrupt >= 0) close(socket_cpu_interrupt);
-    if (socket_cpu_interrupt_kernel >= 0) close(socket_cpu_interrupt_kernel);
-    if (socket_cpu_dispatch_memoria >= 0) close(socket_cpu_dispatch_memoria);
-    if (socket_cpu_interrupt_memoria >= 0) close(socket_cpu_interrupt_memoria);
-
-    config_destroy(CONFIG_CPU);
-    log_destroy(LOGGER_CPU);
 }

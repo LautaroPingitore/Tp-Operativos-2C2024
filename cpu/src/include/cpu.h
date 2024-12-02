@@ -15,8 +15,7 @@ extern int socket_cpu_dispatch;
 extern int socket_cpu_dispatch_kernel;
 extern int socket_cpu_interrupt;
 extern int socket_cpu_interrupt_kernel;
-extern int socket_cpu_dispatch_memoria;
-extern int socket_cpu_interrupt_memoria;
+extern int socket_cpu_memoria;
 
 
 void inicializar_config(char*);
@@ -25,5 +24,8 @@ int iniciar_conexion_con_kernel(int, char*, char*);
 int gestionar_conexion(int, const char*);
 int gestionarConexionConKernelDispatch();
 int gestionarConexionConKernelInterrupt();
+
+void manejar_conexion_kernel_dispatch();
+void manejar_conexion_kernel_interrupt();
 
 #endif /* CPU_H_ */

@@ -67,10 +67,10 @@ void read_mem(char* reg_datos, char* reg_direccion, int socket) {
     }
 
     enviar_solicitud_valor_memoria(socket, direccion_fisica);
-    uint32_t valor_leido;
+    uint32_t valor_leido = 0;
 
     // Leer el valor de memoria desde la direccion fisica y se lo asigna al valor leido
-    recibir_valor_de_memoria(socket, valor_leido, direccion_fisica);
+    recibir_valor_de_memoria(socket, direccion_fisica, valor_leido);
     if (!valor_leido) {
         log_warning(LOGGER_CPU, "Error al leer memoria en read_mem.");
         return;

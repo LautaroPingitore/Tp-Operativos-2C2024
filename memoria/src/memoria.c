@@ -60,7 +60,7 @@ void inicializar_programa() {
 void manejar_conexiones() {
     while (1) {
         int socket_cliente = esperar_cliente(socket_memoria, LOGGER_MEMORIA);
-        if (socket_cliente == -1) continue;
+        if (socket_cliente != -1) continue;
 
         pthread_t hilo_conexion;
         t_procesar_conexion_args* args = malloc(sizeof(t_procesar_conexion_args));

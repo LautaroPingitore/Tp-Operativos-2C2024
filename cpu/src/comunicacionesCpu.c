@@ -1,53 +1,60 @@
 #include "include/gestor.h"
 
+bool hay_interrupcion = false;
+
 // FUNCIONES DE CICLO_INSTRUCCION
 
 t_tcb* recibir_hilo_kernel(int socket_cliente) {
     t_paquete* paquete = recibir_paquete_entero(socket_cliente);
     if(paquete == NULL) {
-        log_error(logger, "Error al recibir el paquete del hilo.");
-        return;
+        log_error(LOGGER_CPU, "Error al recibir el paquete del hilo.");
+        return NULL;
     }
 
     if (paquete->codigo_operacion != HILO) {
-        log_warning(logger, "Código de operación inesperado: %d", paquete->codigo_operacion);
+        log_warning(LOGGER_CPU, "Código de operación inesperado: %d", paquete->codigo_operacion);
         eliminar_paquete(paquete);
-        return;
+        return NULL;
     }
 
     t_tcb* hilo = deserializar_paquete_tcb(paquete->buffer->stream, paquete->buffer->size);
 
-    log_info(logger, "Hilo recibido: <%d>, PRIORIDAD=%d, PID_PADRE=%d, ESTADO=%d",
+    log_info(LOGGER_CPU, "Hilo recibido: <%d>, PRIORIDAD=%d, PID_PADRE=%d, ESTADO=%d",
              hilo->TID, hilo->PRIORIDAD, hilo->PID_PADRE, hilo->ESTADO);
 
-    liminar_paquete(paquete);
+    eliminar_paquete(paquete);
     return hilo;
 }
 
-bool recibir_interrupcion(int socket) {
+void* recibir_interrupcion(void* void_args) {
+
+    t_procesar_conexion_args *args = (t_procesar_conexion_args *)void_args;
+    int socket = args->fd;
+
     t_paquete* paquete = recibir_paquete_entero(socket);
 
     if(!paquete) {
-        return false;
+        return NULL;
     }
 
-    int quantum;
-    bool interrupcion;
+    int quantum = 0;
+    bool interrupcion = false;
 
-    if(!deserializar_instruccion(paquete->buffer->stream, paquete->buffer->size, quantum, interrupcion)) {
+    if(!deserializar_interrupcion(paquete->buffer->stream, paquete->buffer->size, quantum, interrupcion)) {
         log_error(LOGGER_CPU, "Error al deserializar los datos de interrupcion");
         eliminar_paquete(paquete);
-        return false;
+        return NULL;
     }
 
     if(interrupcion) {
         log_info(LOGGER_CPU, "Interrupcion recibida, Quantum = %d", quantum);
+        hay_interrupcion = true;
     }
     eliminar_paquete(paquete);
-    return interrupcion;
+    return NULL;;
 }
 
-bool deserializar_interrupcion(void* stream, int size, int quantum, bool interrupcion, ) {
+bool deserializar_interrupcion(void* stream, int size, int quantum, bool interrupcion) {
 
     if (size < sizeof(int) + sizeof(bool)) {
         return false;
@@ -63,7 +70,7 @@ void pedir_instruccion_memoria(uint32_t tid, uint32_t pc, int socket) {
     t_paquete *paquete = crear_paquete_con_codigo_operacion(PEDIDO_INSTRUCCION);
     agregar_a_paquete(paquete, &tid, sizeof(uint32_t));
     agregar_a_paquete(paquete, &pc, sizeof(uint32_t));
-    serializar_paquete(paquete);
+    serializar_paquete(paquete, paquete->buffer->size);
 
     enviar_paquete(paquete, socket);
     eliminar_paquete(paquete);
@@ -76,7 +83,7 @@ void enviar_contexto_memoria(uint32_t pid, uint32_t tid, t_registros* registros,
     agregar_a_paquete(paquete, &tid, sizeof(uint32_t));
     agregar_a_paquete(paquete, &registros, sizeof(t_registros));
     agregar_a_paquete(paquete, &program_counter, sizeof(uint32_t));
-    serializar_paquete(paquete);
+    serializar_paquete(paquete, paquete->buffer->size);
 
     enviar_paquete(paquete, socket_memoria);
     eliminar_paquete(paquete);
@@ -107,7 +114,7 @@ void enviar_interrupcion_segfault(uint32_t pid, int socket) {
     // Agregar el PID al paquete
     agregar_a_paquete(paquete, &pid, sizeof(uint32_t));
     
-    serializar_paquete(paquete);
+    serializar_paquete(paquete, paquete->buffer->size);
 
     // Enviar el paquete al socket de la memoria o kernel
     if (enviar_paquete(paquete, socket) != 0) {
@@ -127,12 +134,12 @@ void enviar_valor_a_memoria(int socket, uint32_t dire_fisica, uint32_t* valor) {
     agregar_a_paquete(paquete, &dire_fisica, sizeof(uint32_t));
     agregar_a_paquete(paquete, &valor, sizeof(uint32_t));
 
-    serializar_paquete(paquete);
+    serializar_paquete(paquete, paquete->buffer->size);
 
     if (enviar_paquete(paquete, socket) < 0) {
-        log_error(LOGGER_CPU, "Error al enviar valor a memoria: Dirección Física %d - Valor %d", dire_fisica, valor);
+        log_error(LOGGER_CPU, "Error al enviar valor a memoria: Dirección Física %d - Valor %d", dire_fisica, *valor);
     } else {
-        log_info(LOGGER_CPU, "Valor enviado a Memoria: Dirección Física %d - Valor %d", dire_fisica, valor);
+        log_info(LOGGER_CPU, "Valor enviado a Memoria: Dirección Física %d - Valor %d", dire_fisica, *valor);
     }
     
     // Eliminar el paquete para liberar memoria
@@ -146,13 +153,13 @@ void enviar_solicitud_valor_memoria(int socket, uint32_t direccion_fisica) {
     if (enviar_paquete(paquete, socket) < 0) {
         log_error(LOGGER_CPU, "Error al enviar solicitud de valor desde memoria.");
         eliminar_paquete(paquete);
-        return -1;
+        return;
     }
 
     eliminar_paquete(paquete);
 }
 
-void recibir_valor_de_memoria(int socket, uint32_t direccion_fisica, uint32_t* valor_leido) {
+void recibir_valor_de_memoria(int socket, uint32_t direccion_fisica, uint32_t valor_leido) {
     t_paquete* paquete = recibir_paquete_entero(socket);
     void* stream = paquete->buffer->stream;
 
@@ -162,9 +169,9 @@ void recibir_valor_de_memoria(int socket, uint32_t direccion_fisica, uint32_t* v
     }
 
     memcpy(&direccion_fisica, stream, sizeof(uint32_t));
-    memcpy(valor_leido, stream + sizeof(uint32_t), sizeof(uint32_t));
+    memcpy(&valor_leido, stream + sizeof(uint32_t), sizeof(uint32_t));
 
-    log_info(LOGGER_CPU, "Valor recibido de Memoria: Dirección Física %d - Valor %d", direccion_fisica, *valor_leido);
+    log_info(LOGGER_CPU, "Valor recibido de Memoria: Dirección Física %d - Valor %d", direccion_fisica, valor_leido);
 }
 
 // FUNCIONES MMU
@@ -172,7 +179,7 @@ void recibir_valor_de_memoria(int socket, uint32_t direccion_fisica, uint32_t* v
 void enviar_solicitud_memoria(int socket, uint32_t pid, op_code codigo, const char* descripcion) {
     t_paquete* paquete = crear_paquete_con_codigo_operacion(codigo);
     agregar_a_paquete(paquete, &pid, sizeof(uint32_t));
-    serializar_paquete(paquete);
+    serializar_paquete(paquete, paquete->buffer->size);
 
     if (enviar_paquete(paquete, socket) < 0) {
         log_error(LOGGER_CPU, "Error al enviar solicitud de %s para PID: %d", descripcion, pid);

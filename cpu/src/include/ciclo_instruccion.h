@@ -5,7 +5,6 @@
 
 extern t_pcb* pcb_actual;
 extern t_tcb* hilo_actual;
-extern int fd_cpu_memoria;
 
 typedef struct {
     uint32_t direccion_fisica;
@@ -34,7 +33,7 @@ typedef enum {
     ERROR_INSTRUCCION
 } nombre_instruccion;
 
-void ejecutar_ciclo_instruccion(int);
+void* ejecutar_ciclo_instruccion(void*);
 t_instruccion *fetch(uint32_t, uint32_t);
 void execute(t_instruccion *, int, t_tcb*);
 void check_interrupt();

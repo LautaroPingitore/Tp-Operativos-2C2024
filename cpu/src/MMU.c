@@ -30,9 +30,9 @@ uint32_t traducir_direccion(uint32_t logicalAddress, uint32_t pid) {
 
 // DEBIDO A ESO ES PROBABLE QUE LA BASE Y LIMITE DE LA PARTICION SE DEBA CONSULTAR AL MODULO MEMORIA
 uint32_t consultar_base_particion(uint32_t pid) {
-    enviar_solicitud_memoria(socket_cpu_dispatch_memoria, pid, SOLICITUD_BASE_MEMORIA, "base de particion");
+    enviar_solicitud_memoria(socket_cpu_memoria, pid, SOLICITUD_BASE_MEMORIA, "base de particion");
     
-    uint32_t base_particion = recibir_entero(socket_cpu_dispatch_memoria, "Base de particion");
+    uint32_t base_particion = recibir_entero(socket_cpu_memoria, "Base de particion");
     if (base_particion == BASE_ERROR) {
         log_error(LOGGER_CPU, "No se encontró la base de la partición para el PID: %d", pid);
     }
@@ -42,9 +42,9 @@ uint32_t consultar_base_particion(uint32_t pid) {
 }
 
 uint32_t consultar_limite_particion(uint32_t pid) {
-    enviar_solicitud_memoria(socket_cpu_dispatch_memoria, pid, SOLICITUD_LIMITE_MEMORIA, "limite de particion");
+    enviar_solicitud_memoria(socket_cpu_memoria, pid, SOLICITUD_LIMITE_MEMORIA, "limite de particion");
 
-    uint32_t limite = recibir_entero(socket_cpu_dispatch_memoria, "Límite de partición");
+    uint32_t limite = recibir_entero(socket_cpu_memoria, "Límite de partición");
     if (limite == LIMITE_ERROR) {
         log_error(LOGGER_CPU, "No se encontró el límite de la partición para el PID: %d", pid);
     }

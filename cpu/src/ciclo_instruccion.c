@@ -3,9 +3,12 @@
 // VARIABLES GLOBALES
 t_pcb* pcb_actual = NULL;
 t_tcb* hilo_actual = NULL;
-int fd_cpu_memoria = -1;
 
-void ejecutar_ciclo_instruccion(int socket_cliente) {
+void* ejecutar_ciclo_instruccion(void* void_args) {
+
+    t_procesar_conexion_args *args = (t_procesar_conexion_args *)void_args;
+    int socket_cliente = args->fd;
+
     while (true) {
         hilo_actual = recibir_hilo_kernel(socket_cliente);
 
@@ -29,13 +32,14 @@ void ejecutar_ciclo_instruccion(int socket_cliente) {
 
         liberar_instruccion(instruccion);
     }
+    return NULL;
 }
 
 // RECIBE LA PROXIMA EJECUCION A REALIZAR OBTENIDA DEL MODULO MEMORIA
 t_instruccion *fetch(uint32_t tid, uint32_t pc) {
-    pedir_instruccion_memoria(tid, pc, fd_cpu_memoria);
+    pedir_instruccion_memoria(tid, pc, socket_cpu_memoria);
     
-    t_paquete* paquete = recibir_paquete_entero(socket_cpu_dispatch_memoria);
+    t_paquete* paquete = recibir_paquete_entero(socket_cpu_memoria);
     if (!paquete) {
         log_error(LOGGER_CPU, "Fallo al recibir paquete.");
         return NULL;
@@ -186,10 +190,10 @@ void execute(t_instruccion *instruccion, int socket, t_tcb* tcb) {
 // VERIFICA SI SE RECIBIO UNA INTERRUPCION POR PARTE DE KERNEL
 // PODRIA RECIBIR UN PAQUETE CON EL NOMBRE DE LA INTERRUPCCION
 void check_interrupt() {
-    bool respuesta = recibir_interrupcion(socket_cpu_dispatch_kernel);
-    if(respuesta) {
+    //recibir_interrupcion(socket_cpu_interrupt_kernel);
+    if(hay_interrupcion) {
         log_info(LOGGER_CPU, "Interrupción recibida. Actualizando contexto y devolviendo control al Kernel.");
-        actualizar_contexto_memoria(respuesta);
+        actualizar_contexto_memoria();
         devolver_control_al_kernel();
     }
 }
@@ -218,7 +222,7 @@ void actualizar_contexto_memoria() {
 
     // Enviar los registros y el program counter a memoria
     // A través de la memoria se actualizaría el PCB
-    enviar_contexto_memoria(hilo_actual->PID_PADRE, hilo_actual->TID, pcb->CONTEXTO->registros, hilo_actual->PC, socket_cpu_dispatch_memoria);
+    enviar_contexto_memoria(hilo_actual->PID_PADRE, hilo_actual->TID, pcb->CONTEXTO->registros, hilo_actual->PC, socket_cpu_memoria);
 
     log_info(LOGGER_CPU, "Contexto de la CPU actualizado en memoria.");
 }
