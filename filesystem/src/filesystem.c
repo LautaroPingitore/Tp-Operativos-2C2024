@@ -20,7 +20,7 @@ t_config *CONFIG_FILESYSTEM;
 
 int socket_filesystem;
 
-int main(int argc, char *argv[]) {
+int main() {
 
     signal(SIGINT, handle_signal);
 
@@ -35,6 +35,7 @@ int main(int argc, char *argv[]) {
 
     //Iniciar servidor
     socket_filesystem = iniciar_servidor(PUERTO_ESCUCHA,LOGGER_FILESYSTEM,IP_FILESYSTEM,"FILESYSTEM");
+    log_info(LOGGER_FILESYSTEM, "Servidor filesystem iniciado y escuchando en el puerto %s", PUERTO_ESCUCHA);
 
     // CICLO PARA ESPERAR CONEXIONES Y CREAR HILOS POR CLIENTE
     while(server_running) {
@@ -42,10 +43,6 @@ int main(int argc, char *argv[]) {
         sem_wait(&sem_clientes);
 
         int socket_cliente = esperar_cliente(socket_filesystem, LOGGER_FILESYSTEM);
-        if (socket_cliente < 0) {
-            sem_post(&sem_clientes);
-            continue;
-        }
 
         // CREA UN HILO PARA MANEJAR CADA CLIENTE
         pthread_t thread_id;
@@ -56,6 +53,7 @@ int main(int argc, char *argv[]) {
             sem_post(&sem_clientes);
             continue;
         }
+        log_info(LOGGER_FILESYSTEM, "Se creo el hilo para manejar el cliente");
 
         datos_cliente->socket_cliente = socket_cliente;
 
@@ -108,13 +106,13 @@ void inicializar_config(char* arg){
     IP_FILESYSTEM = config_get_string_value(CONFIG_FILESYSTEM,"IP_FILESYSTEM");
 }
 
-void inicializar_archivo(char* path, size_t size) {
+void inicializar_archivo(char* path, size_t size, char* nombre) {
     FILE* file = fopen(path, "r+");
     if(!file) { // VERIFICA SI ESTA VACIO
-        log_warning(LOGGER_FILESYSTEM, "bitmap.dat no encontrado. Creando...");
+        log_warning(LOGGER_FILESYSTEM, "%s no encontrado. Creando...", nombre);
         file = fopen(path, "w");
         if (!file) {
-            log_error(LOGGER_FILESYSTEM, "Error al crear bitmap.dat");
+            log_error(LOGGER_FILESYSTEM, "Error al crear %s", nombre);
             exit(EXIT_FAILURE);
         }
         if(size > 0) {
@@ -122,39 +120,64 @@ void inicializar_archivo(char* path, size_t size) {
             fputc('\0', file);
         }
     }
+    log_info(LOGGER_FILESYSTEM, "El archivo ya se encuentra creado");
     fclose(file);
 }
 
 void iniciar_archivos() {
     char bitmap_path[256], bloques_path[256];
-    sprintf(bitmap_path, "%s/bitmap.dat", MOUNT_DIR);
-    sprintf(bloques_path, "%s/bloques.dat", MOUNT_DIR);
+    sprintf(bitmap_path, "../%s/bitmap.dat", MOUNT_DIR);
+    sprintf(bloques_path, "../%s/bloques.dat", MOUNT_DIR);
 
-    inicializar_archivo(bitmap_path, (BLOCK_COUNT + 7) / 8);
-    inicializar_archivo(bloques_path, BLOCK_COUNT * BLOCK_SIZE);
+    inicializar_archivo(bitmap_path, (BLOCK_COUNT + 7) / 8, "bitmap.dat");
+    inicializar_archivo(bloques_path, BLOCK_COUNT * BLOCK_SIZE, "bloques.dat");
 }
 
 // FUNCION LA CUAL MANEJARA CADA PETICION DE UN HILO
 void *handle_client(void *arg) {
-    t_datos_cliente *datos_cliente = (t_datos_cliente *) arg;
+    t_datos_cliente *datos_cliente = (t_datos_cliente *)arg;
     int socket_cliente = datos_cliente->socket_cliente;
 
+    log_info(LOGGER_FILESYSTEM, "Socket cliente: %d", socket_cliente);
+
     while (1) {
-        t_paquete* paquete = recibir_paquete_entero(socket_cliente);
-        void* stream = paquete->buffer->stream;
-        int size = paquete->buffer->size;
+        log_info(LOGGER_FILESYSTEM, "Esperando un paquete");
+
+        t_paquete *paquete = recibir_paquete_entero(socket_cliente);
+        if (!paquete) {
+            log_error(LOGGER_FILESYSTEM, "Error al recibir paquete. Terminando hilo.");
+            close(socket_cliente);
+            free(datos_cliente);
+            sem_post(&sem_clientes);
+            pthread_exit(NULL);
+        }
+
+        void *stream = paquete->buffer->stream;
+        int offset = 0;
 
         switch (paquete->codigo_operacion) {
-            case CREAR_ARCHIVO:
-                char* nombre_archivo;
-                char* contenido;
+            case CREAR_ARCHIVO: {
+                uint32_t nombre_size, contenido_size;
+                char *nombre_archivo, *contenido;
                 int tamanio;
 
-                memcpy(&nombre_archivo, stream + size, sizeof(strlen(nombre_archivo) + 1));
-                size += sizeof(strlen(nombre_archivo) + 1);
-                memcpy(&contenido, stream + size, sizeof(strlen(contenido) + 1));
-                size += sizeof(strlen(contenido) + 1);
-                memcpy(&tamanio, stream + size, sizeof(int));
+                // Deserializar nombre del archivo
+                memcpy(&nombre_size, stream + offset, sizeof(uint32_t));
+                offset += sizeof(uint32_t);
+                nombre_archivo = malloc(nombre_size);
+                memcpy(nombre_archivo, stream + offset, nombre_size);
+                offset += nombre_size;
+
+                // Deserializar contenido
+                memcpy(&contenido_size, stream + offset, sizeof(uint32_t));
+                offset += sizeof(uint32_t);
+                contenido = malloc(contenido_size);
+                memcpy(contenido, stream + offset, contenido_size);
+                offset += contenido_size;
+
+                // Deserializar tamaño del archivo
+                memcpy(&tamanio, stream + offset, sizeof(int));
+                offset += sizeof(int);
 
                 if (!nombre_archivo || !contenido || tamanio <= 0) {
                     enviar_mensaje("Datos inválidos", socket_cliente);
@@ -166,8 +189,6 @@ void *handle_client(void *arg) {
                 int resultado = crear_archivo_dump(nombre_archivo, contenido, tamanio);
                 if (resultado == -1) {
                     enviar_mensaje("Error en la creación de archivo", socket_cliente);
-                    free(nombre_archivo);
-                    free(contenido);
                 } else {
                     enviar_mensaje("OK", socket_cliente);
                 }
@@ -176,17 +197,27 @@ void *handle_client(void *arg) {
                 free(nombre_archivo);
                 free(contenido);
                 break;
+            }
+
+            case MENSAJE: {
+                char *respuesta = (char *)stream;
+                log_info(LOGGER_FILESYSTEM, "%s", respuesta);
+                break;
+            }
 
             case ERROROPCODE:
                 log_error(LOGGER_FILESYSTEM, "El cliente se desconectó. Terminando hilo");
                 close(socket_cliente);
                 free(datos_cliente);
-                break;
+                sem_post(&sem_clientes);
+                pthread_exit(NULL);
 
             default:
-                log_warning(LOGGER_FILESYSTEM, "Operacion desconocida");
+                log_warning(LOGGER_FILESYSTEM, "Operación desconocida");
                 break;
         }
+
+        eliminar_paquete(paquete);
     }
 
     close(socket_cliente);

@@ -21,7 +21,7 @@ extern sem_t sem_clientes;
 
 void handle_signal(int);
 void inicializar_config(char*);
-void inicializar_archivo(char*, size_t);
+void inicializar_archivo(char*, size_t, char*);
 void iniciar_archivos();
 void* handle_client(void*);
 

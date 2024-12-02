@@ -4,7 +4,7 @@ char* bitmap_memoria = NULL;
 
 void cargar_bitmap() {
     char bitmap_path[256];
-    sprintf(bitmap_path, "%s/bitmap.dat", MOUNT_DIR);
+    sprintf(bitmap_path, "../%s/bitmap.dat", MOUNT_DIR);
 
     FILE* bitmap = fopen(bitmap_path, "r");
     if (!bitmap) {
@@ -35,9 +35,9 @@ void guardar_bitmap() {
     }
 
     char bitmap_path[256];
-    sprintf(bitmap_path, "%s/bitmap.dat", MOUNT_DIR);
+    sprintf(bitmap_path, "./%s/bitmap.dat", MOUNT_DIR);
 
-    FILE* bitmap = fopen(bitmap_path, "w");
+    FILE* bitmap = fopen(bitmap_path, "w+");
     if (!bitmap) {
         log_error(LOGGER_FILESYSTEM, "Error al guardar bitmap.dat");
         return;
@@ -66,8 +66,8 @@ int crear_archivo_dump(char* nombre_archivo, char* contenido, int tamanio) {
 
     // CREAR ARCHIVO DE METADATA (NOMBRE FORMATEADO)
     char metadata_path[256];
-    sprintf(metadata_path, "%s/files/%s.dmp", MOUNT_DIR, nombre_archivo);
-    FILE* metadata = fopen(metadata_path, "w");
+
+    FILE* metadata = fopen(metadata_path, "w+");
     if (!metadata) {
         log_error(LOGGER_FILESYSTEM, "Error al crear archivo de metadata: %s", metadata_path);
         liberar_bloque(bloque_indice);
@@ -89,7 +89,7 @@ int crear_archivo_dump(char* nombre_archivo, char* contenido, int tamanio) {
 void escribir_en_bloques(char* contenido, int tamanio, int bloque_indice) {
     // ABRE BLOQUES.DAT PARA ESCRIBIR
     char bloques_path[256];
-    sprintf(bloques_path, "%s/bloques.dat", MOUNT_DIR);
+    sprintf(bloques_path, "./%s/bloques.dat", MOUNT_DIR);
     FILE* bloques_file = fopen(bloques_path, "r+");
     if (!bloques_file) {
         log_error(LOGGER_FILESYSTEM, "Error al abrir bloques.dat");
