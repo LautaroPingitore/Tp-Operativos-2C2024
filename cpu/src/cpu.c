@@ -10,87 +10,19 @@ char* IP_CPU;
 t_log *LOGGER_CPU;
 t_config *CONFIG_CPU;
 
-int socket_cpu_dispatch;
-int socket_cpu_interrupt;
 int socket_cpu_dispatch_kernel;
 int socket_cpu_interrupt_kernel;
 int socket_cpu_memoria;
 
 int main() {
     inicializar_config("cpu");
+    log_info(LOGGER_CPU, "Iniciando CPU \n");
 
-    int sockets[] = {socket_cpu_dispatch_kernel, socket_cpu_interrupt_kernel, socket_cpu_memoria,socket_cpu_dispatch,socket_cpu_interrupt, -1};
-    socket_cpu_memoria = crear_conexion(IP_MEMORIA, PUERTO_MEMORIA);
-
-    //manejo error de conexion
-    if(socket_cpu_memoria == -1) {
-        log_error(LOGGER_CPU, "No se pudo conectar con el módulo Memoria");
-        terminar_programa(CONFIG_CPU,LOGGER_CPU,sockets);
-        exit (EXIT_FAILURE);
-    }
-    log_info(LOGGER_CPU, "Conexión establecida con Memoria");
-
-    manejar_conexion_kernel_dispatch();
-    manejar_conexion_kernel_interrupt();
+    int sockets[] = {socket_cpu_dispatch_kernel, socket_cpu_interrupt_kernel, socket_cpu_memoria, -1};
+    iniciar_comunicaciones(sockets);
 
     terminar_programa(CONFIG_CPU, LOGGER_CPU, sockets);
     return 0;
-}
-
-void manejar_conexion_kernel_dispatch() {
-    while(1) {
-        int socket_cliente = esperar_cliente(socket_cpu_dispatch_kernel, LOGGER_CPU);
-        if(socket_cliente != -1) continue;
-
-        pthread_t hilo_conexion;
-        t_procesar_conexion_args* args = malloc(sizeof(t_procesar_conexion_args));
-        if (!args) {
-            log_error(LOGGER_CPU, "Error al asignar memoria para los argumentos del hilo");
-            close(socket_cliente);
-            continue;
-        }
-
-        args->log = LOGGER_CPU;
-        args->fd = socket_cliente;
-        strcpy(args->server_name, "DISPATCH");
-
-        if(pthread_create(&hilo_conexion, NULL, ejecutar_ciclo_instruccion, (void*) args) != 0) {
-            log_error(LOGGER_CPU, "Error al crear el hilo para conexión");
-            free(args); // Liberar la memoria en caso de error
-            close(socket_cliente);
-            continue;
-        }
-
-        pthread_detach(hilo_conexion);
-    }
-}
-
-void manejar_conexion_kernel_interrupt() {
-    while(1) {
-        int socket_cliente = esperar_cliente(socket_cpu_interrupt_kernel, LOGGER_CPU);
-        if(socket_cliente != -1) continue;
-
-        pthread_t hilo_conexion;
-        t_procesar_conexion_args* args = malloc(sizeof(t_procesar_conexion_args));
-        if (!args) {
-            log_error(LOGGER_CPU, "Error al asignar memoria para los argumentos del hilo");
-            close(socket_cliente);
-            continue;
-        }
-
-        args->log = LOGGER_CPU;
-        args->fd = socket_cliente;
-        strcpy(args->server_name, "INTERRUPT");        
-
-        if(pthread_create(&hilo_conexion, NULL, recibir_interrupcion, (void*) args) != 0) {
-            log_error(LOGGER_CPU, "Error al crear el hilo para conexión");
-            free(args); // Liberar la memoria en caso de error
-            close(socket_cliente);
-            continue;
-        }
-
-        pthread_detach(hilo_conexion);
-    }
 }
 
 void inicializar_config(char* arg){
@@ -117,4 +49,108 @@ void inicializar_config(char* arg){
     LOG_LEVEL = config_get_string_value(CONFIG_CPU, "LOG_LEVEL");
 
     IP_CPU = config_get_string_value(CONFIG_CPU,"IP_CPU");
+}
+
+void inciar_comunicaciones(int socket[]) {
+    // CONECTAR CON MEMORIA
+    socket_cpu_memoria = crear_conexion(IP_MEMORIA, PUERTO_MEMORIA);
+    if(socket_cpu_memoria == -1) {
+        log_error(LOGGER_CPU, "Error al conectar con memoria");
+        terminar_programa(CONFIG_CPU, LOGGER_CPU, sockets);
+        exit(EXIT_FAILURE);
+    }
+    log_info(LOGGER_CPU, "Conexion con Memoria Establecida");
+
+    // Crear hilo para manejar la comunicación con Memoria
+    pthread_t hilo_memoria;
+    t_procesar_conexion_args* args_memoria = malloc(sizeof(t_procesar_conexion_args));
+    args_memoria->fd = socket_cpu_memoria;
+    args_memoria->log = LOGGER_CPU;
+    args_memoria->server_name = "Memoria";
+    pthread_create(&hilo_memoria, NULL, procesar_conexion, (void*) args_memoria);
+    pthread_detach(hilo_memoria);  
+
+    // CONECTAR CON KERNEL, DISPATCH
+    socket_cpu_dispatch_kernel = crear_conexion(IP_CPU, PUERTO_ESCUCHA_DISPATCH);
+    if(socket_cpu_dispatch_kernel == -1) {
+        log_error(LOGGER_CPU, "Error al conectar con Kernel Dispatch");
+        terminar_programa(CONFIG_CPU, LOGGER_CPU, sockets);
+        exit(EXIT_FAILURE);
+    }
+    log_info(LOGGER_CPU, "Conexion con Kernel Dispatch Establecida");
+
+    // Crear hilo para manejar la comunicación con kernel_dispatch
+    pthread_t hilo_kernel_dispatch;
+    t_procesar_conexion_args* args_kernel_dispatch = malloc(sizeof(t_procesar_conexion_args));
+    args_kernel_dispatch->fd = socket_cpu_dispatch_kernel;
+    args_kernel_dispatch->log = LOGGER_CPU;
+    args_kernel_dispatch->server_name = "Kernel Dispatch";
+    pthread_create(&hilo_kernel_dispatch, NULL, procesar_conexion, (void*) args_kernel_dispatch);
+    pthread_detach(hilo_kernel_dispatch);  
+
+    // CONECTAR CON KERNEL, INTERRUPT
+    socket_cpu_interrupt_kernel = crear_conexion(IP_CPU, PUERTO_ESCUCHA_INTERRUPT);
+    if(socket_cpu_interrupt_kernel == -1) {
+        log_error(LOGGER_CPU, "Error al conectar con Kernel Interrupt");
+        terminar_programa(CONFIG_CPU, LOGGER_CPU, sockets);
+        exit(EXIT_FAILURE);
+    }
+    log_info(LOGGER_CPU, "Conexion con Kernel Interrupt Establecida");
+
+    // Crear hilo para manejar la comunicación con kernel_interrupt
+    pthread_t hilo_kernel_interrupt;
+    t_procesar_conexion_args* args_kernel_interrupt = malloc(sizeof(t_procesar_conexion_args));
+    args_kernel_interrupt->fd = socket_cpu_interrupt_kernel;
+    args_kernel_interrupt->log = LOGGER_CPU;
+    args_kernel_interrupt->server_name = "Kernel Dispatch";
+    pthread_create(&hilo_kernel_interrupt, NULL, procesar_conexion, (void*) args_kernel_interrupt);
+    pthread_detach(hilo_kernel_interrupt);  
+}
+
+void* procesar_conexion(void* args) {
+    t_procesar_conexion_args *args = (t_procesar_conexion_args *)void_args;
+    t_log *logger = args->log;
+    int socket = args->fd;
+    char *server_name = args->server_name;
+    free(args);
+
+    while (socket != -1) {
+        // Recibimos un paquete de memoria (respuesta)
+        t_paquete* paquete = recibir_paquete_entero(socket);
+        void* stream = paquete->buffer->stream;
+        int size = paquete->buffer->size;
+
+        switch (paquete->codigo_operacion) {
+        // KERNEL LE MANDA A CPU EL HILO A EJECUTAR
+        case HILO:
+            hilo_actual = deserializar_paquete_tcb(stream, size);
+            ejecutar_ciclo_instruccion();
+            break;
+        
+        // KERNEL LE MANDA A CPU EL PROCESO DEL HILO EJECUTANDOSE
+        case SOLICITUD_PROCESO:
+            pcb_actual = deserializar_proceso(stream, size);
+            break;
+
+        // KERNEL LE MANDA UNA INTERRUPCION POR FINALIZACION DE QUANTUM A CPU
+        case FINALIZACION_QUANTUM:
+            hay_interrupcion = true;
+            break;
+
+        // MEMORIA LE RESPONDE OK SI SE PUDO ESCRIBIR EN MEMORIA
+        case MENSAJE:
+            char* respuesta = (char*)stream;
+            if (strcmp(respuesta, "OK") == 0) {
+                log_info(logger, "Se pudo escribir en memoria");
+            } else {
+                log_warning(logger, "Error al escribir en memoria.");
+            }
+            break;
+
+        default:
+            break;
+        }
+    }
+
+    return NULL;
 }

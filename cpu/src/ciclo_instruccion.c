@@ -4,20 +4,19 @@
 t_proceso_cpu* pcb_actual = NULL;
 t_tcb* hilo_actual = NULL;
 
-void* ejecutar_ciclo_instruccion(void* void_args) {
-
-    t_procesar_conexion_args *args = (t_procesar_conexion_args *)void_args;
-    int socket_cliente = args->fd;
+void ejecutar_ciclo_instruccion() {
 
     while (true) {
-        hilo_actual = recibir_hilo_kernel(socket_cliente);
 
         if (!hilo_actual) {
             log_error(LOGGER_CPU, "No hay Hilo actual. Terminando ciclo de instrucción.");
             break;
         }
 
-        pcb_actual = deserializar_proceso(socket_cpu_dispatch_kernel);
+        if(!pcb_actual) {
+            log_error(LOGGER_CPU, "No hay Proceso actual. Terminando ciclo de instrucción.");
+            break;
+        }
 
         t_instruccion *instruccion = fetch(hilo_actual->TID, hilo_actual->PC);
         
@@ -34,7 +33,6 @@ void* ejecutar_ciclo_instruccion(void* void_args) {
 
         liberar_instruccion(instruccion);
     }
-    return NULL;
 }
 
 // RECIBE LA PROXIMA EJECUCION A REALIZAR OBTENIDA DEL MODULO MEMORIA
