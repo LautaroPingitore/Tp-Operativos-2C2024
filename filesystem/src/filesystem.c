@@ -138,6 +138,10 @@ void *handle_client(void *arg) {
     t_datos_cliente *datos_cliente = (t_datos_cliente *)arg;
     int socket_cliente = datos_cliente->socket_cliente;
 
+    char* hola = "Hola FILESYSTEM, soy Memoria";
+    size_t tam = sizeof(strlen(hola) + 1);
+
+    log_info(LOGGER_FILESYSTEM, "TmzxZxZXxansadada = %d", (int*)tam);
     log_info(LOGGER_FILESYSTEM, "Socket cliente: %d", socket_cliente);
 
     while (1) {
@@ -153,7 +157,9 @@ void *handle_client(void *arg) {
         }
 
         void *stream = paquete->buffer->stream;
-        int offset = 0;
+        int offset = paquete->buffer->size;
+
+        log_info(LOGGER_FILESYSTEM, "%d", paquete->buffer->size);
 
         switch (paquete->codigo_operacion) {
             case CREAR_ARCHIVO: {
@@ -200,7 +206,9 @@ void *handle_client(void *arg) {
             }
 
             case MENSAJE: {
-                char *respuesta = (char *)stream;
+                log_info(LOGGER_FILESYSTEM, "ENTRO A LA SWITCHEACION DE MENSAJE :)");
+                char* respuesta;
+                memcpy(&respuesta, stream + offset, sizeof(30));
                 log_info(LOGGER_FILESYSTEM, "%s", respuesta);
                 break;
             }

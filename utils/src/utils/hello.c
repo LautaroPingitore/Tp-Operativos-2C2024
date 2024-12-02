@@ -92,17 +92,13 @@ void recibir_mensaje(int socket_cliente, t_log* logger)
 }
 
 void* recibir_buffer(int* size, int socket_cliente)
-{
-
-	printf("ESTA HACIENDO LA RECIBICION DEL BUFFER");
-	
+{	
 	void * buffer;
 
 	recv(socket_cliente, size, sizeof(int), MSG_WAITALL);
 	buffer = malloc(*size);
 	recv(socket_cliente, buffer, *size, MSG_WAITALL);
 
-	printf("llego buffeeeeeeer");
 
 	return buffer;
 }
@@ -131,7 +127,6 @@ t_list* recibir_paquete(int socket_cliente)
 
 
 t_paquete* recibir_paquete_entero(int socket_cliente) {
-	printf("dasdasdasd");
     int size;
     int desplazamiento = 0;
     void *buffer;
@@ -152,8 +147,6 @@ t_paquete* recibir_paquete_entero(int socket_cliente) {
     paquete->buffer->size = tamanio_buffer;      // Asigna el tamaño al buffer
     paquete->buffer->stream = malloc(tamanio_buffer);  // Reserva memoria para el stream
     memcpy(paquete->buffer->stream, buffer + desplazamiento, tamanio_buffer);
-    
-	printf("Checkpoint 3");
 
     free(buffer);
     return paquete;  // Retorna el puntero a t_paquete
@@ -255,12 +248,10 @@ void enviar_mensaje(char* mensaje, int socket_cliente) {
 	agregar_a_paquete(paquete, &mensaje, sizeof(strlen(mensaje) + 1));
 	serializar_paquete(paquete, paquete->buffer->size);
 
-	printf("DADASDASDAS");
-
 	if(enviar_paquete(paquete, socket_cliente) == 0) {
-		printf("SE A ENVIADO");
+		printf("SE HA ENVIADO");
 	} else {
-		printf("NO SE A ENVIADO");
+		printf("NO SE HA ENVIADO");
 	}
 
 	eliminar_paquete(paquete);
