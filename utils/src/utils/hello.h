@@ -109,7 +109,6 @@ typedef enum {
 } finalizacion_proceso;
 
 typedef struct {
-    //uint32_t program_counter; // Contador de programa (PC)
     uint32_t AX;
     uint32_t BX;
     uint32_t CX;

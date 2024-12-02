@@ -1,6 +1,7 @@
 #include "include/gestor.h"
 
 // VARIABLES GLOBALES
+t_pcb* pcb_actual = NULL;
 t_tcb* hilo_actual = NULL;
 int fd_cpu_memoria = -1;
 
@@ -21,7 +22,7 @@ void ejecutar_ciclo_instruccion(int socket_cliente) {
         }
 
         // Aquí se llama a decode, pero por simplicidad se omite en este ejemplo
-        execute(instruccion, socket_cliente);
+        execute(instruccion, socket_cliente, hilo_actual);
         
         // Verifica si se necesita realizar un check_interrupt
         check_interrupt();
@@ -56,79 +57,122 @@ t_instruccion *fetch(uint32_t tid, uint32_t pc) {
     return instruccion;
 }
 
+nombre_instruccion string_a_enum(char* instruccion) {
+    if (strcmp(instruccion, "SUM") == 0) {
+        return SUM;
+    } else if (strcmp(instruccion, "READ_MEM") == 0) {
+        return READ_MEM;
+    } else if (strcmp(instruccion, "WRITE_MEM") == 0) {
+        return WRITE_MEM;
+    } else if (strcmp(instruccion, "JNZ") == 0) {
+        return JNZ;
+    } else if (strcmp(instruccion, "SET") == 0) {
+        return SET;
+    } else if (strcmp(instruccion, "SUB") == 0) {
+        return SUB;
+    } else if (strcmp(instruccion, "LOG") == 0) {
+        return LOG;
+    } else if (strcmp(instruccion, "DUMP_MEMORY") == 0) {
+        return INST_DUMP_MEMORY;
+    } else if (strcmp(instruccion, "IO") == 0) {
+        return INST_IO;
+    } else if (strcmp(instruccion, "PROCESS_CREATE") == 0) {
+        return INST_PROCESS_CREATE;
+    } else if (strcmp(instruccion, "THREAD_CREATE") == 0) {
+        return INST_THREAD_CREATE;
+    } else if (strcmp(instruccion, "THREAD_JOIN") == 0) {
+        return INST_THREAD_JOIN;
+    } else if (strcmp(instruccion, "THREAD_CANCEL") == 0) {
+        return INST_THREAD_CANCEL;
+    } else if (strcmp(instruccion, "MUTEX_CREATE") == 0) {
+        return INST_MUTEX_CREATE;
+    } else if (strcmp(instruccion, "MUTEX_LOCK") == 0) {
+        return INST_MUTEX_LOCK;
+    } else if (strcmp(instruccion, "MUTEX_UNLOCK") == 0) {
+        return INST_MUTEX_UNLOCK;
+    } else if (strcmp(instruccion, "THREAD_EXIT") == 0) {
+        return INST_THREAD_EXIT;
+    } else if (strcmp(instruccion, "PROCESS_EXIT") == 0) {
+        return INST_PROCESS_EXIT;
+    }
+    return ERROR_INSTRUCCION;
+}
+
 // EJECUTA LA INSTRUCCION OBTENIDA, Y TAMBIEN HACE EL DECODE EN CASO DE NECESITARLO
-void execute(t_instruccion *instruccion, int socket) {
-    switch (instruccion->nombre) {
-        case "SUM":
+void execute(t_instruccion *instruccion, int socket, t_tcb* tcb) {
+    pcb_actual = obtener_pcb_padre_de_hilo(tcb->PID_PADRE);
+    nombre_instruccion op_code = string_a_enum(instruccion->nombre);
+    switch (op_code) {
+        case SUM:
             loguear_y_sumar_pc(instruccion);
             sum_registros(instruccion->parametro1, instruccion->parametro2);
             break;
-        case "READ_MEM":
+        case READ_MEM:
             loguear_y_sumar_pc(instruccion);
             read_mem(instruccion->parametro1, instruccion->parametro2, socket);
             break;
-        case "WRITE_MEM":
+        case WRITE_MEM:
             loguear_y_sumar_pc(instruccion);
             write_mem(instruccion->parametro1, instruccion->parametro2, socket);
             break;
-        case "JNZ":
+        case JNZ:
             loguear_y_sumar_pc(instruccion);
             jnz_pc(instruccion->parametro1, instruccion->parametro2);
             break;
-        case "SET":
+        case SET:
             loguear_y_sumar_pc(instruccion);
             set_registro(instruccion->parametro1, instruccion->parametro2);
             break;
-        case "SUB":
+        case SUB:
             loguear_y_sumar_pc(instruccion);
             sub_registros(instruccion->parametro1, instruccion->parametro2);
             break;
-        case "LOG":
+        case LOG:
             loguear_y_sumar_pc(instruccion);
             break;
 
         // SYSCALLS QUE DEVUELVEN EL CONTROL A KERNEL
-        case "DUMP_MEMORY":
+        case INST_DUMP_MEMORY:
             loguear_y_sumar_pc(instruccion);
             enviar_syscall_kernel(instruccion, DUMP_MEMORY);
             break;
-        case "IO":
+        case INST_IO:
             loguear_y_sumar_pc(instruccion);
             enviar_syscall_kernel(instruccion, IO);
             break;
-        case "PROCESS_CREATE":
+        case INST_PROCESS_CREATE:
             loguear_y_sumar_pc(instruccion);
             enviar_syscall_kernel(instruccion, PROCESS_CREATE);
             break;
-        case "THREAD_CREATE":
+        case INST_THREAD_CREATE:
             loguear_y_sumar_pc(instruccion);
             enviar_syscall_kernel(instruccion, THREAD_CREATE);
             break;
-        case "THREAD_JOIN":
+        case INST_THREAD_JOIN:
             loguear_y_sumar_pc(instruccion);
             enviar_syscall_kernel(instruccion, THREAD_JOIN);
             break;
-        case "THREAD_CANCEL":
+        case INST_THREAD_CANCEL:
             loguear_y_sumar_pc(instruccion);
             enviar_syscall_kernel(instruccion, THREAD_CANCEL);
             break;
-        case "MUTEX_CREATE":
+        case INST_MUTEX_CREATE:
             loguear_y_sumar_pc(instruccion);
             enviar_syscall_kernel(instruccion, MUTEX_CREATE);
             break;
-        case "MUTEX_LOCK":
+        case INST_MUTEX_LOCK:
             loguear_y_sumar_pc(instruccion);
             enviar_syscall_kernel(instruccion, MUTEX_LOCK);
             break;
-        case "MUTEX_UNLOCK":
+        case INST_MUTEX_UNLOCK:
             loguear_y_sumar_pc(instruccion);
             enviar_syscall_kernel(instruccion, MUTEX_UNLOCK);
             break;
-        case "THREAD_EXIT":
+        case INST_THREAD_EXIT:
             loguear_y_sumar_pc(instruccion);
             enviar_syscall_kernel(instruccion, THREAD_EXIT);
             break;
-        case "PROCESS_EXIT":
+        case INST_PROCESS_EXIT:
             loguear_y_sumar_pc(instruccion);
             enviar_syscall_kernel(instruccion, PROCESS_EXIT);
             break;
@@ -152,14 +196,13 @@ void check_interrupt() {
 
 // MUESTRA EN CONSOLA LA INSTRUCCION EJECUTADA Y LE SUMA 1 AL PC
 void loguear_y_sumar_pc(t_instruccion *instruccion) {
-    log_info(LOGGER_CPU, "TID: %d - Ejecutando: %s - Parametros: %s %s %d", hilo_actual->TID, instruccion->nombre, intruccion->parametro1, instruccion->parametro2, instruccion->parametro3);
+    log_info(LOGGER_CPU, "TID: %d - Ejecutando: %s - Parametros: %s %s %d", hilo_actual->TID, instruccion->nombre, instruccion->parametro1, instruccion->parametro2, instruccion->parametro3);
     hilo_actual->PC++;
 }
 
 void liberar_instruccion(t_instruccion *instruccion) {
     free(instruccion->parametro1);
     free(instruccion->parametro2);
-    free(instruccion->parametro3);
     free(instruccion);
 }
 
@@ -171,7 +214,7 @@ void actualizar_contexto_memoria() {
         return;
     }
 
-    t_tcb* pcb = obtener_pcb_padre_de_hilo(hilo_actual->PID_PADRE);
+    t_pcb* pcb = obtener_pcb_padre_de_hilo(hilo_actual->PID_PADRE);
 
     // Enviar los registros y el program counter a memoria
     // A través de la memoria se actualizaría el PCB
@@ -184,7 +227,7 @@ void devolver_control_al_kernel() {
     log_info(LOGGER_CPU, "Devolviendo control al Kernel...");
 
     // Crear un paquete para notificar al Kernel
-    t_paquete *paquete = crear_paquete_con_codigo_de_operacion(DEVOLVER_CONTROL_KERNEL);
+    t_paquete *paquete = crear_paquete_con_codigo_operacion(DEVOLVER_CONTROL_KERNEL);
 
     // Enviar el paquete indicando que el control se devuelve al Kernel
     enviar_paquete(paquete, socket_cpu_interrupt_kernel); 

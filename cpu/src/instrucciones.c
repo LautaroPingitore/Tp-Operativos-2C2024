@@ -1,6 +1,6 @@
 #include "include/gestor.h"
 
-#define VALOR_ERROR ((uint32_t)-1)
+#define SEGMENTATION_FAULT ((uint32_t)-1)
 
 // Validar si una cadena es numérica
 bool es_numerico(const char* str) {
@@ -23,7 +23,6 @@ uint32_t* obtener_registro(char* registro){
     if (strcmp(registro, "EX") == 0) return &regs->EX;
     if (strcmp(registro, "GX") == 0) return &regs->GX;
     if (strcmp(registro, "HX") == 0) return &regs->HX;
-    if (strcmp(registro, "PC") == 0) return &regs->program_counter;
 
     return NULL;
 }
@@ -67,7 +66,7 @@ void read_mem(char* reg_datos, char* reg_direccion, int socket) {
         return;
     }
 
-    enviar_solicitud_memoria(socket, direccion_fisica);
+    enviar_solicitud_valor_memoria(socket, direccion_fisica);
     uint32_t valor_leido;
 
     // Leer el valor de memoria desde la direccion fisica y se lo asigna al valor leido
@@ -109,7 +108,7 @@ void write_mem(char* reg_direccion, char* reg_datos, int socket) {
     }
 
     // Enviar el valor a la memoria para escribir en la direccion fisica
-    enviar_valor_a_memoria(socket, direccion_fisica, *reg_dat);
+    enviar_valor_a_memoria(socket, direccion_fisica, reg_dat);
 
     // Loguear la accion de escritura
     log_info(LOGGER_CPU, "PID: %d - Escribir Memoria - Direccion Fisica: %d - Valor: %d",
@@ -152,9 +151,6 @@ void jnz_pc(char* registro, char* instruccion) {
         return;
     }
 
-    if(*reg != 0) {
-        pcb_actual->CONTEXTO->registros->program_counter = atoi(instruccion);
-    }
 }
 
 //Escribe en el archivo de log el valor del registro.
@@ -166,5 +162,5 @@ void log_registro(char* registro) {
         return;
     }
 
-    log_info(LOGGER_CPU, "LOG - Registro %s: %d (PID: %d, PC: %d)", registro, *reg, pcb_actual->PID, pcb_actual->CONTEXTO->registros->program_counter);
+    log_info(LOGGER_CPU, "LOG - Registro %s: %d (PID: %d, PC: %d)", registro, *reg, pcb_actual->PID, hilo_actual->PC);
 }

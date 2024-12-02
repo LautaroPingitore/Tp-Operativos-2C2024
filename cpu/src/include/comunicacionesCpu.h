@@ -11,12 +11,12 @@ void enviar_syscall_kernel(t_instruccion*, op_code);
 
 // INSTRUCCIONES
 void enviar_interrupcion_segfault(uint32_t, int);
-void enviar_valor_a_memoria(int, uint32_t, uint32_t);
+void enviar_valor_a_memoria(int, uint32_t, uint32_t*);
 void enviar_solicitud_valor_memoria(int, uint32_t);
-void recibir_valor_de_memoria(int, uint32_t, uint32_t);
+void recibir_valor_de_memoria(int, uint32_t, uint32_t*);
 
 // MMU
-void enviar_solicitud_memoria(uint32_t, op_code, const char*);
+void enviar_solicitud_memoria(int, uint32_t, op_code, const char*);
 uint32_t recibir_entero(int, const char*);
 
 #endif //COMUNICACIONESCPU_H_
