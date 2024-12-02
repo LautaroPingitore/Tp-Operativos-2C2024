@@ -1,8 +1,6 @@
 #ifndef CICLO_INSTRUCCION_H_
 #define CICLO_INSTRUCCION_H_
 
-#include "../../../kernel/src/include/planificador.h"
-
 extern t_pcb* pcb_actual;
 extern t_tcb* hilo_actual;
 

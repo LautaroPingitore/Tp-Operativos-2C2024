@@ -3,6 +3,11 @@
 
 extern bool hay_interrupcion;
 
+typedef struct {
+    uitn32_t PID,
+    t_contexto_ejecucion CONTEXTO;
+} t_proceso_cpu;
+
 // CICLO_INSTRUCCION
 t_tcb* recibir_hilo_kernel(int);
 void* recibir_interrupcion(void*);
@@ -20,5 +25,8 @@ void recibir_valor_de_memoria(int, uint32_t, uint32_t);
 // MMU
 void enviar_solicitud_memoria(int, uint32_t, op_code, const char*);
 uint32_t recibir_entero(int, const char*);
+
+t_proceso_cpu* deserializar_proceso();
+void enviar_pedido_proceso_kernel(uitn32_t);
 
 #endif //COMUNICACIONESCPU_H_

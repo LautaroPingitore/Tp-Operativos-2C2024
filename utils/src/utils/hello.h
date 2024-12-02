@@ -98,7 +98,8 @@ typedef enum{
     PROCESO,
     HILO,
     CREAR_ARCHIVO,
-    FINALIZACION_QUANTUM
+    FINALIZACION_QUANTUM,
+    SOLICITUD_PROCESO
 } op_code;
 
 

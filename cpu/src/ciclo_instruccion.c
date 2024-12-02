@@ -1,7 +1,7 @@
 #include "include/gestor.h"
 
 // VARIABLES GLOBALES
-t_pcb* pcb_actual = NULL;
+t_proceso_cpu* pcb_actual = NULL;
 t_tcb* hilo_actual = NULL;
 
 void* ejecutar_ciclo_instruccion(void* void_args) {
@@ -16,6 +16,8 @@ void* ejecutar_ciclo_instruccion(void* void_args) {
             log_error(LOGGER_CPU, "No hay Hilo actual. Terminando ciclo de instrucción.");
             break;
         }
+
+        pcb_actual = deserializar_proceso(socket_cpu_dispatch_kernel);
 
         t_instruccion *instruccion = fetch(hilo_actual->TID, hilo_actual->PC);
         
@@ -104,7 +106,6 @@ nombre_instruccion string_a_enum(char* instruccion) {
 
 // EJECUTA LA INSTRUCCION OBTENIDA, Y TAMBIEN HACE EL DECODE EN CASO DE NECESITARLO
 void execute(t_instruccion *instruccion, int socket, t_tcb* tcb) {
-    pcb_actual = obtener_pcb_padre_de_hilo(tcb->PID_PADRE);
     nombre_instruccion op_code = string_a_enum(instruccion->nombre);
     switch (op_code) {
         case SUM:
@@ -218,11 +219,9 @@ void actualizar_contexto_memoria() {
         return;
     }
 
-    t_pcb* pcb = obtener_pcb_padre_de_hilo(hilo_actual->PID_PADRE);
-
     // Enviar los registros y el program counter a memoria
     // A través de la memoria se actualizaría el PCB
-    enviar_contexto_memoria(hilo_actual->PID_PADRE, hilo_actual->TID, pcb->CONTEXTO->registros, hilo_actual->PC, socket_cpu_memoria);
+    enviar_contexto_memoria(hilo_actual->PID_PADRE, hilo_actual->TID, pcb_actual->CONTEXTO->registros, hilo_actual->PC, socket_cpu_memoria);
 
     log_info(LOGGER_CPU, "Contexto de la CPU actualizado en memoria.");
 }
@@ -232,7 +231,9 @@ void devolver_control_al_kernel() {
 
     // Crear un paquete para notificar al Kernel
     t_paquete *paquete = crear_paquete_con_codigo_operacion(DEVOLVER_CONTROL_KERNEL);
-
+    hilo_actual->motivo_desalojo = INTERRUPCION_BLOQUEO;
+    agregar_a_paquete(paquete, &hilo_actual, sizeof(t_tcb));
+    serializar_paquete(paquete, paquete->buffer->size);
     // Enviar el paquete indicando que el control se devuelve al Kernel
     enviar_paquete(paquete, socket_cpu_interrupt_kernel); 
 

@@ -26,6 +26,21 @@ t_tcb* recibir_hilo_kernel(int socket_cliente) {
     return hilo;
 }
 
+t_proceso_cpu* deserializar_proceso() {
+    t_proceso_cpu* pcb = malloc(sizeof(t_pcb));
+    t_paquete* paquete = recibir_paquete_entero(socket_cpu_dispatch_kernel);
+    void* stream = paquete->buffer->stream;
+    int size = paquete->buffer->size;
+    
+    memcpy(&pcb->PID, stream + size, sizeof(uint32t));
+    size += sizeof(uint32_t);
+
+    memcpy(&pcb->CONTEXTO, stream + size, sizeof(t_contexto_ejecucion));
+
+    eliminar_paquete(paquete);
+    return pcb;
+}
+
 void* recibir_interrupcion(void* void_args) {
 
     t_procesar_conexion_args *args = (t_procesar_conexion_args *)void_args;

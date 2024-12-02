@@ -118,3 +118,4 @@ void iniciar_comunicaciones(int sockets[]) {
     log_info(LOGGER_KERNEL, "Conexion con CPU Interrupt establecida.");
     // log_info(LOGGER_KERNEL, "IP_CPU: %s \nPUERTO_CPU_INTERRUPT %s", IP_CPU, PUERTO_CPU_INTERRUPT);
 }
+

@@ -17,6 +17,20 @@ void enviar_proceso_memoria(int socket_cliente, t_pcb* pcb, op_code codigo) {
     eliminar_paquete(paquete);
 }
 
+void enviar_proceso_cpu(int socket, t_pcb* pcb) {
+    t_paquete* paquete = crear_paquete_con_codigo_operacion(SOLICITUD_PROCESO);
+    agregar_a_paquete(paquete, &pcb->PID, sizeof(uint32_t));
+    agregar_a_paquete(paquete, &pcb->CONTEXTO, sizeof(uint32_t));
+    serializar_paquete(paquete, paquete->buffer->size);
+
+    if(enviar_paquete(paquete, socket) == 0) {
+        log_info(LOGGER_KERNEL, "Proceso enviado ok a cpu");
+    } else {
+        log_error(LOGGER_KERNEL, "No se a podido enviar el proceso requerido hacia el modulo de cpu :(");
+    }
+    eliminar_paquete(paquete);
+}
+
 int respuesta_memoria_creacion(int socket_cliente) {
     char buffer[50];
     int bytes_recibidos = recv(socket_cliente, buffer, sizeof(buffer)-1, 0);
@@ -77,29 +91,6 @@ int enviar_hilo_a_cpu(t_tcb* hilo) {
     return resultado;
 }
 
-// RECIBE EL HILO DE CPU CON SU MOTIVO DE FINALIZACION
-void manejar_hilo_cpu() {
-    t_paquete* paquete = recibir_paquete_entero(socket_kernel_cpu_interrupt);
-    t_tcb* hilo = deserializar_paquete_tcb(paquete->buffer->stream, paquete->buffer->size);
-
-    switch (paquete->codigo_operacion) {
-    case FINALIZACION_QUANTUM:
-        list_remove(cola_exec, 0); //Pq cola exec si ejecuta uno solo a la vez, no va a ser una cola, va a haber uno solo siempre
-        log_info(LOGGER_KERNEL, "## (<%d>:<%d>) - Desalojado por fin de Quantum", hilo->PID_PADRE, hilo->TID);
-        pthread_mutex_lock(&mutex_cola_ready);
-        list_add(cola_ready, hilo);
-        pthread_mutex_unlock(&mutex_cola_ready);
-        cpu_libre = true;
-        intentar_mover_a_execute();
-        reiniciar_quantum();
-        break;
-    default:
-        list_remove(cola_exec, 0);
-        cpu_libre = true;
-        manejar_syscall(paquete, hilo);
-        break;
-    }
-}
 
 void enviar_memory_dump(t_pcb* pcb, uint32_t tid) {
     t_paquete* paquete = crear_paquete_con_codigo_operacion(DUMP_MEMORY);
@@ -133,4 +124,45 @@ void enviar_interrupcion_cpu(op_code interrupcion, int quantum) {
         return;
     }
     eliminar_paquete(paquete);
+}
+
+void* procesar_comunicaciones_cpu(void* void_args) {
+    t_procesar_conexion_args *args = (t_procesar_conexion_args *)void_args;
+    t_log *logger = args->log;
+    int socket = args->fd;
+    char *server_name = args->server_name;
+    free(args);
+
+    while(socket != -1) {
+        t_paquete* paquete = recibir_paquete_entero(socket);
+        void* stream = paquete->buffer->stream;
+        int size = paquete->buffer->size;
+
+        switch (paquete->codigo_operacion) {
+        case HANDSHAKE_cpu:
+            recibir_mensaje(socket, logger);
+            log_info(logger, "Conexion establecida con CPU");
+            break;
+        
+        case DEVOLVER_CONTROL_KERNEL:
+            t_tcb* tcb = deserializar_paquete_tcb(stream, size);
+            if(tcb->motivo_desalojo == INTERRUPCION_BLOQUEO) {
+                list_remove(cola_exec, 0);
+
+                pthread_mutex_lock(&mutex_cola_ready);
+                list_add(cola_ready);
+                pthread_mutex_unlock(&mutex_cola_ready);
+
+                intentar_mover_a_execute();
+            }
+            break;
+
+        default:
+            manejar_syscall(paquete);
+            break;
+        }
+
+        eliminar_paquete(paquete);
+    }
+    return NULL;
 }

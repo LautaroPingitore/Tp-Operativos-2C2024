@@ -18,7 +18,6 @@ extern int socket_kernel_cpu_dispatch;
 extern int socket_kernel_cpu_interrupt;
 extern lista_recursos recursos_globales;
 
-
 void inicializar_config(char*);
 void iniciar_comunicaciones(int []);
 
