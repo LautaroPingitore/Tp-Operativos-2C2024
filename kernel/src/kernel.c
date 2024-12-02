@@ -141,14 +141,14 @@ void* procesar_comunicaciones_memoria(void* void_args) {
     t_procesar_conexion_args *args = (t_procesar_conexion_args *)void_args;
     t_log *logger = args->log;
     int socket = args->fd;
-    char *server_name = args->server_name;
+
     free(args);
 
     while (socket != -1) {
         // Recibimos un paquete de memoria (respuesta)
         t_paquete* paquete = recibir_paquete_entero(socket);
         void* stream = paquete->buffer->stream;
-        int size = paquete->buffer->size;
+
 
         switch (paquete->codigo_operacion) {
         case HANDSHAKE_memoria:

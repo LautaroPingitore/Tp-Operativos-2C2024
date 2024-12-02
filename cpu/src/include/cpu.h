@@ -18,7 +18,7 @@ extern int socket_cpu_memoria;
 
 void inicializar_config(char*);
 
-void inciar_comunicaciones(int[]);
+void iniciar_comunicaciones(int[]);
 void* procesar_conexion(void*);
 
 #endif /* CPU_H_ */

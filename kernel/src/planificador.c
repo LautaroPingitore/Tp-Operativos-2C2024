@@ -515,7 +515,7 @@ void intentar_mover_a_execute() {
     log_info(LOGGER_KERNEL, "(<%d>:<%d>) Movido a Excecute", hilo_a_ejecutar->PID_PADRE, hilo_a_ejecutar->TID);
 
     int resultado = enviar_hilo_a_cpu(hilo_a_ejecutar);
-    enviar_proceso_cpu(pcb_padre);
+    enviar_proceso_cpu(socket_kernel_cpu_dispatch, pcb_padre);
 
     if (resultado != 0) {
         log_error(LOGGER_KERNEL, "Error al enviar el hilo %d a la CPU", hilo_a_ejecutar->TID);

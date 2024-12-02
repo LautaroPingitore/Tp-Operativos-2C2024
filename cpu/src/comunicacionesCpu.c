@@ -32,7 +32,7 @@ t_proceso_cpu* deserializar_proceso() {
     void* stream = paquete->buffer->stream;
     int size = paquete->buffer->size;
     
-    memcpy(&pcb->PID, stream + size, sizeof(uint32t));
+    memcpy(&pcb->PID, stream + size, sizeof(uint32_t));
     size += sizeof(uint32_t);
 
     memcpy(&pcb->CONTEXTO, stream + size, sizeof(t_contexto_ejecucion));

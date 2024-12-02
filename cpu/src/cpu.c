@@ -51,7 +51,7 @@ void inicializar_config(char* arg){
     IP_CPU = config_get_string_value(CONFIG_CPU,"IP_CPU");
 }
 
-void inciar_comunicaciones(int socket[]) {
+void iniciar_comunicaciones(int sockets[]) {
     // CONECTAR CON MEMORIA
     socket_cpu_memoria = crear_conexion(IP_MEMORIA, PUERTO_MEMORIA);
     if(socket_cpu_memoria == -1) {
@@ -107,11 +107,11 @@ void inciar_comunicaciones(int socket[]) {
     pthread_detach(hilo_kernel_interrupt);  
 }
 
-void* procesar_conexion(void* args) {
+void* procesar_conexion(void* void_args) {
     t_procesar_conexion_args *args = (t_procesar_conexion_args *)void_args;
     t_log *logger = args->log;
     int socket = args->fd;
-    char *server_name = args->server_name;
+
     free(args);
 
     while (socket != -1) {

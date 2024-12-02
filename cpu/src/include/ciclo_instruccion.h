@@ -1,7 +1,12 @@
 #ifndef CICLO_INSTRUCCION_H_
 #define CICLO_INSTRUCCION_H_
 
-extern t_pcb* pcb_actual;
+typedef struct {
+    uint32_t PID;
+    t_contexto_ejecucion* CONTEXTO;
+} t_proceso_cpu;
+
+extern t_proceso_cpu* pcb_actual;
 extern t_tcb* hilo_actual;
 
 typedef struct {
@@ -31,7 +36,7 @@ typedef enum {
     ERROR_INSTRUCCION
 } nombre_instruccion;
 
-void* ejecutar_ciclo_instruccion(void*);
+void ejecutar_ciclo_instruccion();
 t_instruccion *fetch(uint32_t, uint32_t);
 void execute(t_instruccion *, int, t_tcb*);
 void check_interrupt();

@@ -26,7 +26,7 @@ void ejecutar_ciclo_instruccion() {
         }
 
         // Aquí se llama a decode, pero por simplicidad se omite en este ejemplo
-        execute(instruccion, socket_cliente, hilo_actual);
+        execute(instruccion, socket_cpu_dispatch_kernel, hilo_actual);
         
         // Verifica si se necesita realizar un check_interrupt
         check_interrupt();
