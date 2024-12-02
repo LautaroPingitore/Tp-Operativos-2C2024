@@ -21,6 +21,8 @@ extern lista_recursos recursos_globales;
 void inicializar_config(char*);
 void iniciar_comunicaciones(int []);
 
+void* procesar_comunicaciones_memoria(void*);
+void* procesar_comunicaciones_cpu(void*);
 
 #endif /* KERNEL_H_ */
 

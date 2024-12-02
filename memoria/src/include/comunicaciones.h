@@ -12,7 +12,6 @@ extern pthread_mutex_t mutex_instrucciones;
 // Funciones para manejar el servidor y la comunicación con otros módulos
 void* procesar_conexion_memoria(void *);
 int server_escuchar(t_log *, char *, int );
-void enviar_respuesta(int, char*); 
 
 void recibir_pedido_instruccion(uint32_t*, uint32_t*, int);
 t_instruccion* obtener_instruccion(uint32_t, uint32_t);

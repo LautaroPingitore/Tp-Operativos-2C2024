@@ -1,5 +1,7 @@
 #include "include/gestor.h"
 
+int respuesta_memoria = -1;
+
 void enviar_proceso_memoria(int socket_cliente, t_pcb* pcb, op_code codigo) {
     t_paquete* paquete = crear_paquete_con_codigo_operacion(codigo);    
 
@@ -32,25 +34,31 @@ void enviar_proceso_cpu(int socket, t_pcb* pcb) {
 }
 
 int respuesta_memoria_creacion(int socket_cliente) {
-    char buffer[50];
-    int bytes_recibidos = recv(socket_cliente, buffer, sizeof(buffer)-1, 0);
+    // Recibimos el paquete completo desde memoria
+    t_paquete* paquete = recibir_paquete_entero(socket_cliente);
 
-    if (bytes_recibidos <= 0) {
-        perror("Error al recibir la respuesta de memoria");
-        return -1;
+    if (paquete == NULL) {
+        log_error(LOGGER_KERNEL, "Error al recibir respuesta de memoria");
+        return -1;  // Error al recibir la respuesta
     }
 
-    buffer[bytes_recibidos] = '\0';  // Asegurar que el mensaje esté terminado en NULL
+    // Verificamos si la operación es MENSAJE (la respuesta que esperamos de memoria)
+    if (paquete->codigo_operacion == MENSAJE) {
+        char* respuesta = (char*)paquete->buffer->stream;
 
-    if(strcmp(buffer, "OK")) {
-        return 1;
-    } else {
-        return -1;
+        // Comparamos la respuesta con "OK"
+        if (strcmp(respuesta, "OK") == 0) {
+            free(paquete);  // Liberamos memoria del paquete
+            return 1;  // Proceso creado correctamente
+        } else {
+            log_warning(LOGGER_KERNEL, "Error en la creación del proceso: %s", respuesta);
+        }
     }
 
-    free(buffer);
-    return -1;
+    free(paquete);  // Liberamos memoria del paquete
+    return -1;  // Error en la creación del proceso
 }
+
 
 void envio_hilo_crear(int socket_cliente, t_tcb* tcb, op_code codigo) {
     t_paquete* paquete = crear_paquete_con_codigo_operacion(codigo);
@@ -164,5 +172,45 @@ void* procesar_comunicaciones_cpu(void* void_args) {
 
         eliminar_paquete(paquete);
     }
+    return NULL;
+}
+
+void* procesar_comunicaciones_memoria(void* void_args) {
+    t_procesar_conexion_args *args = (t_procesar_conexion_args *)void_args;
+    t_log *logger = args->log;
+    int socket = args->fd;
+    char *server_name = args->server_name;
+    free(args);
+
+    while(socket != -1) {
+        // Recibimos un paquete de memoria (respuesta)
+        t_paquete* paquete = recibir_paquete_entero(socket);
+        void* stream = paquete->buffer->stream;
+        int size = paquete->buffer->size;
+
+        switch (paquete->codigo_operacion) {
+        case HANDSHAKE_memoria:
+            recibir_mensaje(socket, logger);
+            log_info(logger, "Conexion establecida con Memoria");
+            break;
+
+        case MENSAJE:
+            char* respuesta = (char*)stream;
+            if (strcmp(respuesta, "OK") == 0) {
+                log_info(logger, "Proceso creado en memoria.");
+                respuesta_memoria = 1;
+            } else {
+                log_warning(logger, "Error al crear proceso en memoria.");
+            }
+            break;
+        
+        default:
+            log_error(logger, "Operacion desconocida");
+            break;
+        }
+
+        eliminar_paquete(paquete);
+    }
+
     return NULL;
 }
