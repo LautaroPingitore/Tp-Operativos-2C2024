@@ -19,18 +19,20 @@ int socket_cpu_memoria;
 int main() {
     inicializar_config("cpu");
 
+    int sockets[] = {socket_cpu_dispatch_kernel, socket_cpu_interrupt_kernel, socket_cpu_memoria,socket_cpu_dispatch,socket_cpu_interrupt, -1};
     socket_cpu_memoria = crear_conexion(IP_MEMORIA, PUERTO_MEMORIA);
-    if(socket_cpu_memoria < 0) {
+
+    //manejo error de conexion
+    if(socket_cpu_memoria == -1) {
         log_error(LOGGER_CPU, "No se pudo conectar con el módulo Memoria");
-        cerrar_conexiones();
-        return EXIT_FAILURE;
+        terminar_programa(CONFIG_CPU,LOGGER_CPU,sockets);
+        exit (EXIT_FAILURE);
     }
     log_info(LOGGER_CPU, "Conexión establecida con Memoria");
 
     manejar_conexion_kernel_dispatch();
     manejar_conexion_kernel_interrupt();
 
-    int sockets[] = {socket_cpu_dispatch_kernel, socket_cpu_interrupt_kernel, socket_cpu_memoria, -1};
     terminar_programa(CONFIG_CPU, LOGGER_CPU, sockets);
     return 0;
 }
