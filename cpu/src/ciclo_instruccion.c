@@ -13,7 +13,6 @@ void ejecutar_ciclo_instruccion(int socket_cliente) {
             break;
         }
 
-        // CUIDADO ACA, HAY QUE VOLVER A HACER CASI TODO CPU
         t_instruccion *instruccion = fetch(hilo_actual->TID, hilo_actual->PC);
         
         if (!instruccion) {

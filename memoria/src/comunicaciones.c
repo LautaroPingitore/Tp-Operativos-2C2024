@@ -328,6 +328,7 @@ void eliminar_proceso_de_lista(uint32_t pid) {
 //-----------------|
 // CREACION DE HILO|
 //-----------------|
+
 t_hilo_memoria* deserializar_hilo_memoria(int socket, void* stream, int size) {
     t_hilo_memoria* hilo = malloc(sizeof(t_hilo_memoria));
 
@@ -337,9 +338,7 @@ t_hilo_memoria* deserializar_hilo_memoria(int socket, void* stream, int size) {
     memcpy(&hilo->pid_padre, stream + size, sizeof(uint32_t));
     size += sizeof(uint32_t);
 
-    // ERROR YA QUE NO ESTA BIEN HACER UN SIZEOF(CHAR*)
-    memcpy(&hilo->archivo, stream + size, sizeof(hilo->archivo));
-    //size += sizeof(hilo->archivo); ESTO LO PONEMOS O NO? PQ NO ESTABA ANTES
+    memcpy(&hilo->archivo, stream + size, sizeof(strlen(hilo->archivo) + 1));
 
     return hilo;
 }
@@ -390,6 +389,10 @@ void agregar_instrucciones_a_lista(uint32_t tid, char* archivo) {
         inst->parametro2 = malloc(15);
 
         int elementos = sscanf(line, "%s %s %s %d", inst->nombre, inst->parametro1, inst->parametro2, &(inst->parametro3));
+        inst->nombre = realloc(inst->nombre, strlen(inst->nombre) + 1);
+        inst->parametro1 = realloc(inst->parametro1, strlen(inst->parametro1) + 1);
+        inst->parametro2 = realloc(inst->parametro2, strlen(inst->parametro2) + 1);
+
         if (elementos == 3) {
             inst->parametro3 = -1;
         } else if (elementos == 2) {
@@ -639,7 +642,7 @@ t_list* convertir_registros_a_char(t_registros* registros) {
     };
 
     for (int i = 0; i < 8; i++) {
-        char* registro_str = malloc(12); // Espacio para un entero de 32 bits (10 dígitos máx.) + nulo
+        char* registro_str = malloc(strlen(registro_str) + 1); // Espacio para un entero de 32 bits (10 dígitos máx.) + nulo
         if (!registro_str) {
             list_destroy_and_destroy_elements(lista, free); // Limpiar si hay error
             return NULL;
@@ -844,8 +847,8 @@ void procesar_actualizacion_contexto(int socket_cliente, uint32_t pid, uint32_t 
 int mandar_solicitud_dump_memory(char* nombre_archivo, char* contenido_proceso, int tamanio) {
     t_paquete* paquete = crear_paquete_con_codigo_operacion(DUMP_MEMORY);
     // ERROR YA QUE NO ESTA BIEN HACER UN SIZEOF(CHAR*)
-    agregar_a_paquete(paquete, &nombre_archivo, sizeof(nombre_archivo)); //
-    agregar_a_paquete(paquete, &contenido_proceso, sizeof(contenido_proceso));// 
+    agregar_a_paquete(paquete, &nombre_archivo, sizeof(strlen(nombre_archivo) + 1)); //
+    agregar_a_paquete(paquete, &contenido_proceso, sizeof(strlen(contenido_proceso) + 1));// 
     agregar_a_paquete(paquete, &tamanio, sizeof(int));
     serializar_paquete(paquete, paquete->buffer->size);
 

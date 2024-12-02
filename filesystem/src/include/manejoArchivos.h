@@ -1,6 +1,8 @@
 #ifndef MANEJOARCHIVOS_H_
 #define MANEJOARCHIVOS_H_
 
+extern char* bitmap_memoria;
+
 int crear_archivo_dump(char*, char*, int);
 void escribir_en_bloques(char*, int, int);
 int asignar_bloque();

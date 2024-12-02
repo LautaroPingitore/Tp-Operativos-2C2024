@@ -200,9 +200,9 @@ t_contexto_ejecucion* inicializar_contexto() {
 // ENVIA EL PROCECSO A MEMORIA E INTENTA INICIALIZARLO
 void inicializar_proceso(t_pcb* pcb, char* path_proceso) {
     enviar_proceso_memoria(socket_kernel_memoria, pcb, PROCESS_CREATE);
-    int resultado = respuesta_memoria_creacion(socket_kernel_memoria);
+    int se_pudo_asignar = respuesta_memoria_creacion(socket_kernel_memoria); 
 
-    if (resultado == 1) {
+    if (se_pudo_asignar == 1) {
         log_info(LOGGER_KERNEL, "Proceso %d inicializado y movido a READY", pcb->PID);
         mover_a_ready(pcb);
     } else {

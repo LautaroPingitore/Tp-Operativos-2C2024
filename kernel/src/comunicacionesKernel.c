@@ -43,7 +43,7 @@ void envio_hilo_crear(int socket_cliente, t_tcb* tcb, op_code codigo) {
 
     agregar_a_paquete(paquete, &tcb->TID, sizeof(uint32_t));
     agregar_a_paquete(paquete, &tcb->PID_PADRE, sizeof(uint32_t));
-    agregar_a_paquete(paquete, &tcb->archivo, sizeof(tcb->archivo));
+    agregar_a_paquete(paquete, &tcb->archivo, sizeof(strlen(tcb->archivo) + 1));
     serializar_paquete(paquete, paquete->buffer->size);
 
     if (enviar_paquete(paquete, socket_cliente) == -1) {
@@ -84,7 +84,7 @@ void manejar_hilo_cpu() {
 
     switch (paquete->codigo_operacion) {
     case FINALIZACION_QUANTUM:
-        list_remove(cola_exec, 0);
+        list_remove(cola_exec, 0); //Pq cola exec si ejecuta uno solo a la vez, no va a ser una cola, va a haber uno solo siempre
         log_info(LOGGER_KERNEL, "## (<%d>:<%d>) - Desalojado por fin de Quantum", hilo->PID_PADRE, hilo->TID);
         pthread_mutex_lock(&mutex_cola_ready);
         list_add(cola_ready, hilo);
@@ -121,10 +121,10 @@ void enviar_memory_dump(t_pcb* pcb, uint32_t tid) {
 // ACA SOLO ESTA PUESTA LA DE FIN DE QUANTUM
 void enviar_interrupcion_cpu(op_code interrupcion, int quantum) {
     t_paquete* paquete = crear_paquete_con_codigo_operacion(interrupcion);
-    bool interrupcion = true;
+    bool hay_interrupcion = true;
     agregar_a_paquete(paquete, &quantum, sizeof(int));
-    agregar_a_paquete(paquete, &interrupcion, sizeof(bool));
-    serializar_paquete(paquete);
+    agregar_a_paquete(paquete, &hay_interrupcion, sizeof(bool));
+    serializar_paquete(paquete, paquete->buffer->size);
 
     if(enviar_paquete(paquete, socket_kernel_cpu_interrupt) == -1) {
         log_error(LOGGER_KERNEL, "Error al enviar la interrupcion");
