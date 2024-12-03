@@ -1,7 +1,7 @@
 #ifndef FILESYSTEM_H_
 #define FILESYSTEM_H_
 
-#define MAX_CLIENTES 100
+#include "../../utils/src/utils/include/hello.h"
 
 extern char* PUERTO_ESCUCHA;
 extern char* MOUNT_DIR;
@@ -16,21 +16,27 @@ extern t_config *CONFIG_FILESYSTEM;
 
 extern int socket_filesystem;
 
-extern pthread_mutex_t server_mutex;
-extern sem_t sem_clientes;
-
-void handle_signal(int);
-void inicializar_config(char*);
-void inicializar_archivo(char*, size_t, char*);
-void iniciar_archivos();
-void* handle_client(void*);
-void escuchar_filesystem();
-int server_escuchar(t_log*, char*, int);
+typedef struct {
+    char* nombre;
+    uint32_t tamanio_nombre;
+    char* contenido;
+    uint32_t tamanio_contenido;
+} t_archivo_dump;
 
 typedef struct {
     int socket_cliente;
     struct sockaddr_in direccion_cliente;
 } t_datos_cliente;
 
+void inicializar_config(char*);
+void inicializar_archivo(char*, size_t, char*);
+void iniciar_archivos();
+void iniciar_conexiones();
+void escuhar_filesystem();
+void server_escuchar(t_log*, char* , int);
+void gestionar_conexiones(void*);
+
+t_archivo_dump* recibir_datos_archivo(int);
+t_archivo_dump* deserializar_archivo_dump(t_buffer*);
 
 #endif /* FILESYSTEM_H_ */

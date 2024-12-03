@@ -135,6 +135,7 @@ int recibir_operacion(int);
 void recibir_mensaje(int, t_log*);
 void* serializar_paquete(t_paquete*, int);
 void enviar_mensaje(char*, int);
+void enviar_handshake(char*, int, op_code);
 void crear_buffer(t_paquete*);
 void agregar_a_paquete(t_paquete*, void*, int);
 int enviar_paquete(t_paquete*, int);

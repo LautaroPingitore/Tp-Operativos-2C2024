@@ -4,7 +4,7 @@ char* bitmap_memoria = NULL;
 
 void cargar_bitmap() {
     char bitmap_path[256];
-    sprintf(bitmap_path, "../%s/bitmap.dat", MOUNT_DIR);
+    sprintf(bitmap_path, "%s/bitmap.dat", MOUNT_DIR);
 
     FILE* bitmap = fopen(bitmap_path, "r");
     if (!bitmap) {
@@ -35,7 +35,7 @@ void guardar_bitmap() {
     }
 
     char bitmap_path[256];
-    sprintf(bitmap_path, "./%s/bitmap.dat", MOUNT_DIR);
+    sprintf(bitmap_path, "%s/bitmap.dat", MOUNT_DIR);
 
     FILE* bitmap = fopen(bitmap_path, "w+");
     if (!bitmap) {
@@ -89,7 +89,7 @@ int crear_archivo_dump(char* nombre_archivo, char* contenido, int tamanio) {
 void escribir_en_bloques(char* contenido, int tamanio, int bloque_indice) {
     // ABRE BLOQUES.DAT PARA ESCRIBIR
     char bloques_path[256];
-    sprintf(bloques_path, "./%s/bloques.dat", MOUNT_DIR);
+    sprintf(bloques_path, "%s/bloques.dat", MOUNT_DIR);
     FILE* bloques_file = fopen(bloques_path, "r+");
     if (!bloques_file) {
         log_error(LOGGER_FILESYSTEM, "Error al abrir bloques.dat");

@@ -117,6 +117,7 @@ void* procesar_conexion_memoria(void *void_args){
                 break;
 
             case DUMP_MEMORY:
+               
                 uint32_t pid_md, tid_md;
 
                 memcpy(&pid_md, stream + size, sizeof(uint32_t));
@@ -130,6 +131,8 @@ void* procesar_conexion_memoria(void *void_args){
                 } else {
                     enviar_mensaje("ERROR", cliente_socket);
                 }
+                
+                // borrar conexion y volverla a crear
                 break;
 
             case HANDSHAKE_cpu: //AVISA QUE SE CONECTO A CPU
@@ -645,12 +648,13 @@ void procesar_actualizacion_contexto(int socket_cliente, uint32_t pid, uint32_t 
     enviar_mensaje("ERROR", socket_cliente);
 }
 
-int mandar_solicitud_dump_memory(char* nombre_archivo, char* contenido_proceso, int tamanio) {
+int mandar_solicitud_dump_memory(char* nombre_archivo, char* contenido_proceso, uint32_t tamanio) {
     t_paquete* paquete = crear_paquete_con_codigo_de_operacion(DUMP_MEMORY);
-    // ERROR YA QUE NO ESTA BIEN HACER UN SIZEOF(CHAR*)
-    agregar_a_paquete(paquete, &nombre_archivo, sizeof(strlen(nombre_archivo) + 1)); //
-    agregar_a_paquete(paquete, &contenido_proceso, sizeof(strlen(contenido_proceso) + 1));// 
-    agregar_a_paquete(paquete, &tamanio, sizeof(int));
+    uint32_t tamanio_nombre = strlen(nombre_archivo) + 1;
+    agregar_a_paquete(paquete, &tamanio_nombre, sizeof(uint32_t));
+    agregar_a_paquete(paquete, &nombre_archivo, tamanio_nombre); //
+    agregar_a_paquete(paquete, &tamanio, sizeof(uint32_t));
+    agregar_a_paquete(paquete, &contenido_proceso, tamanio);// 
     serializar_paquete(paquete, paquete->buffer->size);
 
     int resultado = enviar_paquete(paquete, socket_memoria_filesystem);
