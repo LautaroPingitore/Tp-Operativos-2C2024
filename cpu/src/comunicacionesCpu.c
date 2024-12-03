@@ -5,7 +5,7 @@ bool hay_interrupcion = false;
 // FUNCIONES DE CICLO_INSTRUCCION
 
 t_tcb* recibir_hilo_kernel(int socket_cliente) {
-    t_paquete* paquete = recibir_paquete_entero(socket_cliente);
+    t_paquete* paquete = recibir_paquete(socket_cliente);
     if(paquete == NULL) {
         log_error(LOGGER_CPU, "Error al recibir el paquete del hilo.");
         return NULL;
@@ -28,7 +28,7 @@ t_tcb* recibir_hilo_kernel(int socket_cliente) {
 
 t_proceso_cpu* deserializar_proceso() {
     t_proceso_cpu* pcb = malloc(sizeof(t_pcb));
-    t_paquete* paquete = recibir_paquete_entero(socket_cpu_dispatch_kernel);
+    t_paquete* paquete = recibir_paquete(socket_cpu_dispatch_kernel);
     void* stream = paquete->buffer->stream;
     int size = paquete->buffer->size;
     
@@ -46,7 +46,7 @@ void* recibir_interrupcion(void* void_args) {
     t_procesar_conexion_args *args = (t_procesar_conexion_args *)void_args;
     int socket = args->fd;
 
-    t_paquete* paquete = recibir_paquete_entero(socket);
+    t_paquete* paquete = recibir_paquete(socket);
 
     if(!paquete) {
         return NULL;
@@ -175,7 +175,7 @@ void enviar_solicitud_valor_memoria(int socket, uint32_t direccion_fisica) {
 }
 
 void recibir_valor_de_memoria(int socket, uint32_t direccion_fisica, uint32_t valor_leido) {
-    t_paquete* paquete = recibir_paquete_entero(socket);
+    t_paquete* paquete = recibir_paquete(socket);
     void* stream = paquete->buffer->stream;
 
     if (paquete->buffer->size < sizeof(uint32_t) + sizeof(uint32_t)) {

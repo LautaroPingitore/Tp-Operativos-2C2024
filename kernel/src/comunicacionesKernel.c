@@ -35,7 +35,7 @@ void enviar_proceso_cpu(int socket, t_pcb* pcb) {
 
 int respuesta_memoria_creacion(int socket_cliente) {
     // Recibimos el paquete completo desde memoria
-    t_paquete* paquete = recibir_paquete_entero(socket_cliente);
+    t_paquete* paquete = recibir_paquete(socket_cliente);
 
     if (paquete == NULL) {
         log_error(LOGGER_KERNEL, "Error al recibir respuesta de memoria");

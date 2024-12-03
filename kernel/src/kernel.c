@@ -146,7 +146,7 @@ void* procesar_comunicaciones_memoria(void* void_args) {
 
     while (socket != -1) {
         // Recibimos un paquete de memoria (respuesta)
-        t_paquete* paquete = recibir_paquete_entero(socket);
+        t_paquete* paquete = recibir_paquete(socket);
         void* stream = paquete->buffer->stream;
 
 
@@ -184,7 +184,7 @@ void* procesar_comunicaciones_cpu(void* void_args) {
     free(args);
 
     while(socket != -1) {
-        t_paquete* paquete = recibir_paquete_entero(socket);  // Recibimos el paquete entero
+        t_paquete* paquete = recibir_paquete(socket);  // Recibimos el paquete entero
         void* stream = paquete->buffer->stream;
         int size = paquete->buffer->size;
 

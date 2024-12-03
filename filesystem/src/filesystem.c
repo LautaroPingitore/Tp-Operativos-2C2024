@@ -155,12 +155,10 @@ void* gestionar_conexiones(void* void_args) {
 
         switch (cod) {
             case HANDSHAKE_memoria:
-                log_info(logger, "ENTRO A HANDSHAKE");
                 recibir_mensaje(socket_cliente, logger);
                 break;
 
             case MENSAJE:
-                log_info(logger, "ENTRO A MENSAJE");
                 recibir_mensaje(socket_cliente, logger);
                 break;
 

@@ -27,26 +27,27 @@ void inicializar_datos(){
     pthread_mutex_init(&mutex_instrucciones, NULL);
 }
 
-// PREGUNTARLE AL AMIGO POR EL TEMA DEL VOID_ARGS
 void* procesar_conexion_memoria(void *void_args){
-    inicializar_datos();
     t_procesar_conexion_args *args = (t_procesar_conexion_args *)void_args;
     t_log *logger = args->log;
     int cliente_socket = args->fd;
     char *server_name = args->server_name;
     free(args);
 
-    while (cliente_socket != -1) {
+    op_code cod;
+    while (1) {
+        // Recibir código de operación
+        ssize_t bytes_recibidos = recv(cliente_socket, &cod, sizeof(op_code), 0);
+        if (bytes_recibidos <= 0) { // El cliente cerró la conexión o hubo un error
+            log_error(logger, "El cliente cerró la conexión.");
+            break; // Salir del bucle y cerrar el hilo
+        }
 
         t_paquete* paquete = recibir_paquete(cliente_socket);
-        void* stream = paquete->buffer->stream;
-        int size = paquete->buffer->size;
 
-        switch (paquete->codigo_operacion) {
-            
+        switch (cod) {
             case HANDSHAKE_kernel: // Simplemente avisa que se conecta a kernel 
                 recibir_mensaje(cliente_socket, logger);
-                log_info(LOGGER_MEMORIA, "Conexion establecida con Kernel");
                 break;
 
             case PROCESS_CREATE:
@@ -220,28 +221,8 @@ void* procesar_conexion_memoria(void *void_args){
 
 
     log_warning(logger, "El cliente se desconectó de %s server", server_name);
+    close(cliente_socket);
     return NULL;
-}
-
-int server_escuchar(t_log *logger, char *server_name, int server_socket) {
-    int cliente_socket = esperar_cliente(server_socket, logger);
-
-    if (cliente_socket != -1) {
-        pthread_t hilo;
-        t_procesar_conexion_args *args = malloc(sizeof(t_procesar_conexion_args));
-        args->log = logger;
-        args->fd = cliente_socket;
-        args->server_name = strdup(server_name);
-        if (pthread_create(&hilo, NULL, (void *)procesar_conexion_memoria, (void *)args) != 0) {
-            log_error(logger, "Error al crear hilo para cliente en %s.", server_name);
-            free(args->server_name);
-            free(args);
-            close(cliente_socket);
-            return 0;
-        }
-        return 1;
-    }
-    return 0;
 }
 
 //---------------------------------------|

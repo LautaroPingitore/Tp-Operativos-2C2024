@@ -56,16 +56,8 @@ void inicializar_programa() {
     log_info(LOGGER_MEMORIA, "Inicializando servidor de memoria en el puerto %s", PUERTO_ESCUCHA);
     socket_memoria = iniciar_servidor(PUERTO_ESCUCHA, LOGGER_MEMORIA, IP_MEMORIA, "MEMORIA");
 
-    // Conectar memoria con filesystem
-    socket_memoria_filesystem = crear_conexion(IP_FILESYSTEM, PUERTO_FILESYSTEM);
-    if (socket_memoria_filesystem < 0) {
-        log_error(LOGGER_MEMORIA, "No se pudo conectar con el módulo FileSystem");
-        exit(EXIT_FAILURE);
-    }
-    enviar_handshake("Hola FILESYSTEM, soy MEMORIA", socket_memoria_filesystem, HANDSHAKE_memoria);
-    usleep(5000);
-    enviar_mensaje("Pto el que recibe", socket_memoria_filesystem);
-    log_info(LOGGER_MEMORIA, "Conexión con FileSystem establecida exitosamente");
+    iniciar_conexiones();
+    
 }
 
 void inicializar_config(char *arg) {
@@ -103,7 +95,6 @@ t_list* obtener_particiones_fijas(char** particiones) {
     return lista_particiones_fijas;
 }
 
-
 void iniciar_conexiones() {
     // SERVER MEMORIA
     socket_memoria = iniciar_servidor(PUERTO_ESCUCHA, LOGGER_MEMORIA, IP_MEMORIA, "MEMORIA");
@@ -111,6 +102,12 @@ void iniciar_conexiones() {
 
     // CONEXION CLIENTE FILESYSTEM
     socket_memoria_filesystem = crear_conexion(IP_FILESYSTEM, PUERTO_FILESYSTEM);
+    if (socket_memoria_filesystem < 0) {
+        log_error(LOGGER_MEMORIA, "No se pudo conectar con el módulo FileSystem");
+        exit(EXIT_FAILURE);
+    }
+    enviar_handshake("Hola FILESYSTEM, soy MEMORIA", socket_memoria_filesystem, HANDSHAKE_memoria);
+    log_info(LOGGER_MEMORIA, "Conexión con FileSystem establecida exitosamente");
 
     // HILO SERVIDOR
     pthread_create(&hilo_server_memoria, NULL, (void*)escuchar_memoria, NULL);
@@ -122,32 +119,26 @@ void escuchar_memoria()
     while(server_escuchar(LOGGER_MEMORIA, "MEMORIA", socket_memoria));
 }
 
+int server_escuchar(t_log *logger, char *server_name, int server_socket) {
+    int cliente_socket = esperar_cliente(server_socket, logger);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    if (cliente_socket != -1) {
+        pthread_t hilo;
+        t_procesar_conexion_args *args = malloc(sizeof(t_procesar_conexion_args));
+        args->log = logger;
+        args->fd = cliente_socket;
+        args->server_name = strdup(server_name);
+        if (pthread_create(&hilo, NULL, (void *)procesar_conexion_memoria, (void *)args) != 0) {
+            log_error(logger, "Error al crear hilo para cliente en %s.", server_name);
+            free(args->server_name);
+            free(args);
+            close(cliente_socket);
+            return 0;
+        }
+        return 1;
+    }
+    return 0;
+}
 
 void manejar_conexiones() {
     while (1) {

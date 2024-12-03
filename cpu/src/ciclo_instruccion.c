@@ -39,7 +39,7 @@ void ejecutar_ciclo_instruccion() {
 t_instruccion *fetch(uint32_t tid, uint32_t pc) {
     pedir_instruccion_memoria(tid, pc, socket_cpu_memoria);
     
-    t_paquete* paquete = recibir_paquete_entero(socket_cpu_memoria);
+    t_paquete* paquete = recibir_paquete(socket_cpu_memoria);
     if (!paquete) {
         log_error(LOGGER_CPU, "Fallo al recibir paquete.");
         return NULL;

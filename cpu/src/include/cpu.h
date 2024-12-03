@@ -18,7 +18,10 @@ extern int socket_cpu_memoria;
 
 void inicializar_config(char*);
 
-void iniciar_comunicaciones(int[]);
-void* procesar_conexion(void*);
+void iniciar_conexiones();
+void* escuchar_cpu();
+int server_escuchar(t_log*, char*, int);
+void* procesar_conexion_dispatch(void*);
+void* procesar_conexion_interrupt(void*);
 
 #endif /* CPU_H_ */
