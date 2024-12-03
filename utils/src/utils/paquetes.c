@@ -1,3 +1,4 @@
+#include "include/paquetes.h"
 
 // FUNCIONES DE RECIBIR
 t_paquete *recibir_paquete(int socket_cliente) {

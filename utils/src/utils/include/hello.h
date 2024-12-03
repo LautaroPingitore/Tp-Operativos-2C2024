@@ -16,7 +16,6 @@
 #include <stdint.h>
 #include <pthread.h>
 #include <semaphore.h>
-#include "paquetes.h"
 
 /**
 * @brief Imprime un saludo por consola
@@ -24,13 +23,28 @@
 * @return No devuelve nada
 */
 
-// Definición del tipo para los argumentos de la conexión
+
+
+// SERVIDORES.h
+extern t_log* logger_recibido;
+
+// Definición del tipo para los argumentos de la conexión 
 typedef struct {
     t_log *log;          // Logger para registrar eventos
     int fd;              // Descriptor de archivo del socket del cliente
-    char *server_name;   // Nombre del servidor para logging
+    char *server_name;   // Nombre del servidor para logging 
 } t_procesar_conexion_args;
 
+int iniciar_servidor(char*, t_log* , char* , char* );
+int esperar_cliente(int, t_log);
+void iterator(char);
+t_log *iniciar_logger(char*, char);
+t_config *iniciar_config(char*, char);
+void terminar_programa(t_config*, t_log*, int[]);
+int crear_conexion(char*, char);
+void liberar_socket(int);
+
+// PAQUETES.H
 typedef enum{
     HANDSHAKE_consola,
     HANDSHAKE_kernel,
@@ -103,6 +117,29 @@ typedef enum{
     SOLICITUD_PROCESO
 } op_code;
 
+typedef struct {
+	int size;
+	void* stream;
+} t_buffer;
+
+typedef struct {
+	op_code codigo_operacion;
+	t_buffer* buffer;
+} t_paquete;
+
+t_paquete* recibir_paquete(int);
+void* recibir_buffer(int*, int);
+int recibir_operacion(int);
+void recibir_mensaje(int, t_log*);
+void* serializar_paquete(t_paquete*, int);
+void enviar_mensaje(char*, int);
+void crear_buffer(t_paquete*);
+void agregar_a_paquete(t_paquete*, void*, int);
+int enviar_paquete(t_paquete*, int);
+void eliminar_paquete(t_paquete*);
+void liberar_conexion(int);
+
+
 
 typedef enum {
     INTERRUPCION_SYSCALL,
@@ -139,8 +176,6 @@ typedef struct {
     char* parametro2;
     int parametro3; // ELIMINE LOS OTROS PARAMETROS YA QUE LAS INSTRUCCIONES QUE TENEMOS SOLO USAN HASTA 2 PARAMETROS
 } t_instruccion;
-
-extern t_log* logger;
 
 typedef enum {
     NEW,
@@ -183,16 +218,7 @@ typedef struct {
     //char* ARCHIVO;
 } t_pcb;
 
-
-int iniciar_servidor(char*, t_log*,char*,char*);
-int esperar_cliente(int, t_log*);
-t_log* iniciar_logger(char*, char*);
-t_config* iniciar_config(char*,char*);
-int crear_conexion(char* ip, char* puerto);
-void liberar_socket(int socket_cliente);
-void terminar_programa(t_config*, t_log*, int []);
-int gestionarConexiones(int, t_log*);
 t_tcb* deserializar_paquete_tcb(void*, int);
-t_instruccion *deserializar_instruccion(void*, int);
+t_instruccion* deserializar_instruccion(void*, int);
 
 #endif
