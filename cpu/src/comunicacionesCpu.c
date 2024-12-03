@@ -82,7 +82,7 @@ bool deserializar_interrupcion(void* stream, int size, int quantum, bool interru
 }
 
 void pedir_instruccion_memoria(uint32_t tid, uint32_t pc, int socket) {
-    t_paquete *paquete = crear_paquete_con_codigo_operacion(PEDIDO_INSTRUCCION);
+    t_paquete *paquete = crear_paquete_con_codigo_de_operacion(PEDIDO_INSTRUCCION);
     agregar_a_paquete(paquete, &tid, sizeof(uint32_t));
     agregar_a_paquete(paquete, &pc, sizeof(uint32_t));
     serializar_paquete(paquete, paquete->buffer->size);
@@ -92,7 +92,7 @@ void pedir_instruccion_memoria(uint32_t tid, uint32_t pc, int socket) {
 }
 
 void enviar_contexto_memoria(uint32_t pid, uint32_t tid, t_registros* registros, uint32_t program_counter, int socket_memoria) {
-    t_paquete *paquete = crear_paquete_con_codigo_operacion(ACTUALIZAR_CONTEXTO);
+    t_paquete *paquete = crear_paquete_con_codigo_de_operacion(ACTUALIZAR_CONTEXTO);
 
     agregar_a_paquete(paquete, &pid, sizeof(uint32_t));
     agregar_a_paquete(paquete, &tid, sizeof(uint32_t));
@@ -105,7 +105,7 @@ void enviar_contexto_memoria(uint32_t pid, uint32_t tid, t_registros* registros,
 }
 
 void enviar_syscall_kernel(t_instruccion* instruccion, op_code syscall) {
-    t_paquete* paquete = crear_paquete_con_codigo_operacion(syscall);
+    t_paquete* paquete = crear_paquete_con_codigo_de_operacion(syscall);
     agregar_a_paquete(paquete, &instruccion->nombre, sizeof(instruccion->nombre));
     agregar_a_paquete(paquete, &instruccion->parametro1, sizeof(instruccion->parametro1));
     agregar_a_paquete(paquete, &instruccion->parametro2, sizeof(instruccion->parametro2));
@@ -124,7 +124,7 @@ void enviar_syscall_kernel(t_instruccion* instruccion, op_code syscall) {
 
 void enviar_interrupcion_segfault(uint32_t pid, int socket) {
     // Crear el paquete de interrupcion
-    t_paquete* paquete = crear_paquete_con_codigo_operacion(SEGF_FAULT);
+    t_paquete* paquete = crear_paquete_con_codigo_de_operacion(SEGF_FAULT);
     
     // Agregar el PID al paquete
     agregar_a_paquete(paquete, &pid, sizeof(uint32_t));
@@ -143,7 +143,7 @@ void enviar_interrupcion_segfault(uint32_t pid, int socket) {
 }
 
 void enviar_valor_a_memoria(int socket, uint32_t dire_fisica, uint32_t* valor) {
-    t_paquete *paquete = crear_paquete_con_codigo_operacion(ESCRIBIR_VALOR_MEMORIA);
+    t_paquete *paquete = crear_paquete_con_codigo_de_operacion(ESCRIBIR_VALOR_MEMORIA);
 
     // Agregar la dirección física y el valor del registro de datos al paquete
     agregar_a_paquete(paquete, &dire_fisica, sizeof(uint32_t));
@@ -162,7 +162,7 @@ void enviar_valor_a_memoria(int socket, uint32_t dire_fisica, uint32_t* valor) {
 }
 
 void enviar_solicitud_valor_memoria(int socket, uint32_t direccion_fisica) {
-    t_paquete *paquete = crear_paquete_con_codigo_operacion(PEDIR_VALOR_MEMORIA);
+    t_paquete *paquete = crear_paquete_con_codigo_de_operacion(PEDIR_VALOR_MEMORIA);
     agregar_a_paquete(paquete, &direccion_fisica, sizeof(uint32_t));
 
     if (enviar_paquete(paquete, socket) < 0) {
@@ -192,7 +192,7 @@ void recibir_valor_de_memoria(int socket, uint32_t direccion_fisica, uint32_t va
 // FUNCIONES MMU
 
 void enviar_solicitud_memoria(int socket, uint32_t pid, op_code codigo, const char* descripcion) {
-    t_paquete* paquete = crear_paquete_con_codigo_operacion(codigo);
+    t_paquete* paquete = crear_paquete_con_codigo_de_operacion(codigo);
     agregar_a_paquete(paquete, &pid, sizeof(uint32_t));
     serializar_paquete(paquete, paquete->buffer->size);
 

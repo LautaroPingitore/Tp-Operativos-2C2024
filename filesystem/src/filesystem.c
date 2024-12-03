@@ -140,11 +140,11 @@ void iniciar_conexiones() {
 
     // HILO SERVIDOR
     pthread_create(&hilo_server_filesystem, NULL, (void*)escuchar_filesystem, NULL);
-    pthread_detach(&hilo_server_filesystem);
+    pthread_detach(hilo_server_filesystem);
 }
 
 void escuchar_filesystem() {
-    while(server_escuchar(LOGGER_FILESYSTEM, "FILESYSTEM", socket_filesystem))
+    while(server_escuchar(LOGGER_FILESYSTEM, "FILESYSTEM", socket_filesystem));
 }
 
 int server_escuchar(t_log *logger, char *server_name, int server_socket)
@@ -172,16 +172,16 @@ void *handle_client(void *void_args) {
     t_procesar_conexion_args *args = (t_procesar_conexion_args *)void_args;
 	t_log *logger = args->log;
 	int cliente_socket = args->fd;
-	char *server_name = args->server_name;
+	//char *server_name = args->server_name;
 
     free(args);
 
     op_code cop;
     while (cliente_socket != -1) {
-        if (recv(cliente_socket, &cop, sizeof(op_cod), 0) != sizeof(op_cod))
+        if (recv(cliente_socket, &cop, sizeof(op_code), 0) != sizeof(op_code))
 		{
 			log_debug(logger, "Cliente desconectado.\n");
-			return;
+			return NULL;
 		}
 
         log_info(LOGGER_FILESYSTEM, "Esperando un paquete");
@@ -211,7 +211,7 @@ void *handle_client(void *void_args) {
 
         switch (cop) {
             case CREAR_ARCHIVO:
-                t_paquete* paquete = recibir_paquete(cliente_socket);
+                // t_paquete* paquete = recibir_paquete(cliente_socket);
                 // t_archivo_dump* arch = deserializar_archivo(t_buffer* buffer);
 
 
@@ -262,8 +262,8 @@ void *handle_client(void *void_args) {
 
             case ERROROPCODE:
                 log_error(LOGGER_FILESYSTEM, "El cliente se desconectó. Terminando hilo");
-                close(socket_cliente);
-                free(datos_cliente);
+                close(cliente_socket);
+                free(args);
                 sem_post(&sem_clientes);
                 pthread_exit(NULL);
 
@@ -271,12 +271,11 @@ void *handle_client(void *void_args) {
                 log_warning(LOGGER_FILESYSTEM, "Operación desconocida");
                 break;
         }
-
-        eliminar_paquete(paquete);
     }
 
-    close(socket_cliente);
-    free(datos_cliente);
+    close(cliente_socket);
+    free(args);
     sem_post(&sem_clientes);
     pthread_exit(NULL);
+    return NULL;
 }

@@ -3,19 +3,21 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-#include <commons/log.h>
-#include <commons/string.h>
-#include <commons/config.h>
+#include <../commons/log.h>
+#include <../commons/string.h>
+#include <../commons/config.h>
 #include <readline/readline.h>
 #include <signal.h>
 #include <unistd.h>
 #include <sys/socket.h>
 #include <netdb.h>
-#include <commons/collections/list.h>
+#include <../commons/collections/list.h>
 #include <assert.h>
 #include <stdint.h>
 #include <pthread.h>
 #include <semaphore.h>
+#include "paquetes.h"
+#include "servidores.h"
 
 /**
 * @brief Imprime un saludo por consola
@@ -36,12 +38,12 @@ typedef struct {
 } t_procesar_conexion_args;
 
 int iniciar_servidor(char*, t_log* , char* , char* );
-int esperar_cliente(int, t_log);
-void iterator(char);
-t_log *iniciar_logger(char*, char);
-t_config *iniciar_config(char*, char);
+int esperar_cliente(int, t_log*);
+void iterator(char*);
+t_log *iniciar_logger(char*, char*);
+t_config *iniciar_config(char*, char*);
 void terminar_programa(t_config*, t_log*, int[]);
-int crear_conexion(char*, char);
+int crear_conexion(char*, char*);
 void liberar_socket(int);
 
 // PAQUETES.H
@@ -138,7 +140,7 @@ void agregar_a_paquete(t_paquete*, void*, int);
 int enviar_paquete(t_paquete*, int);
 void eliminar_paquete(t_paquete*);
 void liberar_conexion(int);
-
+t_paquete* crear_paquete_con_codigo_de_operacion(op_code);
 
 
 typedef enum {

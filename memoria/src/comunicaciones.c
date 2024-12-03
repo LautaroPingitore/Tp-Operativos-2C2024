@@ -38,7 +38,7 @@ void* procesar_conexion_memoria(void *void_args){
 
     while (cliente_socket != -1) {
 
-        t_paquete* paquete = recibir_paquete_entero(cliente_socket);
+        t_paquete* paquete = recibir_paquete(cliente_socket);
         void* stream = paquete->buffer->stream;
         int size = paquete->buffer->size;
 
@@ -561,7 +561,7 @@ t_list* obtener_lista_instrucciones_por_tid(uint32_t tid) {
 // INSTRUCCIONES CPU |
 // ------------------|
 int enviar_instruccion(int socket, t_instruccion* inst) {
-    t_paquete* paquete = crear_paquete_con_codigo_operacion(INSTRUCCION);
+    t_paquete* paquete = crear_paquete_con_codigo_de_operacion(INSTRUCCION);
     agregar_a_paquete(paquete, &inst, sizeof(t_instruccion));
     serializar_paquete(paquete, paquete->buffer->size);
 
@@ -572,7 +572,7 @@ int enviar_instruccion(int socket, t_instruccion* inst) {
 }
 
 void enviar_valor_leido_cpu(int socket, uint32_t dire_fisica, uint32_t valor) {
-    t_paquete* paquete = crear_paquete_con_codigo_operacion(PEDIDO_READ_MEM);
+    t_paquete* paquete = crear_paquete_con_codigo_de_operacion(PEDIDO_READ_MEM);
     agregar_a_paquete(paquete, &dire_fisica, sizeof(uint32_t));
     agregar_a_paquete(paquete, &valor, sizeof(uint32_t));
     serializar_paquete(paquete, paquete->buffer->size);
@@ -618,7 +618,7 @@ void procesar_solicitud_contexto(int socket_cliente, uint32_t pid, uint32_t tid)
 } 
 
 int enviar_contexto_cpu(t_proceso_memoria* proceso) {
-    t_paquete* paquete = crear_paquete_con_codigo_operacion(CONTEXTO);
+    t_paquete* paquete = crear_paquete_con_codigo_de_operacion(CONTEXTO);
     agregar_a_paquete(paquete, &proceso->pid, sizeof(uint32_t));
     agregar_a_paquete(paquete, &proceso->contexto->registros, sizeof(t_registros));
     agregar_a_paquete(paquete, &proceso->contexto->motivo_finalizacion, sizeof(finalizacion_proceso));
@@ -646,7 +646,7 @@ void procesar_actualizacion_contexto(int socket_cliente, uint32_t pid, uint32_t 
 }
 
 int mandar_solicitud_dump_memory(char* nombre_archivo, char* contenido_proceso, int tamanio) {
-    t_paquete* paquete = crear_paquete_con_codigo_operacion(DUMP_MEMORY);
+    t_paquete* paquete = crear_paquete_con_codigo_de_operacion(DUMP_MEMORY);
     // ERROR YA QUE NO ESTA BIEN HACER UN SIZEOF(CHAR*)
     agregar_a_paquete(paquete, &nombre_archivo, sizeof(strlen(nombre_archivo) + 1)); //
     agregar_a_paquete(paquete, &contenido_proceso, sizeof(strlen(contenido_proceso) + 1));// 

@@ -140,7 +140,7 @@ void iterator(char *value)
 	log_info(logger_recibido, "%s", value);
 }
 
-t_log *iniciar_logger(char *file_name, char *name)
+t_log* iniciar_logger(char *file_name, char *name)
 {
 	t_log *nuevo_logger;
 	nuevo_logger = log_create(file_name, name, 1, LOG_LEVEL_INFO); // LOG_LEVEL_TRACE
@@ -153,7 +153,7 @@ t_log *iniciar_logger(char *file_name, char *name)
 	return nuevo_logger;
 }
 
-t_config *iniciar_config(char *file_name, char *name)
+t_config* iniciar_config(char *file_name, char *name)
 {
 	t_config *nuevo_config;
 	nuevo_config = config_create(file_name);
@@ -295,15 +295,15 @@ void enviar_mensaje(char *mensaje, int socket_cliente)
 	paquete->buffer->stream = malloc(paquete->buffer->size);
 	memcpy(paquete->buffer->stream, mensaje, paquete->buffer->size);
 
-	void *a_enviar = malloc(paquete->buffer->size + sizeof(op_cod) + sizeof(uint32_t));
+	void *a_enviar = malloc(paquete->buffer->size + sizeof(op_code) + sizeof(uint32_t));
 	int offset = 0;
 
-	memcpy(a_enviar + offset, &(paquete->codigo_operacion), sizeof(op_cod));
-	offset += sizeof(op_cod);
+	memcpy(a_enviar + offset, &(paquete->codigo_operacion), sizeof(op_code));
+	offset += sizeof(op_code);
 	memcpy(a_enviar + offset, &(paquete->buffer->size), sizeof(uint32_t));
 	offset += sizeof(uint32_t);
 	memcpy(a_enviar + offset, paquete->buffer->stream, paquete->buffer->size);
-	if (send(socket_cliente, a_enviar, paquete->buffer->size + sizeof(op_cod) + sizeof(uint32_t), 0) == -1)
+	if (send(socket_cliente, a_enviar, paquete->buffer->size + sizeof(op_code) + sizeof(uint32_t), 0) == -1)
 	{
 		free(a_enviar);
 	}
@@ -331,20 +331,20 @@ void agregar_a_paquete(t_paquete *paquete, void *valor, int tamanio)
 int enviar_paquete(t_paquete *paquete, int socket_cliente)
 {
     // Calcular el tamaño total del mensaje a enviar
-    size_t total_size = sizeof(op_cod) + sizeof(int) + paquete->buffer->size;
+    size_t total_size = sizeof(op_code) + sizeof(int) + paquete->buffer->size;
 
     // Asignar memoria para el buffer que se va a enviar
     void *a_enviar = malloc(total_size);
     if (a_enviar == NULL) {
         perror("Error al asignar memoria para a_enviar");
-        return;
+        return -1;
     }
 
     int offset = 0;
 
     // Copiar el código de operación al inicio del buffer
-    memcpy(a_enviar + offset, &(paquete->codigo_operacion), sizeof(op_cod));
-    offset += sizeof(op_cod);
+    memcpy(a_enviar + offset, &(paquete->codigo_operacion), sizeof(op_code));
+    offset += sizeof(op_code);
 
     // Copiar el tamaño del buffer después del código de operación
     memcpy(a_enviar + offset, &(paquete->buffer->size), sizeof(int));
@@ -374,7 +374,7 @@ void eliminar_paquete(t_paquete *paquete)
 	free(paquete);
 }
 
-t_paquete *crear_paquete_con_codigo_de_operacion(op_cod codigo)
+t_paquete *crear_paquete_con_codigo_de_operacion(op_code codigo)
 {
 	t_paquete *paquete = malloc(sizeof(t_paquete));
 	paquete->codigo_operacion = codigo;

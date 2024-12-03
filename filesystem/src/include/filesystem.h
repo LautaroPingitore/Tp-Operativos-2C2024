@@ -24,6 +24,8 @@ void inicializar_config(char*);
 void inicializar_archivo(char*, size_t, char*);
 void iniciar_archivos();
 void* handle_client(void*);
+void escuchar_filesystem();
+int server_escuchar(t_log*, char*, int);
 
 typedef struct {
     int socket_cliente;

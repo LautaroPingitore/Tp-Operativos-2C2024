@@ -228,7 +228,7 @@ void devolver_control_al_kernel() {
     log_info(LOGGER_CPU, "Devolviendo control al Kernel...");
 
     // Crear un paquete para notificar al Kernel
-    t_paquete *paquete = crear_paquete_con_codigo_operacion(DEVOLVER_CONTROL_KERNEL);
+    t_paquete *paquete = crear_paquete_con_codigo_de_operacion(DEVOLVER_CONTROL_KERNEL);
     hilo_actual->motivo_desalojo = INTERRUPCION_BLOQUEO;
     agregar_a_paquete(paquete, &hilo_actual, sizeof(t_tcb));
     serializar_paquete(paquete, paquete->buffer->size);
