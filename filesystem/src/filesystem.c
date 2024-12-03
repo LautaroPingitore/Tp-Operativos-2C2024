@@ -89,24 +89,32 @@ void iniciar_conexiones() {
     } else {
         log_info(LOGGER_FILESYSTEM, "SE A CREADOASSSCAS");
     }
-    pthread_detach(hilo_servidor_filesystem);
+    if (pthread_join(hilo_servidor_filesystem, NULL) != 0) {
+        log_error(LOGGER_FILESYSTEM, "Error al esperar la finalización del hilo escuchar_filesystem.");
+    } else {
+        log_info(LOGGER_FILESYSTEM, "El hilo escuchar_filesystem finalizó correctamente.");
+}
 }
 
-void* escuchar_filesystem()
-{
-    log_info(LOGGER_FILESYSTEM, "Esperando conexiones...");
+void* escuchar_filesystem() {
+    log_info(LOGGER_FILESYSTEM, "El hilo de escuchar_filesystem ha iniciado.");
     while (server_escuchar(LOGGER_FILESYSTEM, "FILESYSTEM", socket_filesystem)) {
-        log_info(LOGGER_FILESYSTEM, "Conexión procesada");
+        log_info(LOGGER_FILESYSTEM, "Conexión procesada.");
     }
+    log_warning(LOGGER_FILESYSTEM, "El servidor de filesystem terminó inesperadamente.");
     return NULL;
 }
 
 int server_escuchar(t_log* logger, char* servidor, int socket_server) {
-    log_info(LOGGER_FILESYSTEM, "Esperando cliente...");
-    int socket_cliente = esperar_cliente(socket_filesystem, LOGGER_FILESYSTEM);
+    log_info(logger, "Esperando cliente...");
+    int socket_cliente = esperar_cliente(socket_server, logger);
+
     if (socket_cliente == -1) {
-        log_error(LOGGER_FILESYSTEM, "Error al aceptar la conexión del cliente.");
+        log_error(logger, "Error al aceptar la conexión del cliente.");
+        return 0;
     }
+
+    log_info(logger, "Cliente conectado. Procesando conexión...");
 
     if (socket_cliente != -1)
 	{
@@ -131,52 +139,54 @@ int server_escuchar(t_log* logger, char* servidor, int socket_server) {
 
 void* gestionar_conexiones(void* void_args) {
     t_procesar_conexion_args *args = (t_procesar_conexion_args *)void_args;
-	t_log *logger = args->log;
-	int socket_cliente = args->fd;
-	//char *server_name = args->server_name;
+    t_log *logger = args->log;
+    int socket_cliente = args->fd;
 
-	free(args);
+    free(args);
 
     op_code cod;
-    while(socket_cliente != -1) {
-        if (recv(socket_cliente, &cod, sizeof(op_code), 0) != sizeof(op_code)) {
-			log_debug(logger, "Cliente desconectado.\n");
-			return NULL;
-		}
+    while (1) {
+        // Recibir código de operación
+        ssize_t bytes_recibidos = recv(socket_cliente, &cod, sizeof(op_code), 0);
+        if (bytes_recibidos <= 0) { // El cliente cerró la conexión o hubo un error
+            log_error(logger, "El cliente cerró la conexión.");
+            break; // Salir del bucle y cerrar el hilo
+        }
 
         switch (cod) {
-        case HANDSHAKE_memoria:
-            log_info(LOGGER_FILESYSTEM, "ENTRO A HANDSHAKE");
-            recibir_mensaje(socket_cliente, LOGGER_FILESYSTEM);
-            break;
+            case HANDSHAKE_memoria:
+                log_info(logger, "ENTRO A HANDSHAKE");
+                recibir_mensaje(socket_cliente, logger);
+                break;
 
-        case MENSAJE:
-            log_info(LOGGER_FILESYSTEM, "ENTRO A MENSAJE");
-            recibir_mensaje(socket_cliente, LOGGER_FILESYSTEM);
-            break;
-        
-        case DUMP_MEMORY:
-            log_info(LOGGER_FILESYSTEM, "ENTRO A DUMP_MEMORY");
-            t_archivo_dump* archivo = recibir_datos_archivo(socket_cliente);
-            int resultado = crear_archivo_dump(archivo->nombre, archivo->contenido, archivo->tamanio_contenido);
-            if (resultado == -1) {
-                enviar_mensaje("Error en la creación de archivo", socket_cliente);
-            } else {
-                enviar_mensaje("OK", socket_cliente);
-            }
-            log_info(LOGGER_FILESYSTEM, "## Fin de solicitud - Archivo: %s", archivo->nombre);
-            free(archivo->contenido);
-            free(archivo->contenido);
-            free(archivo);
-            break;
+            case MENSAJE:
+                log_info(logger, "ENTRO A MENSAJE");
+                recibir_mensaje(socket_cliente, logger);
+                break;
 
-        default:
-            log_error(LOGGER_FILESYSTEM, "Codigo de operacion nro %d desconocido", cod);
-            break;
+            case DUMP_MEMORY:
+                log_info(logger, "ENTRO A DUMP_MEMORY");
+                t_archivo_dump* archivo = recibir_datos_archivo(socket_cliente);
+                int resultado = crear_archivo_dump(archivo->nombre, archivo->contenido, archivo->tamanio_contenido);
+                if (resultado == -1) {
+                    enviar_mensaje("Error en la creación de archivo", socket_cliente);
+                } else {
+                    enviar_mensaje("OK", socket_cliente);
+                }
+                log_info(logger, "## Fin de solicitud - Archivo: %s", archivo->nombre);
+                free(archivo->contenido);
+                free(archivo->nombre);
+                free(archivo);
+                break;
+
+            default:
+                log_error(logger, "Código de operación desconocido: %d", cod);
+                break;
         }
     }
 
-    log_warning(LOGGER_FILESYSTEM, "El cliente se desconecto de Filesystem");
+    log_warning(logger, "Finalizando conexión con el cliente.");
+    close(socket_cliente); // Cerrar el socket del cliente
     return NULL;
 }
 
