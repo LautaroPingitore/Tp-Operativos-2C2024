@@ -35,7 +35,7 @@ int main() {
     manejar_conexiones();
 
     // Ejecutar el servidor en un bucle principal, esperando solicitudes y procesando respuestas
-    int sockets[] = {socket_memoria, socket_memoria_cpu_dispatch, socket_memoria_cpu_interrupt, socket_memoria_kernel, socket_memoria_filesystem, -1};
+    int sockets[] = {socket_memoria, socket_memoria_cpu, socket_memoria_kernel, socket_memoria_filesystem, -1};
     terminar_programa(CONFIG_MEMORIA, LOGGER_MEMORIA, sockets);
 
     return 0;

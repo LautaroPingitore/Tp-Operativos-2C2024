@@ -384,7 +384,7 @@ void enviar_handshake(char* mensaje, int socket, op_code codigo) {
 	memcpy(a_enviar + offset, &(paquete->buffer->size), sizeof(uint32_t));
 	offset += sizeof(uint32_t);
 	memcpy(a_enviar + offset, paquete->buffer->stream, paquete->buffer->size);
-	if (send(socket_cliente, a_enviar, paquete->buffer->size + sizeof(op_code) + sizeof(uint32_t), 0) == -1)
+	if (send(socket, a_enviar, paquete->buffer->size + sizeof(op_code) + sizeof(uint32_t), 0) == -1)
 	{
 		free(a_enviar);
 	}

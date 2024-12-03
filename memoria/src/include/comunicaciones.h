@@ -54,7 +54,7 @@ void enviar_valor_leido_cpu(int, uint32_t, uint32_t);
 void procesar_solicitud_contexto(int, uint32_t, uint32_t);
 int enviar_contexto_cpu(t_proceso_memoria*);
 void procesar_actualizacion_contexto(int, uint32_t, uint32_t, t_contexto_ejecucion*);
-int  mandar_solicitud_dump_memory(char*, char*, int);
+int  mandar_solicitud_dump_memory(char*, char*, uint32_t);
 void liberar_instrucciones(t_list*);
 t_proceso_memoria* obtener_proceso_memoria(uint32_t);
 t_list* convertir_registros_a_char(t_registros*);

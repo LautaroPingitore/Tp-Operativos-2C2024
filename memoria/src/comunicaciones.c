@@ -617,7 +617,7 @@ void procesar_solicitud_contexto(int socket_cliente, uint32_t pid, uint32_t tid)
     }
 
     log_error(LOGGER_MEMORIA, "No se encontró contexto para el PID: %d, TID: %d", pid, tid);
-    enviar_mensaje("ERROR", socket_memoria_cpu_dispatch);
+    enviar_mensaje("ERROR", socket_memoria_cpu);
 } 
 
 int enviar_contexto_cpu(t_proceso_memoria* proceso) {
@@ -627,7 +627,7 @@ int enviar_contexto_cpu(t_proceso_memoria* proceso) {
     agregar_a_paquete(paquete, &proceso->contexto->motivo_finalizacion, sizeof(finalizacion_proceso));
     serializar_paquete(paquete, paquete->buffer->size);
     
-    int resultado = enviar_paquete(paquete, socket_memoria_cpu_dispatch);
+    int resultado = enviar_paquete(paquete, socket_memoria_cpu);
     eliminar_paquete(paquete);
     return resultado;
 }
@@ -703,5 +703,5 @@ void escribir_memoria(uint32_t direccion_fisica, uint32_t valor) {
     
     // Log de éxito y respuesta
     log_info(LOGGER_MEMORIA, "Escritura exitosa: Dirección física %d, Valor %d", direccion_fisica, valor);
-    enviar_mensaje("OK", socket_memoria_cpu_dispatch);  // Responder OK al cliente
+    enviar_mensaje("OK", socket_memoria_cpu);  // Responder OK al cliente
 }

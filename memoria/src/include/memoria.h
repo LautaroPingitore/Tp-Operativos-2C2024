@@ -15,8 +15,7 @@ extern char* IP_MEMORIA;
 
 extern int socket_memoria;
 extern int socket_memoria_kernel;
-extern int socket_memoria_cpu_dispatch;
-extern int socket_memoria_cpu_interrupt;
+extern int socket_memoria_cpu;
 extern int socket_memoria_filesystem;
 
 extern t_log* LOGGER_MEMORIA;
@@ -26,5 +25,6 @@ void inicializar_programa();
 void inicializar_config(char*);
 void manejar_conexiones();
 t_list* obtener_particiones_fijas(char**);
+void escuchar_memoria();
 
 #endif /* MEMORIA_H_ */

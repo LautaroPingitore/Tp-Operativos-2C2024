@@ -13,15 +13,17 @@ t_config *CONFIG_FILESYSTEM;
 
 int socket_filesystem;
 
+pthread_t hilo_servidor_filesystem;
+
 int main() {
     inicializar_config("filesystem");
     iniciar_archivos();
     cargar_bitmap();
     
     iniciar_conexiones();
-    gestionar_conexiones();
 
-    terminar_programa(CONFIG_FILESYSTEM, LOGGER_FILESYSTEM, {socket_filesystem});
+    int sockets[] = {socket_filesystem, -1};
+    terminar_programa(CONFIG_FILESYSTEM, LOGGER_FILESYSTEM, sockets);
     return 0;
 }
 
@@ -75,48 +77,71 @@ void iniciar_archivos() {
 void iniciar_conexiones() {
     // SERVER FS 
     socket_filesystem = iniciar_servidor(PUERTO_ESCUCHA,LOGGER_FILESYSTEM,IP_FILESYSTEM,"FILESYSTEM");
+    if (socket_filesystem == -1) {
+        log_error(LOGGER_FILESYSTEM, "Error al iniciar el servidor. El socket no se pudo crear.");
+        exit(EXIT_FAILURE);
+    }
     log_info(LOGGER_FILESYSTEM, "Servidor filesystem iniciado y escuchando en el puerto %s", PUERTO_ESCUCHA);
 
     // HILOS SERVIDORES
-    pthread_create(&hilo_servidor_filesystem, NULL, (void*)escuchar_filesystem, NULL);
+    if(pthread_create(&hilo_servidor_filesystem, NULL, escuchar_filesystem, NULL) != 0) {
+        log_info(LOGGER_FILESYSTEM, "TRISTEZA PURA");
+    } else {
+        log_info(LOGGER_FILESYSTEM, "SE A CREADOASSSCAS");
+    }
     pthread_detach(hilo_servidor_filesystem);
 }
 
-void escuchar_filesystem()
+void* escuchar_filesystem()
 {
-    while(server_escuchar(LOGGER_FILESYSTEM, "FILESYSTEM", socket_filesystem));
+    log_info(LOGGER_FILESYSTEM, "Esperando conexiones...");
+    while (server_escuchar(LOGGER_FILESYSTEM, "FILESYSTEM", socket_filesystem)) {
+        log_info(LOGGER_FILESYSTEM, "Conexión procesada");
+    }
+    return NULL;
 }
 
-void server_escuchar(t_log* logger,char * servidor, int socket) {
+int server_escuchar(t_log* logger, char* servidor, int socket_server) {
+    log_info(LOGGER_FILESYSTEM, "Esperando cliente...");
     int socket_cliente = esperar_cliente(socket_filesystem, LOGGER_FILESYSTEM);
+    if (socket_cliente == -1) {
+        log_error(LOGGER_FILESYSTEM, "Error al aceptar la conexión del cliente.");
+    }
 
-    if (cliente_socket != -1)
+    if (socket_cliente != -1)
 	{
 		pthread_t hilo;
 		t_procesar_conexion_args *args = malloc(sizeof(t_procesar_conexion_args));
+        if (!args) {
+            log_error(LOGGER_FILESYSTEM, "Error al asignar memoria para las conexiones");
+            close(socket_cliente);
+            return 0;
+        }
 		args->log = logger;
-		args->fd = cliente_socket;
-		args->server_name = server_name;
+		args->fd = socket_cliente;
+		args->server_name = servidor;
 		pthread_create(&hilo, NULL, (void *)gestionar_conexiones, (void *)args);
 		pthread_detach(hilo);
 		return 1;
-	}
+	} else {
+        log_error(LOGGER_FILESYSTEM, ":(");
+    }
 	return 0;
 }
 
-void gestionar_conexiones(void* void_args) {
+void* gestionar_conexiones(void* void_args) {
     t_procesar_conexion_args *args = (t_procesar_conexion_args *)void_args;
 	t_log *logger = args->log;
 	int socket_cliente = args->fd;
-	char *server_name = args->server_name;
+	//char *server_name = args->server_name;
 
 	free(args);
 
     op_code cod;
     while(socket_cliente != -1) {
-        if (recv(cliente_socket, &cop, sizeof(op_cod), 0) != sizeof(op_cod)) {
+        if (recv(socket_cliente, &cod, sizeof(op_code), 0) != sizeof(op_code)) {
 			log_debug(logger, "Cliente desconectado.\n");
-			return;
+			return NULL;
 		}
 
         switch (cod) {
@@ -139,7 +164,7 @@ void gestionar_conexiones(void* void_args) {
             } else {
                 enviar_mensaje("OK", socket_cliente);
             }
-            log_info(LOGGER_FILESYSTEM, "## Fin de solicitud - Archivo: %s", nombre_archivo);
+            log_info(LOGGER_FILESYSTEM, "## Fin de solicitud - Archivo: %s", archivo->nombre);
             free(archivo->contenido);
             free(archivo->contenido);
             free(archivo);
@@ -152,7 +177,7 @@ void gestionar_conexiones(void* void_args) {
     }
 
     log_warning(LOGGER_FILESYSTEM, "El cliente se desconecto de Filesystem");
-    return;
+    return NULL;
 }
 
 t_archivo_dump* recibir_datos_archivo(int socket) {

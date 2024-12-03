@@ -15,6 +15,8 @@ extern t_log *LOGGER_FILESYSTEM;
 extern t_config *CONFIG_FILESYSTEM;
 
 extern int socket_filesystem;
+extern pthread_t hilo_servidor_filesystem;
+
 
 typedef struct {
     char* nombre;
@@ -32,9 +34,10 @@ void inicializar_config(char*);
 void inicializar_archivo(char*, size_t, char*);
 void iniciar_archivos();
 void iniciar_conexiones();
-void escuhar_filesystem();
-void server_escuchar(t_log*, char* , int);
-void gestionar_conexiones(void*);
+void* escuchar_filesystem();
+int server_escuchar(t_log*, char* , int);
+void* gestionar_conexiones(void*);
+
 
 t_archivo_dump* recibir_datos_archivo(int);
 t_archivo_dump* deserializar_archivo_dump(t_buffer*);
