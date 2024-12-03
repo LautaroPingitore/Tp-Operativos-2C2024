@@ -245,14 +245,18 @@ void* serializar_paquete(t_paquete* paquete, int bytes)
 
 void enviar_mensaje(char* mensaje, int socket_cliente) {
 	t_paquete* paquete = crear_paquete_con_codigo_operacion(MENSAJE);
-	agregar_a_paquete(paquete, &mensaje, sizeof(strlen(mensaje) + 1));
+	int tamanio_mensaje = strlen(mensaje) + 1;
+	agregar_a_paquete(paquete, &tamanio_mensaje, sizeof(int));
+	agregar_a_paquete(paquete, &mensaje, tamanio_mensaje);
 	serializar_paquete(paquete, paquete->buffer->size);
+
+	printf("cod de op desde crar paq: %d", paquete->codigo_operacion);
 
 	if(enviar_paquete(paquete, socket_cliente) == 0) {
 		printf("SE HA ENVIADO");
 	} else {
 		printf("NO SE HA ENVIADO");
-	}
+	} 
 
 	eliminar_paquete(paquete);
 }
@@ -406,6 +410,7 @@ t_paquete* crear_paquete_con_codigo_operacion(op_code operacion) {
 	t_paquete* paquete = malloc(sizeof(t_paquete));
 	paquete->codigo_operacion = operacion;
 	crear_buffer(paquete);
+
 	return paquete;
 }
 

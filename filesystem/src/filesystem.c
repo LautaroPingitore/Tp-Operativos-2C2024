@@ -38,7 +38,7 @@ int main() {
     log_info(LOGGER_FILESYSTEM, "Servidor filesystem iniciado y escuchando en el puerto %s", PUERTO_ESCUCHA);
 
     // CICLO PARA ESPERAR CONEXIONES Y CREAR HILOS POR CLIENTE
-    while(server_running) {
+    while(server_running != 0) {
         // ESPERAR A MEMORIA Y GESTIONAR LA CONEXION
         sem_wait(&sem_clientes);
 
@@ -139,9 +139,9 @@ void *handle_client(void *arg) {
     int socket_cliente = datos_cliente->socket_cliente;
 
     char* hola = "Hola FILESYSTEM, soy Memoria";
-    size_t tam = sizeof(strlen(hola) + 1);
+    size_t tam = strlen(hola) + 1;
 
-    log_info(LOGGER_FILESYSTEM, "TmzxZxZXxansadada = %d", (int*)tam);
+    log_info(LOGGER_FILESYSTEM, "Tamaño de la cadena: %zu", tam);
     log_info(LOGGER_FILESYSTEM, "Socket cliente: %d", socket_cliente);
 
     while (1) {
@@ -154,18 +154,38 @@ void *handle_client(void *arg) {
             free(datos_cliente);
             sem_post(&sem_clientes);
             pthread_exit(NULL);
-        }
+        } 
+ 
+        void *stream = paquete->buffer->stream; 
+        int offset = paquete->buffer->size; 
 
-        void *stream = paquete->buffer->stream;
-        int offset = paquete->buffer->size;
+        if(paquete->codigo_operacion == MENSAJE) {
+            log_info(LOGGER_FILESYSTEM, "QUE TP DE VERRRGA");
+        } else if(paquete->codigo_operacion == DEVOLVER_CONTROL_KERNEL){
+            log_info(LOGGER_FILESYSTEM, "LA RE PUTA MADRE QUE TE PARIO");
+        } else {
+            log_info(LOGGER_FILESYSTEM, "Esta como la mierda");
+            log_info(LOGGER_FILESYSTEM, "Cod op: %d", paquete->codigo_operacion);
+        }
 
         log_info(LOGGER_FILESYSTEM, "%d", paquete->buffer->size);
 
+        // int tamanio;
+        // memcpy(&tamanio, stream + offset, sizeof(int));
+        // char* palabra = malloc(tamanio);
+        // memcpy(&palabra, stream + offset + sizeof(int), sizeof(tamanio));
+        // if (palabra == NULL) {
+        //     log_error(LOGGER_FILESYSTEM, "Error al asignar memoria para la palabra");
+        //     return NULL;
+        // }
+        // palabra[tamanio] = '\0';
+        // log_info(LOGGER_FILESYSTEM, "LA PALABRA QUE LLEGO ESSSSSSS = %s", palabra);
+
         switch (paquete->codigo_operacion) {
-            case CREAR_ARCHIVO: {
-                uint32_t nombre_size, contenido_size;
-                char *nombre_archivo, *contenido;
-                int tamanio;
+            case CREAR_ARCHIVO: {  
+                uint32_t nombre_size, contenido_size;  
+                char *nombre_archivo, *contenido;  
+                int tamanio;  
 
                 // Deserializar nombre del archivo
                 memcpy(&nombre_size, stream + offset, sizeof(uint32_t));
