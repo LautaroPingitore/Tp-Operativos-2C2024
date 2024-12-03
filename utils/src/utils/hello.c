@@ -92,13 +92,12 @@ void recibir_mensaje(int socket_cliente, t_log* logger)
 }
 
 void* recibir_buffer(int* size, int socket_cliente)
-{	
+{
 	void * buffer;
 
 	recv(socket_cliente, size, sizeof(int), MSG_WAITALL);
 	buffer = malloc(*size);
 	recv(socket_cliente, buffer, *size, MSG_WAITALL);
-
 
 	return buffer;
 }
@@ -130,24 +129,24 @@ t_paquete* recibir_paquete_entero(int socket_cliente) {
     int size;
     int desplazamiento = 0;
     void *buffer;
-    t_paquete* paquete = malloc(sizeof(t_paquete));  // Reservar memoria para el paquete    
-	buffer = recibir_buffer(&size, socket_cliente);
+    t_paquete *paquete = malloc(sizeof(t_paquete));  // Reservar memoria para el paquete
+    buffer = recibir_buffer(&size, socket_cliente);
     
     // Leer el código de operación
     memcpy(&paquete->codigo_operacion, buffer + desplazamiento, sizeof(op_code));
     desplazamiento += sizeof(op_code);
-
+    
     // Leer el tamaño del buffer
     int tamanio_buffer;
     memcpy(&tamanio_buffer, buffer + desplazamiento, sizeof(int));
     desplazamiento += sizeof(int);
-
+    
     // Reservar memoria para el buffer y copiar los datos
     paquete->buffer = malloc(sizeof(t_buffer));  // Asegúrate de definir t_buffer correctamente
     paquete->buffer->size = tamanio_buffer;      // Asigna el tamaño al buffer
     paquete->buffer->stream = malloc(tamanio_buffer);  // Reserva memoria para el stream
     memcpy(paquete->buffer->stream, buffer + desplazamiento, tamanio_buffer);
-
+    
     free(buffer);
     return paquete;  // Retorna el puntero a t_paquete
 }
@@ -244,20 +243,21 @@ void* serializar_paquete(t_paquete* paquete, int bytes)
 }
 
 void enviar_mensaje(char* mensaje, int socket_cliente) {
-	t_paquete* paquete = crear_paquete_con_codigo_operacion(MENSAJE);
-	int tamanio_mensaje = strlen(mensaje) + 1;
-	agregar_a_paquete(paquete, &tamanio_mensaje, sizeof(int));
-	agregar_a_paquete(paquete, &mensaje, tamanio_mensaje);
-	serializar_paquete(paquete, paquete->buffer->size);
+	t_paquete* paquete = malloc(sizeof(t_paquete));
 
-	printf("cod de op desde crar paq: %d", paquete->codigo_operacion);
+	paquete->codigo_operacion = MENSAJE;
+	paquete->buffer = malloc(sizeof(t_buffer));
+	paquete->buffer->size = strlen(mensaje) + 1;
+	paquete->buffer->stream = malloc(paquete->buffer->size);
+	memcpy(paquete->buffer->stream, mensaje, paquete->buffer->size);
 
-	if(enviar_paquete(paquete, socket_cliente) == 0) {
-		printf("SE HA ENVIADO");
-	} else {
-		printf("NO SE HA ENVIADO");
-	} 
+	int bytes = paquete->buffer->size + 2*sizeof(int);
 
+	void* a_enviar = serializar_paquete(paquete, bytes);
+
+	send(socket_cliente, a_enviar, bytes, 0);
+
+	free(a_enviar);
 	eliminar_paquete(paquete);
 }
 
@@ -410,7 +410,6 @@ t_paquete* crear_paquete_con_codigo_operacion(op_code operacion) {
 	t_paquete* paquete = malloc(sizeof(t_paquete));
 	paquete->codigo_operacion = operacion;
 	crear_buffer(paquete);
-
 	return paquete;
 }
 
