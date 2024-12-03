@@ -16,6 +16,7 @@
 #include <stdint.h>
 #include <pthread.h>
 #include <semaphore.h>
+#include "paquetes.h"
 
 /**
 * @brief Imprime un saludo por consola
@@ -133,22 +134,11 @@ typedef struct {
 } t_contexto_ejecucion;
 
 typedef struct {
-	int size;
-	void* stream;
-} t_buffer;
-
-typedef struct {
     char* nombre;  // Tipo de instrucción (SET, SUM, etc.)
     char* parametro1;
     char* parametro2;
     int parametro3; // ELIMINE LOS OTROS PARAMETROS YA QUE LAS INSTRUCCIONES QUE TENEMOS SOLO USAN HASTA 2 PARAMETROS
 } t_instruccion;
-
-typedef struct
-{
-	op_code codigo_operacion;
-	t_buffer* buffer;
-} t_paquete;
 
 extern t_log* logger;
 
@@ -193,27 +183,14 @@ typedef struct {
     //char* ARCHIVO;
 } t_pcb;
 
-void* recibir_buffer(int*, int);
 
 int iniciar_servidor(char*, t_log*,char*,char*);
 int esperar_cliente(int, t_log*);
-void recibir_mensaje(int, t_log*);
-int recibir_operacion(int);
 t_log* iniciar_logger(char*, char*);
 t_config* iniciar_config(char*,char*);
 int crear_conexion(char* ip, char* puerto);
-void enviar_mensaje(char* mensaje, int socket_cliente);
-t_paquete* crear_paquete(void);
-void agregar_a_paquete(t_paquete* paquete, void* valor, int tamanio);
-int enviar_paquete(t_paquete* paquete, int socket_cliente);
 void liberar_socket(int socket_cliente);
-void eliminar_paquete(t_paquete* paquete);
-t_list* recibir_paquete(int);
-void paquete(int, t_log*);
 void terminar_programa(t_config*, t_log*, int []);
-t_paquete* crear_paquete_con_codigo_operacion(op_code);
-void* serializar_paquete(t_paquete*, int);
-t_paquete* recibir_paquete_entero(int);
 int gestionarConexiones(int, t_log*);
 t_tcb* deserializar_paquete_tcb(void*, int);
 t_instruccion *deserializar_instruccion(void*, int);

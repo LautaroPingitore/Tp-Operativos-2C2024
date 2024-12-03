@@ -1,7 +1,7 @@
 #ifndef GESTOR_H_
 #define GESTOR_H_
 
-#include "../../../utils/src/utils/hello.h"
+#include "../../../utils/src/utils/include/hello.h"
 #include "kernel.h"
 #include "manejoPseudocodigo.h"
 #include "planificador.h"
