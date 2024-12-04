@@ -76,12 +76,12 @@ void iniciar_conexiones() {
 
     // HILOS SERVIDOR
     pthread_create(&hilo_servidor_interrupt, NULL, escuchar_cpu, NULL);
-    pthread_detach(hilo_servidor_interrupt);
-    // if (pthread_join(hilo_servidor_interrupt, NULL) != 0) {
-    //     log_error(LOGGER_CPU, "Error al esperar la finalización del hilo escuchar_cpu.");
-    // } else {
-    //     log_info(LOGGER_CPU, "El hilo escuchar_cpu finalizó correctamente.");
-    // }
+    //pthread_detach(hilo_servidor_interrupt);
+    if (pthread_join(hilo_servidor_interrupt, NULL) != 0) {
+        log_error(LOGGER_CPU, "Error al esperar la finalización del hilo escuchar_cpu.");
+    } else {
+        log_info(LOGGER_CPU, "El hilo escuchar_cpu finalizó correctamente.");
+    }
 
 }
 

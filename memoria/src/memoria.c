@@ -53,7 +53,7 @@ void inicializar_programa() {
 
     // Configurar conexiones de memoria a otros módulos
     log_info(LOGGER_MEMORIA, "Inicializando servidor de memoria en el puerto %s", PUERTO_ESCUCHA);
-    socket_memoria = iniciar_servidor(PUERTO_ESCUCHA, LOGGER_MEMORIA, IP_MEMORIA, "MEMORIA");
+//    socket_memoria = iniciar_servidor(PUERTO_ESCUCHA, LOGGER_MEMORIA, IP_MEMORIA, "MEMORIA");
 
     iniciar_conexiones();
     
@@ -110,12 +110,12 @@ void iniciar_conexiones() {
 
     // HILO SERVIDOR
     pthread_create(&hilo_server_memoria, NULL, (void*)escuchar_memoria, NULL);
-    pthread_detach(hilo_server_memoria);
-    // if (pthread_join(hilo_server_memoria, NULL) != 0) {
-    //     log_error(LOGGER_MEMORIA, "Error al esperar la finalización del hilo escuchar_memoria.");
-    // } else {
-    //     log_info(LOGGER_MEMORIA, "El hilo escuchar_memoria finalizó correctamente.");
-    // }
+    //pthread_detach(hilo_server_memoria);
+    if (pthread_join(hilo_server_memoria, NULL) != 0) {
+        log_error(LOGGER_MEMORIA, "Error al esperar la finalización del hilo escuchar_memoria.");
+    } else {
+        log_info(LOGGER_MEMORIA, "El hilo escuchar_memoria finalizó correctamente.");
+        }
 
 }
 

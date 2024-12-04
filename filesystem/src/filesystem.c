@@ -84,35 +84,24 @@ void iniciar_conexiones() {
     log_info(LOGGER_FILESYSTEM, "Servidor filesystem iniciado y escuchando en el puerto %s", PUERTO_ESCUCHA);
 
     // HILOS SERVIDORES
-    pthread_create(&hilo_servidor_filesystem, NULL, escuchar_filesystem, NULL);
-    pthread_detach(hilo_servidor_filesystem);
+    pthread_create(&hilo_servidor_filesystem, NULL, (void*) escuchar_filesystem, NULL);
+    //pthread_detach(hilo_servidor_filesystem);
 
-//     if (pthread_join(hilo_servidor_filesystem, NULL) != 0) {
-//         log_error(LOGGER_FILESYSTEM, "Error al esperar la finalización del hilo escuchar_filesystem.");
-//     } else {
-//         log_info(LOGGER_FILESYSTEM, "El hilo escuchar_filesystem finalizó correctamente.");
-// }
+     if (pthread_join(hilo_servidor_filesystem, NULL) != 0) {
+         log_error(LOGGER_FILESYSTEM, "Error al esperar la finalización del hilo escuchar_filesystem.");
+     } else {
+         log_info(LOGGER_FILESYSTEM, "El hilo escuchar_filesystem finalizó correctamente.");
+    }
 }
 
-void* escuchar_filesystem() {
-    log_info(LOGGER_FILESYSTEM, "El hilo de escuchar_filesystem ha iniciado.");
-    while (server_escuchar(LOGGER_FILESYSTEM, "FILESYSTEM", socket_filesystem)) {
-        log_info(LOGGER_FILESYSTEM, "Conexión procesada.");
-    }
-    log_warning(LOGGER_FILESYSTEM, "El servidor de filesystem terminó inesperadamente.");
-    return NULL;
+void escuchar_filesystem() 
+{
+    while (server_escuchar(LOGGER_FILESYSTEM, "FILESYSTEM", socket_filesystem));   
 }
 
 int server_escuchar(t_log* logger, char* servidor, int socket_server) {
     log_info(logger, "Esperando cliente...");
     int socket_cliente = esperar_cliente(socket_server, logger);
-
-    if (socket_cliente == -1) {
-        log_error(logger, "Error al aceptar la conexión del cliente.");
-        return 0;
-    }
-
-    log_info(logger, "Cliente conectado. Procesando conexión...");
 
     if (socket_cliente != -1)
 	{
@@ -183,6 +172,7 @@ void* gestionar_conexiones(void* void_args) {
 
     log_warning(logger, "Finalizando conexión con el cliente.");
     close(socket_cliente); // Cerrar el socket del cliente
+
     return NULL;
 }
 

@@ -92,9 +92,14 @@ void iniciar_conexiones() {
         log_error(LOGGER_KERNEL, "No se pudo conectar con el módulo FileSystem");
         exit(EXIT_FAILURE);
     }
-    enviar_handshake("Hola Memoria, soy kernel", socket_kernel_memoria,HANDSHAKE_memoria);
+    enviar_handshake("Hola Memoria, soy kernel", socket_kernel_memoria, HANDSHAKE_memoria);
     pthread_create(&hilo_kernel_memoria, NULL, escuchar_kernel_memoria, NULL);
-    pthread_detach(hilo_kernel_memoria);
+    //pthread_detach(hilo_kernel_memoria);
+    if (pthread_join(hilo_kernel_memoria, NULL) != 0) {
+        log_error(LOGGER_KERNEL, "Error al esperar la finalización del hilo escuchar_kernel_mem.");
+    } else {
+        log_info(LOGGER_KERNEL, "El hilo escuchar_kernel_mem finalizó correctamente.");
+    }
     
     // CONEXION CLIENTE CPU DISPATCH
     socket_kernel_cpu_dispatch = crear_conexion(IP_CPU, PUERTO_CPU_DISPATCH);
@@ -104,7 +109,12 @@ void iniciar_conexiones() {
     }
     enviar_handshake("Hola Dispatch, soy Kernel", socket_kernel_cpu_dispatch, HANDSHAKE_dispatch);
     pthread_create(&hilo_kernel_dispatch, NULL, escuchar_kernel_cpu_dispatch, NULL);
-    pthread_detach(hilo_kernel_dispatch);
+    //pthread_detach(hilo_kernel_dispatch);
+    if (pthread_join(hilo_kernel_dispatch, NULL) != 0) {
+        log_error(LOGGER_KERNEL, "Error al esperar la finalización del hilo escuchar_kernel_dis.");
+    } else {
+        log_info(LOGGER_KERNEL, "El hilo escuchar_kernel_dis finalizó correctamente.");
+    }
 
     socket_kernel_cpu_interrupt = crear_conexion(IP_CPU, PUERTO_CPU_INTERRUPT);
     if (socket_kernel_cpu_interrupt < 0) {
@@ -113,7 +123,12 @@ void iniciar_conexiones() {
     }
     enviar_handshake("Hola Interrupt, soy Kernel",socket_kernel_cpu_interrupt, HANDSHAKE_interrupt);
     pthread_create(&hilo_kernel_interrupt, NULL, escuchar_kernel_cpu_interrupt, NULL);
-    pthread_detach(hilo_kernel_interrupt);
+    //pthread_detach(hilo_kernel_interrupt);
+    if (pthread_join(hilo_kernel_interrupt, NULL) != 0) {
+        log_error(LOGGER_KERNEL, "Error al esperar la finalización del hilo escuchar_kernel_int.");
+    } else {
+        log_info(LOGGER_KERNEL, "El hilo escuchar_kernel_int finalizó correctamente.");
+    }
 }
 
 void* escuchar_kernel_memoria() {
