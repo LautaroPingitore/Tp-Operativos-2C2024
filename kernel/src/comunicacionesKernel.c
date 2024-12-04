@@ -59,13 +59,14 @@ int respuesta_memoria_creacion(int socket_cliente) {
     return -1;  // Error en la creación del proceso
 }
 
-
 void envio_hilo_crear(int socket_cliente, t_tcb* tcb, op_code codigo) {
     t_paquete* paquete = crear_paquete_con_codigo_de_operacion(codigo);
-
+    uint32_t tamanio_archivo = strlen(tcb->archivo) + 1;
     agregar_a_paquete(paquete, &tcb->TID, sizeof(uint32_t));
     agregar_a_paquete(paquete, &tcb->PID_PADRE, sizeof(uint32_t));
-    agregar_a_paquete(paquete, &tcb->archivo, sizeof(strlen(tcb->archivo) + 1));
+    agregar_a_paquete(paquete, &tamanio_archivo, sizeof(uint32_t));
+    agregar_a_paquete(paquete, &tcb->archivo, tamanio_archivo);
+    
     serializar_paquete(paquete, paquete->buffer->size);
 
     if (enviar_paquete(paquete, socket_cliente) == -1) {
