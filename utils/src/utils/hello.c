@@ -34,13 +34,6 @@ t_tcb* deserializar_paquete_tcb(t_buffer* buffer) {
 	return tcb;
 }
 
-t_instruccion* recibir_instruccion(int socket) {
-	t_paquete* paquete = recibir_paquete(socket);
-	t_instruccion* inst = deserializar_instruccion(paquete->buffer);
-	eliminar_paquete(paquete);
-	return inst;
-}
-
 t_instruccion* deserializar_instruccion(t_buffer* buffer) {
     t_instruccion* instruccion = malloc(sizeof(t_instruccion));
     if (!instruccion) {

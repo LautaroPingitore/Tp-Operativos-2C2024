@@ -18,10 +18,19 @@ int socket_cpu_memoria;
 
 pthread_t hilo_servidor_interrupt;
 
+uint32_t base_pedida = 0;
+uint32_t limite_pedido = 0;
+uint32_t valor_memoria = 0;
+t_instruccion* instruccion_actual = NULL;
+
+sem_t sem_base, sem_limite, sem_valor_memoria, sem_instruccion;
+sem_t sem_mutex_globales;
+
 int main() {
     inicializar_config("cpu");
     log_info(LOGGER_CPU, "Iniciando CPU \n");
 
+    iniciar_semaforos();
     iniciar_conexiones();
 
     int sockets[] = {socket_cpu_dispatch_kernel, socket_cpu_interrupt_kernel, socket_cpu_memoria, socket_cpu_dispatch, socket_cpu_interrupt, -1};
@@ -67,11 +76,12 @@ void iniciar_conexiones() {
 
     // HILOS SERVIDOR
     pthread_create(&hilo_servidor_interrupt, NULL, escuchar_cpu, NULL);
-    if (pthread_join(hilo_servidor_interrupt, NULL) != 0) {
-        log_error(LOGGER_CPU, "Error al esperar la finalización del hilo escuchar_cpu.");
-    } else {
-        log_info(LOGGER_CPU, "El hilo escuchar_cpu finalizó correctamente.");
-    }
+    pthread_detach(hilo_servidor_interrupt);
+    // if (pthread_join(hilo_servidor_interrupt, NULL) != 0) {
+    //     log_error(LOGGER_CPU, "Error al esperar la finalización del hilo escuchar_cpu.");
+    // } else {
+    //     log_info(LOGGER_CPU, "El hilo escuchar_cpu finalizó correctamente.");
+    // }
 
 }
 
@@ -151,13 +161,21 @@ void* procesar_conexion_dispatch(void* void_args) {
                 }
                 break;
 
+            case INSTRUCCION:
+                sem_wait(&sem_mutex_globales);
+                t_instruccion* inst = recibir_instruccion(socket);
+                instruccion_actual = inst;
+                sem_post(&sem_instruccion);
+                sem_post(&sem_mutex_globales);
+                break;
+
             case SOLICITUD_BASE_MEMORIA: 
                 uint32_t pid_bm = recibir_pid(socket);
                 uint32_t base = consultar_base_particion(pid_bm);
 
-                sem_wait(&sem_mutex_base_limite);
+                sem_wait(&sem_mutex_globales);
                 base_pedida = base;
-                sem_post(&sem_mutex_base_limite);
+                sem_post(&sem_mutex_globales);
 
                 log_info(logger, "Base recibida: %d para PID: %d", base, pid_bm);
                 sem_post(&sem_base); // Desbloquea al hilo que espera
@@ -167,9 +185,9 @@ void* procesar_conexion_dispatch(void* void_args) {
                 uint32_t pid_lm = recibir_pid(socket);
                 uint32_t limite = consultar_limite_particion(pid_lm);
 
-                sem_wait(&sem_mutex_base_limite);
+                sem_wait(&sem_mutex_globales);
                 limite_pedido = limite;
-                sem_post(&sem_mutex_base_limite);
+                sem_post(&sem_mutex_globales);
 
                 log_info(logger, "Límite recibido: %d para PID: %d", limite, pid_lm);
                 sem_post(&sem_limite); // Desbloquea al hilo que espera
@@ -177,9 +195,9 @@ void* procesar_conexion_dispatch(void* void_args) {
             
             case PEDIDO_READ_MEM:
                 uint32_t valor = recibir_valor_de_memoria(socket); // Función para recibir el valor
-                sem_wait(&sem_mutex_base_limite);
+                sem_wait(&sem_mutex_globales);
                 valor_memoria = valor;
-                sem_post(&sem_mutex_base_limite);
+                sem_post(&sem_mutex_globales);
 
                 log_info(logger, "Valor recibido: %d", valor_memoria);
                 sem_post(&sem_valor_memoria);
@@ -229,4 +247,20 @@ void* procesar_conexion_interrupt(void* void_args) {
 
     close(socket);
     return NULL;
+}
+
+void iniciar_semaforos() {
+    sem_init(&sem_base, 0, 0);
+    sem_init(&sem_limite, 0, 0);
+    sem_init(&sem_valor_memoria, 0, 0);
+    sem_init(&sem_instruccion, 0, 0);
+    sem_init(&sem_mutex_globales, 0, 1);
+}
+
+void destruir_semaforos() {
+    sem_destroy(&sem_base);
+    sem_destroy(&sem_limite);
+    sem_destroy(&sem_valor_memoria);
+    sem_destroy(&sem_instruccion);
+    sem_destroy(&sem_mutex_globales);  
 }

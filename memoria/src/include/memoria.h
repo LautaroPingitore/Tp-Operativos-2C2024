@@ -23,9 +23,10 @@ extern t_config* CONFIG_MEMORIA;
 
 void inicializar_programa();
 void inicializar_config(char*);
-void manejar_conexiones();
+void iniciar_conexiones();
 t_list* obtener_particiones_fijas(char**);
 void escuchar_memoria();
 int server_escuchar(t_log*, char*, int);
+
 
 #endif /* MEMORIA_H_ */

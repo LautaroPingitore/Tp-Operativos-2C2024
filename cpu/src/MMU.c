@@ -4,27 +4,6 @@
 #define BASE_ERROR ((uint32_t)-1)
 #define LIMITE_ERROR ((uint32_t)-1)
 
-uint32_t base_pedida = 0;
-uint32_t limite_pedido = 0;
-uint32_t valor_memoria = 0;
-
-sem_t sem_base, sem_limite, sem_valor_memoria;
-sem_t sem_mutex_base_limite;
-
-void inicializar_semaforos() {
-    sem_init(&sem_base, 0, 0);
-    sem_init(&sem_limite, 0, 0);
-    sem_init(&sem_valor_memoria, 0, 0);
-    sem_init(&sem_mutex_base_limite, 0, 1);
-}
-
-void destruir_semaforos() {
-    sem_destroy(&sem_base);
-    sem_destroy(&sem_limite);
-    sem_destroy(&sem_valor_memoria);
-    sem_destroy(&sem_mutex_base_limite);  
-}
-
 // MMU: Traducir direccion logica a fisica con Asignacion Contigua
 uint32_t traducir_direccion(uint32_t direccion_logica, uint32_t pid) {
     uint32_t base = consultar_base_particion(pid);
@@ -54,9 +33,9 @@ uint32_t consultar_base_particion(uint32_t pid) {
     enviar_solicitud_memoria(socket_cpu_memoria, pid, SOLICITUD_BASE_MEMORIA, "base de partición");
     sem_wait(&sem_base); // Espera a que la base esté disponible
 
-    sem_wait(&sem_mutex_base_limite);
+    sem_wait(&sem_mutex_globales);
     uint32_t base = base_pedida;
-    sem_post(&sem_mutex_base_limite);
+    sem_post(&sem_mutex_globales);
 
     return base;
 }
@@ -65,9 +44,9 @@ uint32_t consultar_limite_particion(uint32_t pid) {
     enviar_solicitud_memoria(socket_cpu_memoria, pid, SOLICITUD_LIMITE_MEMORIA, "límite de partición");
     sem_wait(&sem_limite); // Espera a que el límite esté disponible
 
-    sem_wait(&sem_mutex_base_limite);
+    sem_wait(&sem_mutex_globales);
     uint32_t limite = limite_pedido;
-    sem_post(&sem_mutex_base_limite);
+    sem_post(&sem_mutex_globales);
 
     return limite;
 }

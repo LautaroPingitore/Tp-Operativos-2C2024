@@ -32,7 +32,6 @@ pthread_t hilo_server_memoria;
 
 int main() {
     inicializar_programa();
-    manejar_conexiones();
 
     // Ejecutar el servidor en un bucle principal, esperando solicitudes y procesando respuestas
     int sockets[] = {socket_memoria, socket_memoria_cpu, socket_memoria_kernel, socket_memoria_filesystem, -1};
@@ -112,6 +111,12 @@ void iniciar_conexiones() {
     // HILO SERVIDOR
     pthread_create(&hilo_server_memoria, NULL, (void*)escuchar_memoria, NULL);
     pthread_detach(hilo_server_memoria);
+    // if (pthread_join(hilo_server_memoria, NULL) != 0) {
+    //     log_error(LOGGER_MEMORIA, "Error al esperar la finalización del hilo escuchar_memoria.");
+    // } else {
+    //     log_info(LOGGER_MEMORIA, "El hilo escuchar_memoria finalizó correctamente.");
+    // }
+
 }
 
 void escuchar_memoria() 
@@ -128,7 +133,7 @@ int server_escuchar(t_log *logger, char *server_name, int server_socket) {
         args->log = logger;
         args->fd = cliente_socket;
         args->server_name = strdup(server_name);
-        if (pthread_create(&hilo, NULL, (void *)procesar_conexion_memoria, (void *)args) != 0) {
+        if (pthread_create(&hilo, NULL, procesar_conexion_memoria, (void *)args) != 0) {
             log_error(logger, "Error al crear hilo para cliente en %s.", server_name);
             free(args->server_name);
             free(args);
@@ -139,32 +144,3 @@ int server_escuchar(t_log *logger, char *server_name, int server_socket) {
     }
     return 0;
 }
-
-void manejar_conexiones() {
-    while (1) {
-        int socket_cliente = esperar_cliente(socket_memoria, LOGGER_MEMORIA);
-        if (socket_cliente != -1) continue;
-
-        pthread_t hilo_conexion;
-        t_procesar_conexion_args* args = malloc(sizeof(t_procesar_conexion_args));
-        if (!args) {
-            log_error(LOGGER_MEMORIA, "Error al asignar memoria para los argumentos del hilo");
-            close(socket_cliente);
-            continue;
-        }
-
-        args->log = LOGGER_MEMORIA;
-        args->fd = socket_cliente;
-        args->server_name = "Servidor Memoria";
-
-        if (pthread_create(&hilo_conexion, NULL, procesar_conexion_memoria, (void*)args) != 0) {
-            log_error(LOGGER_MEMORIA, "Error al crear el hilo para conexión");
-            free(args); // Liberar la memoria en caso de error
-            close(socket_cliente);
-            continue;
-        }
-
-        pthread_detach(hilo_conexion); // Separar el hilo para evitar bloqueo
-    }
-}
-

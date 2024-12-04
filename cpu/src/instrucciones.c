@@ -64,9 +64,9 @@ void read_mem(char* reg_datos, char* reg_direccion, int socket) {
     enviar_solicitud_valor_memoria(socket, direccion_fisica);
     sem_wait(&sem_valor_memoria); // Bloquea hasta que se reciba el valor
 
-    sem_wait(&sem_mutex_base_limite);
+    sem_wait(&sem_mutex_globales);
     *registro_datos = valor_memoria;
-    sem_post(&sem_mutex_base_limite);
+    sem_post(&sem_mutex_globales);
 
     log_info(LOGGER_CPU, "PID: %d - Leer Memoria - Dirección Física: %d - Valor: %d",
              pcb_actual->PID, direccion_fisica, *registro_datos);

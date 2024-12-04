@@ -10,12 +10,9 @@ extern pthread_mutex_t mutex_instrucciones;
 // Funciones para manejar el servidor y la comunicación con otros módulos
 void* procesar_conexion_memoria(void *);
 
-void recibir_pedido_instruccion(uint32_t*, uint32_t*, int);
 t_instruccion* obtener_instruccion(uint32_t, uint32_t);
 t_contexto_ejecucion*  obtener_contexto(uint32_t);
 
-void recibir_read_mem(int);
-void recibir_write_mem(int);
 void recibir_log(char [256], int);
 
 typedef struct {
@@ -64,8 +61,6 @@ typedef struct {
 } t_pedido_instruccion;
 
 // FUNCIONES MEJORADAS 2.0247234214321473216487537826432
-t_proceso_memoria* deserializar_proceso(int, void*, int);
-t_hilo_memoria* deserializar_hilo_memoria(int, void*, int);
 int eliminar_espacio_hilo(int, t_hilo_memoria*, t_contexto_ejecucion*);
 int enviar_instruccion(int, t_instruccion*);
 void enviar_valor_leido_cpu(int, uint32_t, uint32_t);
@@ -88,7 +83,6 @@ t_actualizar_contexto* recibir_actualizacion(int);
 t_actualizar_contexto* deserializar_actualizacion(t_buffer*);
 t_write_mem* recibir_write_mem(int);
 t_write_mem* deserializar_write_mem(t_buffer*);
-t_write_mem* recibir_write_mem(int);
 t_write_mem* deserializar_write_mem(t_buffer*);
 uint32_t recibir_read_mem(int);
 t_pedido_instruccion* recibir_pedido_instruccion(int);
@@ -102,7 +96,6 @@ void inicializar_datos();
 //void recibir_finalizacion_hilo(int);
 t_contexto_ejecucion* obtener_contexto(uint32_t);
 void eliminar_instrucciones_hilo(uint32_t);
-void liberar_hilo(uint32_t);
 int solicitar_archivo_filesystem(uint32_t, uint32_t);
 void recibir_solicitud_instruccion(int);
 char* obtener_contenido_proceso(uint32_t, uint32_t);

@@ -35,8 +35,6 @@ void* procesar_conexion_memoria(void *void_args){
             break; // Salir del bucle y cerrar el hilo
         }
 
-        t_paquete* paquete = recibir_paquete(cliente_socket);
-
         switch (cod) {
             case HANDSHAKE_kernel: // Simplemente avisa que se conecta a kernel 
                 recibir_mensaje(cliente_socket, logger);
@@ -97,16 +95,14 @@ void* procesar_conexion_memoria(void *void_args){
                 break;
 
             case THREAD_EXIT:
-                t_hilo_memoria* hilo_a_eliminar = recibir_hilo_memoria(cliente_socke);
+                t_hilo_memoria* hilo_a_eliminar = recibir_hilo_memoria(cliente_socket);
                 if(!hilo_a_eliminar) {
                     enviar_mensaje("ERROR", cliente_socket);
                     break;
                 }
 
-                pthread_mutex_lock(&mutex_hilos);
                 t_contexto_ejecucion* contexto = obtener_contexto(hilo_a_eliminar->pid_padre);
                 int resultado = eliminar_espacio_hilo(cliente_socket, hilo_a_eliminar, contexto);
-                pthread_mutex_unlock(&mutex_hilos);
 
                 if(resultado == 1) {
                     enviar_mensaje("OK", cliente_socket);
@@ -116,12 +112,12 @@ void* procesar_conexion_memoria(void *void_args){
                 break;
 
             case DUMP_MEMORY:
-                t_pid_tid* ident = recibir_identificadores(cliente_socket);
+                t_pid_tid* ident_dm = recibir_identificadores(cliente_socket);
                 
-                if(!ident) {
+                if(!ident_dm) {
                     enviar_mensaje("ERROR", cliente_socket);
                 } 
-                if (solicitar_archivo_filesystem(ident->pid, ident->tid) == 0) {
+                if (solicitar_archivo_filesystem(ident_dm->pid, ident_dm->tid) == 0) {
                     enviar_mensaje("OK", cliente_socket);
                 } else {
                     enviar_mensaje("ERROR", cliente_socket);
@@ -134,11 +130,11 @@ void* procesar_conexion_memoria(void *void_args){
                 break;
 
             case CONTEXTO:
-                t_pid_tid* ident = recibir_identificadores(cliente_socket);
-                if(!ident) {
+                t_pid_tid* ident_cx = recibir_identificadores(cliente_socket);
+                if(!ident_cx) {
                     enviar_mensaje("ERROR", cliente_socket);
                 } 
-                procesar_solicitud_contexto(cliente_socket, ident->pid, ident->tid);
+                procesar_solicitud_contexto(cliente_socket, ident_cx->pid, ident_cx->tid);
                 break;
 
             case ACTUALIZAR_CONTEXTO:
@@ -173,7 +169,7 @@ void* procesar_conexion_memoria(void *void_args){
 
                 t_instruccion* inst = obtener_instruccion(ped_inst->tid, ped_inst->pc);
                 if(enviar_instruccion(cliente_socket, inst) == 0) {
-                    log_info(logger, "Instrucción enviada - PID: %u, TID: %u, PC: %u.", ped_inst->pid, ped_inst->tid, pc);
+                    log_info(logger, "Instrucción enviada - PID: %u, TID: %u, PC: %u.", ped_inst->pid, ped_inst->tid, ped_inst->pc);
                 } else {
                     enviar_mensaje("NO_INSTRUCCION", cliente_socket);
                 }
@@ -181,10 +177,10 @@ void* procesar_conexion_memoria(void *void_args){
                 break;
 
             case SOLICITUD_BASE_MEMORIA:
-                uint32_t pid = recibir_pid(cliente_socket);
-                t_proceso_memoria* pcb = obtener_proceso_memoria(pid);
-                int resultado = enviar_valor_uint_cpu(cliente_socket, pcb->base, SOLICITUD_BASE_MEMORIA);
-                if(resultado == 0) {
+                uint32_t pid_bm = recibir_pid(cliente_socket);
+                t_proceso_memoria* pcb_bm = obtener_proceso_memoria(pid_bm);
+                int resultado_bm = enviar_valor_uint_cpu(cliente_socket, pcb_bm->base, SOLICITUD_BASE_MEMORIA);
+                if(resultado_bm == 0) {
                     log_info(logger, "Paquete enviado correctamente");
                 } else {
                     log_error(logger, "Error al enviar el paquete");
@@ -192,10 +188,10 @@ void* procesar_conexion_memoria(void *void_args){
                 break;
 
             case SOLICITUD_LIMITE_MEMORIA:
-                uint32_t pid = recibir_pid(cliente_socket);
-                t_proceso_memoria* pcb = obtener_proceso_memoria(pid);
-                int resultado = enviar_valor_uint_cpu(cliente_socket, pcb->limite, SOLICITUD_LIMITE_MEMORIA);
-                if(resultado == 0) {
+                uint32_t pid_lm = recibir_pid(cliente_socket);
+                t_proceso_memoria* pcb_lm = obtener_proceso_memoria(pid_lm);
+                int resultado_lm = enviar_valor_uint_cpu(cliente_socket, pcb_lm->limite, SOLICITUD_LIMITE_MEMORIA);
+                if(resultado_lm == 0) {
                     log_info(logger, "Paquete enviado correctamente");
                 } else {
                     log_error(logger, "Error al enviar el paquete");
@@ -207,14 +203,9 @@ void* procesar_conexion_memoria(void *void_args){
                 break;
 
             default:
-                char codigo[10];
-                sprintf(codigo, "%d", paquete->codigo_operacion);
-                log_error(logger, "Codigo desconocido en el servidor de %s, Cod OP: %s", server_name, codigo);
+                log_error(logger, "Codigo desconocido en el servidor de %s, Cod OP: %d", server_name, cod);
                 break;
         }
-
-        eliminar_paquete(paquete);
-
     }
 
 
@@ -243,7 +234,7 @@ t_proceso_memoria* deserializar_proceso(t_buffer* buffer) {
     int desplazamiento = 0;
 
     memcpy(&(proceso->pid), stream + desplazamiento, sizeof(uint32_t));
-    desplamiento += sizeof(uitn32_t);
+    desplazamiento += sizeof(uint32_t);
 
     memcpy(&(proceso->limite), stream + desplazamiento, sizeof(uint32_t));
     desplazamiento += sizeof(uint32_t);
@@ -255,7 +246,7 @@ t_proceso_memoria* deserializar_proceso(t_buffer* buffer) {
         return NULL;
     }
 
-    memcpy(proceso->contexto, buffer->stream + offset, sizeof(t_contexto_ejecucion));
+    memcpy(proceso->contexto, buffer->stream + desplazamiento, sizeof(t_contexto_ejecucion));
 
     return proceso;
 }
@@ -289,7 +280,8 @@ t_hilo_memoria* deserializar_hilo_memoria(t_buffer* buffer) {
         return NULL;
     }
 
-    int desplamiento = 0;
+    void* stream = buffer->stream;
+    int desplazamiento = 0;
     uint32_t tamanio_archivo;
 
     memcpy(&hilo->tid, stream + desplazamiento, sizeof(uint32_t));
@@ -299,7 +291,7 @@ t_hilo_memoria* deserializar_hilo_memoria(t_buffer* buffer) {
     desplazamiento += sizeof(uint32_t);
 
     memcpy(&tamanio_archivo, stream + desplazamiento, sizeof(uint32_t));
-    desplazamiento += sizeof(uint32_t)
+    desplazamiento += sizeof(uint32_t);
 
     hilo->archivo = malloc(tamanio_archivo);
     if(hilo->archivo == NULL) {
@@ -366,7 +358,6 @@ int eliminar_espacio_hilo(int cliente_socket, t_hilo_memoria* hilo, t_contexto_e
         free(contexto);
         eliminar_instrucciones_hilo(hilo->tid);
         log_info(LOGGER_MEMORIA, "Hilo finalizado - PID: %d, TID: %d", hilo->pid_padre, hilo->tid);
-        liberar_hilo(hilo->tid);
         return 1;
     } else {
         log_error(LOGGER_MEMORIA, "Error al finalizar el hilo - PID: %d, TID: %d", hilo->pid_padre, hilo->tid);
@@ -428,7 +419,7 @@ t_pid_tid* deserializar_identificadores(t_buffer* buffer) {
    int desplazamiento = 0;
    
    memcpy(&(ident->pid), stream + desplazamiento, sizeof(uint32_t));
-   desplamiento += sizeof(uitn32_t);
+   desplazamiento += sizeof(uint32_t);
 
    memcpy(&(ident->tid), stream + desplazamiento, sizeof(uint32_t));
    
@@ -501,99 +492,6 @@ char* obtener_contenido_proceso(uint32_t pid, uint32_t tid) {
 
     return contenido;
 }
-
-char* obtener_contenido_proceso(uint32_t pid) {
-    t_list* hilos_proceso = list_create();
-    size_t tamanio_total = 0;
-
-    pthread_mutex_lock(&mutex_hilos);
-    for (int i = 0; i < list_size(lista_hilos); i++) {
-        t_hilo_memoria* hilo = list_get(lista_hilos, i);
-        if (hilo->pid_padre == pid) {
-            list_add(hilos_proceso, hilo);
-            // Obtener las instrucciones del hilo
-            t_list* instrucciones_tamanio = obtener_lista_instrucciones_por_tid(hilo->tid);
-            if (!instrucciones_tamanio) continue;
-
-            // Calcular el tamaño total necesario para este hilo
-            for (int j = 0; j < list_size(instrucciones_tamanio); j++) {
-                t_instruccion* inst = list_get(instrucciones_tamanio, j);
-                if (inst->nombre && inst->parametro1 && inst->parametro2) {
-                    tamanio_total += strlen(inst->nombre) + strlen(inst->parametro1) +
-                                     strlen(inst->parametro2) + 12; // Incluye espacio para `parametro3`.
-                }
-            }
-            list_destroy_and_destroy_elements(instrucciones_tamanio, free);
-        }
-    }
-    pthread_mutex_unlock(&mutex_hilos);
-
-    if (list_size(hilos_proceso) == 0) {
-        list_destroy(hilos_proceso);
-        return NULL; // Si no hay hilos para este proceso
-    }
-
-    // Reservar espacio para el contenido de todo el proceso
-    tamanio_total += 8 * 10 + 3 * 8 + 8;
-    char* contenido = malloc(tamanio_total + 1);
-    contenido[0] = '\0';
-
-    // Construir el contenido concatenando las instrucciones de cada hilo
-    for (int i = 0; i < list_size(hilos_proceso); i++) {
-        t_hilo_memoria* hilo = list_get(hilos_proceso, i);
-        t_list* instrucciones = obtener_lista_instrucciones_por_tid(hilo->tid);
-        if (!instrucciones) continue;
-
-        char parametro3_str[12]; // Buffer para convertir `parametro3` a cadena
-        for (int j = 0; j < list_size(instrucciones); j++) {
-            t_instruccion* inst = list_get(instrucciones, j);
-            if (inst->parametro3 == -1) {
-                strcpy(parametro3_str, " ");
-            } else {
-                sprintf(parametro3_str, "%d", inst->parametro3); // Convertir `parametro3` a cadena
-            }
-
-            if (inst->nombre && inst->parametro1 && inst->parametro2) {
-                strcat(contenido, inst->nombre);
-                strcat(contenido, " ");
-                strcat(contenido, inst->parametro1);
-                strcat(contenido, " ");
-                strcat(contenido, inst->parametro2);
-                strcat(contenido, " ");
-                strcat(contenido, parametro3_str);
-                strcat(contenido, "\n");
-            }
-        }
-        list_destroy_and_destroy_elements(instrucciones, free);
-    }
-
-    t_proceso_memoria* pcb = obtener_proceso_memoria(pid);
-    if (!pcb) {
-        free(contenido);
-        list_destroy(hilos_proceso);
-        return NULL;
-    }
-
-    t_list* lista_registros = convertir_registros_a_char(pcb->contexto->registros);
-    if (!lista_registros) {
-        free(contenido);
-        list_destroy(hilos_proceso);
-        return NULL;
-    }
-
-    const char* nombres_registros[] = {"AX:", "BX:", "CX:", "DX:", "EX:", "FX:", "GX:", "HX:"};
-    for (int i = 0; i < 8; i++) {
-        strcat(contenido, nombres_registros[i]);
-        strcat(contenido, " ");
-        strcat(contenido, list_get(lista_registros, i));
-        strcat(contenido, "\n");
-    }
-
-    list_destroy_and_destroy_elements(lista_registros, free);
-    list_destroy(hilos_proceso); // Liberar la lista de hilos
-    return contenido;
-}
-
 
 t_proceso_memoria* obtener_proceso_memoria(uint32_t pid) {
     for(int i=0; i < list_size(lista_procesos); i++) {
@@ -847,7 +745,8 @@ uint32_t recibir_read_mem(int socket) {
     t_paquete* paquete = recibir_paquete(socket);
     uint32_t direccion_fisica;
     memcpy(&direccion_fisica, paquete->buffer->stream, sizeof(uint32_t));
-    eliminar_paquete()
+    eliminar_paquete(paquete);
+    return direccion_fisica;
 }
 
 

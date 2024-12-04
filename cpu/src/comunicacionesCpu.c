@@ -52,6 +52,13 @@ t_proceso_cpu* deserializar_proceso(t_buffer* buffer) {
     return pcb;
 }
 
+t_instruccion* recibir_instruccion(int socket) {
+    t_paquete* paquete = recibir_paquete(socket);
+    t_instruccion* inst = deserializar_instruccion(paquete->buffer);
+    eliminar_paquete(paquete);
+    return inst;
+}
+
 void* recibir_interrupcion(void* void_args) {
 
     t_procesar_conexion_args *args = (t_procesar_conexion_args *)void_args;

@@ -1,5 +1,6 @@
 #include "include/gestor.h"
 
+pthread_t hilo_server_kernel;
 t_log* LOGGER_KERNEL;
 t_config* CONFIG_KERNEL;
 
@@ -16,6 +17,10 @@ int socket_kernel_memoria;
 int socket_kernel_cpu_dispatch;
 int socket_kernel_cpu_interrupt;
 lista_recursos recursos_globales;
+
+pthread_t hilo_kernel_memoria;
+pthread_t hilo_kernel_dispatch;
+pthread_t hilo_kernel_interrupt;
 
 int main(int argc, char* argv[]) {
     // VERIFICACIÓN DE QUE SE PASARON AL MENOS 3 ARGUMENTOS (programa, archivo pseudocódigo, tamaño proceso)
@@ -35,7 +40,7 @@ int main(int argc, char* argv[]) {
     log_info(LOGGER_KERNEL, "Iniciando KERNEL \n");
 
     // INICIAR CONEXIONES
-    iniciar_comunicaciones(sockets);
+    iniciar_conexiones();
 
     // INICIAR LOS SEMAFOROS Y COLAS
     inicializar_kernel();
@@ -80,84 +85,114 @@ void inicializar_config(char* arg){
     LOG_LEVEL = config_get_string_value(CONFIG_KERNEL, "LOG_LEVEL");
 }
 
-void iniciar_comunicaciones(int sockets[]) {
-    // Conectar con Memoria
+void iniciar_conexiones() {
+    // CONEXION CLIENTE MEMORIA
     socket_kernel_memoria = crear_conexion(IP_MEMORIA, PUERTO_MEMORIA);
-    if(socket_kernel_memoria == -1) {
-        log_error(LOGGER_KERNEL, "Error al conectar con memoria");
-        terminar_programa(CONFIG_KERNEL, LOGGER_KERNEL, sockets);
+    if (socket_kernel_memoria < 0) {
+        log_error(LOGGER_KERNEL, "No se pudo conectar con el módulo FileSystem");
         exit(EXIT_FAILURE);
     }
-    log_info(LOGGER_KERNEL, "Conexion con Memoria Establecida");
-
-    // Crear hilo para manejar la comunicación con Memoria
-    pthread_t hilo_memoria;
-    t_procesar_conexion_args* args_memoria = malloc(sizeof(t_procesar_conexion_args));
-    args_memoria->fd = socket_kernel_memoria;
-    args_memoria->log = LOGGER_KERNEL;
-    args_memoria->server_name = "Memoria";
-    pthread_create(&hilo_memoria, NULL, procesar_comunicaciones_memoria, (void*) args_memoria);
-    pthread_detach(hilo_memoria);  // Para que no sea necesario hacer join
-
-    // Conexión con CPU Dispatch
+    enviar_handshake("Hola Memoria, soy kernel", socket_kernel_memoria,HANDSHAKE_memoria);
+    pthread_create(&hilo_kernel_memoria, NULL, escuchar_kernel_memoria, NULL);
+    pthread_detach(hilo_kernel_memoria);
+    
+    // CONEXION CLIENTE CPU DISPATCH
     socket_kernel_cpu_dispatch = crear_conexion(IP_CPU, PUERTO_CPU_DISPATCH);
-    if(socket_kernel_cpu_dispatch == -1) {
-        log_error(LOGGER_KERNEL, "Error al conectar con CPU Dispatch");
-        terminar_programa(CONFIG_KERNEL, LOGGER_KERNEL, sockets);
+    if (socket_kernel_cpu_dispatch < 0) {
+        log_error(LOGGER_KERNEL, "No se pudo conectar con el módulo CPU DISPATCH");
         exit(EXIT_FAILURE);
     }
-    log_info(LOGGER_KERNEL, "Conexion con CPU Dispatch Establecida");
+    enviar_handshake("Hola Dispatch, soy Kernel", socket_kernel_cpu_dispatch, HANDSHAKE_dispatch);
+    pthread_create(&hilo_kernel_dispatch, NULL, escuchar_kernel_cpu_dispatch, NULL);
+    pthread_detach(hilo_kernel_dispatch);
 
-    // Crear hilo para manejar la comunicación con CPU Dispatch
-    pthread_t hilo_cpu_dispatch;
-    t_procesar_conexion_args* args_cpu_dispatch = malloc(sizeof(t_procesar_conexion_args));
-    args_cpu_dispatch->fd = socket_kernel_cpu_dispatch;
-    args_cpu_dispatch->log = LOGGER_KERNEL;
-    args_cpu_dispatch->server_name = "CPU Dispatch";
-    pthread_create(&hilo_cpu_dispatch, NULL, procesar_comunicaciones_cpu, (void*) args_cpu_dispatch);
-    pthread_detach(hilo_cpu_dispatch);  // Para que no sea necesario hacer join
-
-    // Conexión con CPU Interrupt
     socket_kernel_cpu_interrupt = crear_conexion(IP_CPU, PUERTO_CPU_INTERRUPT);
-    if(socket_kernel_cpu_interrupt == -1) {
-        log_error(LOGGER_KERNEL, "Error al conectar con CPU Interrupt");
-        terminar_programa(CONFIG_KERNEL, LOGGER_KERNEL, sockets);
+    if (socket_kernel_cpu_interrupt < 0) {
+        log_error(LOGGER_KERNEL, "No se pudo conectar con el módulo CPU INTERRUPT");
         exit(EXIT_FAILURE);
     }
-    log_info(LOGGER_KERNEL, "Conexion con CPU Interrupt Establecida");
-
-    // Crear hilo para manejar la comunicación con CPU Interrupt
-    pthread_t hilo_cpu_interrupt;
-    t_procesar_conexion_args* args_cpu_interrupt = malloc(sizeof(t_procesar_conexion_args));
-    args_cpu_interrupt->fd = socket_kernel_cpu_interrupt;
-    args_cpu_interrupt->log = LOGGER_KERNEL;
-    args_cpu_interrupt->server_name = "CPU Interrupt";
-    pthread_create(&hilo_cpu_interrupt, NULL, procesar_comunicaciones_cpu, (void*) args_cpu_interrupt);
-    pthread_detach(hilo_cpu_interrupt);  // Para que no sea necesario hacer join
+    enviar_handshake("Hola Interrupt, soy Kernel",socket_kernel_cpu_interrupt, HANDSHAKE_interrupt);
+    pthread_create(&hilo_kernel_interrupt, NULL, escuchar_kernel_cpu_interrupt, NULL);
+    pthread_detach(hilo_kernel_interrupt);
 }
 
+void* escuchar_kernel_memoria() {
+    while (1) {
+        int cliente_socket = esperar_cliente(socket_kernel_memoria, LOGGER_KERNEL);
+        if (cliente_socket > 0) {
+            pthread_t hilo_cliente;
+            t_procesar_conexion_args* args = malloc(sizeof(t_procesar_conexion_args));
+            args->log = LOGGER_KERNEL;
+            args->fd = cliente_socket;
+            args->server_name = strdup("KERNEL");
+
+            pthread_create(&hilo_cliente, NULL, procesar_conexion_memoria, (void*)args);
+            pthread_detach(hilo_cliente);
+        }
+    }
+    return NULL;
+}
+
+void* escuchar_kernel_cpu_dispatch() {
+    while (1) {
+        int cliente_socket = esperar_cliente(socket_kernel_cpu_dispatch, LOGGER_KERNEL);
+        if (cliente_socket > 0) {
+            pthread_t hilo_cliente;
+            t_procesar_conexion_args* args = malloc(sizeof(t_procesar_conexion_args));
+            args->log = LOGGER_KERNEL;
+            args->fd = cliente_socket;
+            args->server_name = strdup("KERNEL");
+
+            pthread_create(&hilo_cliente, NULL, procesar_conexiones_cpu, (void*)args);
+            pthread_detach(hilo_cliente);
+        }
+    }
+    return NULL;
+}
+
+void* escuchar_kernel_cpu_interrupt() {
+    while (1) {
+        int cliente_socket = esperar_cliente(socket_kernel_cpu_interrupt, LOGGER_KERNEL);
+        if (cliente_socket > 0) {
+            pthread_t hilo_cliente;
+            t_procesar_conexion_args* args = malloc(sizeof(t_procesar_conexion_args));
+            args->log = LOGGER_KERNEL;
+            args->fd = cliente_socket;
+            args->server_name = strdup("KERNEL");
+
+            pthread_create(&hilo_cliente, NULL, procesar_conexiones_cpu, (void*)args);
+            pthread_detach(hilo_cliente);
+        }
+    }
+    return NULL;
+}
+
+
 // OJO CON ESTA PORQUE ES EXTREMADAMENTE RARA
-void* procesar_comunicaciones_memoria(void* void_args) {
+void* procesar_conexion_memoria(void* void_args) {
     t_procesar_conexion_args *args = (t_procesar_conexion_args *)void_args;
     t_log *logger = args->log;
     int socket = args->fd;
+    //char* server_name = args->server_name;
 
     free(args);
 
-    while (socket != -1) {
-        // Recibimos un paquete de memoria (respuesta)
-        t_paquete* paquete = recibir_paquete(socket);
-        void* stream = paquete->buffer->stream;
+    op_code cod;
+    while (1) {
+        // Recibir código de operación
+        ssize_t bytes_recibidos = recv(socket, &cod, sizeof(op_code), 0);
+        if (bytes_recibidos <= 0) { // El cliente cerró la conexión o hubo un error
+            log_error(logger, "El cliente cerró la conexión.");
+            break; // Salir del bucle y cerrar el hilo
+        }
 
-
-        switch (paquete->codigo_operacion) {
+        switch (cod) {
         case HANDSHAKE_memoria:
             recibir_mensaje(socket, logger);
-            log_info(logger, "Conexion establecida con Memoria");
             break;
 
         case MENSAJE:
-            char* respuesta = (char*)stream;
+            char* respuesta = deserializar_mensaje(socket);
             if (strcmp(respuesta, "OK") == 0) {
                 log_info(logger, "Proceso creado en memoria.");
             } else {
@@ -169,34 +204,34 @@ void* procesar_comunicaciones_memoria(void* void_args) {
             log_error(logger, "Operacion desconocida");
             break;
         }
-
-        eliminar_paquete(paquete);
     }
-
     return NULL;
 }
 
-void* procesar_comunicaciones_cpu(void* void_args) {
+void* procesar_conexiones_cpu(void* void_args) {
     t_procesar_conexion_args *args = (t_procesar_conexion_args *)void_args;
     t_log *logger = args->log;
     int socket = args->fd;
-    char *server_name = args->server_name;
+    //char *server_name = args->server_name;
     free(args);
 
-    while(socket != -1) {
-        t_paquete* paquete = recibir_paquete(socket);  // Recibimos el paquete entero
-        void* stream = paquete->buffer->stream;
-        int size = paquete->buffer->size;
+    op_code cod;
+    while(1) {
+        // Recibir código de operación
+        ssize_t bytes_recibidos = recv(socket, &cod, sizeof(op_code), 0);
+        if (bytes_recibidos <= 0) { // El cliente cerró la conexión o hubo un error 
+            log_error(logger, "El cliente cerró la conexión.");
+            break; // Salir del bucle y cerrar el hilo
+        }
 
-        switch (paquete->codigo_operacion) {
+        switch (cod) {
         case HANDSHAKE_cpu:
             recibir_mensaje(socket, logger);
-            log_info(logger, "Conexion establecida con %s", server_name);
             break;
         
         case DEVOLVER_CONTROL_KERNEL:
             // Procesar el TCB recibido desde la CPU (cuando el CPU termina de ejecutar una instrucción)
-            t_tcb* tcb = deserializar_paquete_tcb(paquete->buffer);
+            t_tcb* tcb = recibir_hilo(socket);
             if(tcb->motivo_desalojo == INTERRUPCION_BLOQUEO) {
                 list_remove(cola_exec, 0);
 
@@ -209,11 +244,10 @@ void* procesar_comunicaciones_cpu(void* void_args) {
             break;
 
         default:
-            manejar_syscall(paquete);  // Manejar syscalls para el kernel
+            manejar_syscall(socket);  // Manejar syscalls para el kernel
             break;
         }
 
-        eliminar_paquete(paquete);  // Liberamos la memoria del paquete después de procesarlo
     }
 
     return NULL;

@@ -38,27 +38,20 @@ void ejecutar_ciclo_instruccion() {
 // RECIBE LA PROXIMA EJECUCION A REALIZAR OBTENIDA DEL MODULO MEMORIA
 t_instruccion *fetch(uint32_t tid, uint32_t pc) {
     pedir_instruccion_memoria(tid, pc, socket_cpu_memoria);
+    t_instruccion* inst = malloc(sizeof(t_instruccion));
+
+    sem_wait(&sem_instruccion);
+    inst = instruccion_actual;
+    sem_post(&sem_instruccion);
     
-    t_paquete* paquete = recibir_paquete(socket_cpu_memoria);
-    if (!paquete) {
-        log_error(LOGGER_CPU, "Fallo al recibir paquete.");
-        return NULL;
-    }
-
-    if (paquete->codigo_operacion != INSTRUCCION) {
-        log_warning(LOGGER_CPU, "Operación desconocida al obtener la instrucción de memoria.");
-        return NULL;
-    }
-
-    t_instruccion *instruccion = deserializar_instruccion(paquete->buffer);
-    if (!instruccion) {
+    if (!inst) {
         log_error(LOGGER_CPU, "Fallo al deserializar la instrucción.");
         return NULL;
     }
 
     log_info(LOGGER_CPU, "TID: %d - FETCH - Program Counter: %d", tid, pc);
 
-    return instruccion;
+    return inst;
 }
 
 nombre_instruccion string_a_enum(char* instruccion) {
@@ -204,6 +197,7 @@ void loguear_y_sumar_pc(t_instruccion *instruccion) {
 }
 
 void liberar_instruccion(t_instruccion *instruccion) {
+    free(instruccion->nombre);
     free(instruccion->parametro1);
     free(instruccion->parametro2);
     free(instruccion);

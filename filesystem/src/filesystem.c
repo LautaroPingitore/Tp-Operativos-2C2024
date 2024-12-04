@@ -84,16 +84,14 @@ void iniciar_conexiones() {
     log_info(LOGGER_FILESYSTEM, "Servidor filesystem iniciado y escuchando en el puerto %s", PUERTO_ESCUCHA);
 
     // HILOS SERVIDORES
-    if(pthread_create(&hilo_servidor_filesystem, NULL, escuchar_filesystem, NULL) != 0) {
-        log_info(LOGGER_FILESYSTEM, "TRISTEZA PURA");
-    } else {
-        log_info(LOGGER_FILESYSTEM, "SE A CREADOASSSCAS");
-    }
-    if (pthread_join(hilo_servidor_filesystem, NULL) != 0) {
-        log_error(LOGGER_FILESYSTEM, "Error al esperar la finalización del hilo escuchar_filesystem.");
-    } else {
-        log_info(LOGGER_FILESYSTEM, "El hilo escuchar_filesystem finalizó correctamente.");
-}
+    pthread_create(&hilo_servidor_filesystem, NULL, escuchar_filesystem, NULL);
+    pthread_detach(hilo_servidor_filesystem);
+
+//     if (pthread_join(hilo_servidor_filesystem, NULL) != 0) {
+//         log_error(LOGGER_FILESYSTEM, "Error al esperar la finalización del hilo escuchar_filesystem.");
+//     } else {
+//         log_info(LOGGER_FILESYSTEM, "El hilo escuchar_filesystem finalizó correctamente.");
+// }
 }
 
 void* escuchar_filesystem() {
