@@ -51,7 +51,7 @@ void* procesar_conexion_memoria(void *void_args){
                 break;
 
             case PROCESS_CREATE:
-                t_proceso_memoria* proceso_nuevo = deserializar_proceso(cliente_socket, stream, size);
+                t_proceso_memoria* proceso_nuevo = recibir_proceso(cliente_socket);
 
                 if(proceso_nuevo == NULL) {
                     enviar_mensaje("ERROR",cliente_socket);
@@ -60,6 +60,8 @@ void* procesar_conexion_memoria(void *void_args){
                 
                 if (asignar_espacio_memoria(proceso_nuevo, ALGORITMO_BUSQUEDA) == -1) {
                     enviar_mensaje("ERROR: No se pudo asignar memoria", cliente_socket);
+                    free(proceso_nuevo->contexto);
+                    free(proceso_nuevo);
                 } else {
                     pthread_mutex_lock(&mutex_procesos);
                     list_add(lista_procesos, proceso_nuevo);
@@ -72,7 +74,7 @@ void* procesar_conexion_memoria(void *void_args){
 
             case PROCESS_EXIT: // TERMINADO
                 
-                t_proceso_memoria* proceso_a_eliminar = deserializar_proceso(cliente_socket, stream, size);
+                t_proceso_memoria* proceso_a_eliminar = recibir_proceso(cliente_socket);
 
                 if (proceso_a_eliminar == NULL) {
                     enviar_mensaje("ERROR", cliente_socket);
@@ -86,25 +88,33 @@ void* procesar_conexion_memoria(void *void_args){
 
                 log_info(logger, "Proceso eliminado: PID=%d", proceso_a_eliminar->pid);
                 enviar_mensaje("OK", cliente_socket);
+                free(proceso_a_eliminar->contexto);
                 free(proceso_a_eliminar);
                 break;
 
             case THREAD_CREATE:
-                // CUIDADO CON DESERIALIZAR_HILO POR TEMA DE SIZEOF(CHAR*)
-                t_hilo_memoria* hilo_a_crear = deserializar_hilo_memoria(cliente_socket, stream, size);
+                t_hilo_memoria* hilo_a_crear = recibir_hilo(cliente_socket);
+                if(!hilo_a_crear) {
+                    enviar_mensaje("ERROR", cliente_socket);
+                    break;
+                }
+
                 pthread_mutex_lock(&mutex_hilos);
                 list_add(lista_hilos, hilo_a_crear);
                 pthread_mutex_unlock(&mutex_hilos);
                 
-                // CUIDADO CON MALLOC(CHAR*) YA QUE ESTA MAL
                 agregar_instrucciones_a_lista(hilo_a_crear->tid, hilo_a_crear->archivo);
-
                 enviar_mensaje("OK", cliente_socket);
                 log_info(logger, "Hilo creado exitosamente");
                 break;
 
             case THREAD_EXIT:
-                t_hilo_memoria* hilo_a_eliminar = deserializar_hilo_memoria(cliente_socket, stream, size);
+                t_hilo_memoria* hilo_a_eliminar = recibir_hilo(cliente_socke);
+                if(!hilo_a_eliminar) {
+                    enviar_mensaje("ERROR", cliente_socket);
+                    break;
+                }
+
                 pthread_mutex_lock(&mutex_hilos);
                 t_contexto_ejecucion* contexto = obtener_contexto(hilo_a_eliminar->pid_padre);
                 int resultado = eliminar_espacio_hilo(cliente_socket, hilo_a_eliminar, contexto);
@@ -118,37 +128,33 @@ void* procesar_conexion_memoria(void *void_args){
                 break;
 
             case DUMP_MEMORY:
-               
-                uint32_t pid_md, tid_md;
-
-                memcpy(&pid_md, stream + size, sizeof(uint32_t));
-                memcpy(&tid_md, stream + size + sizeof(uint32_t), sizeof(uint32_t));
+                t_pid_tid* ident = recibir_identificadores(cliente_socket);
                 
-                if(!hilo_a_eliminar || !tid_md) {
+                if(!ident) {
                     enviar_mensaje("ERROR", cliente_socket);
                 } 
-                if (solicitar_archivo_filesystem(pid_md, tid_md) == 0) {
+                if (solicitar_archivo_filesystem(ident->pid, ident->tid) == 0) {
                     enviar_mensaje("OK", cliente_socket);
                 } else {
                     enviar_mensaje("ERROR", cliente_socket);
                 }
-                
-                // borrar conexion y volverla a crear
+
                 break;
 
             case HANDSHAKE_cpu: //AVISA QUE SE CONECTO A CPU
                 recibir_mensaje(cliente_socket, logger);
-                log_info(LOGGER_MEMORIA, "Conexion establecida con CPU");
                 break;
 
             case CONTEXTO:
-                uint32_t pid_ct, tid_ct;
-                memcpy(&pid_ct, stream + size, sizeof(uint32_t));
-                memcpy(&tid_ct, stream + size + sizeof(uint32_t), sizeof(uint32_t));
-                procesar_solicitud_contexto(cliente_socket, pid_ct, tid_ct);
+                t_pid_tid* ident = recibir_identificadores(cliente_socket);
+                if(!ident) {
+                    enviar_mensaje("ERROR", cliente_socket);
+                } 
+                procesar_solicitud_contexto(cliente_socket, ident->pid, ident->tid);
                 break;
 
             case ACTUALIZAR_CONTEXTO:
+            
                 uint32_t pid_act, tid_act;
                 t_contexto_ejecucion* contexto_nuevo = malloc(sizeof(t_contexto_ejecucion));
                 memcpy(&pid_act, stream + size, sizeof(uint32_t));
@@ -228,19 +234,38 @@ void* procesar_conexion_memoria(void *void_args){
 //---------------------------------------|
 // CONEXION KERNEL DE CREACION DE PROCESO|
 //---------------------------------------|
+t_proceso_memoria* recibir_proceso(int socket) {
+    t_paquete* paquete = recibir_paquete(socket);
+    t_proceso_memoria* proceso = deserializar_proceso(paquete->buffer);
+    eliminar_paquete(paquete);
+    return proceso;
+}
 
-t_proceso_memoria* deserializar_proceso(int socket, void* stream, int size) {
-    t_proceso_memoria* pcb_memoria = malloc(sizeof(t_proceso_memoria));
+t_proceso_memoria* deserializar_proceso(t_buffer* buffer) {
+    t_proceso_memoria* proceso = malloc(sizeof(t_proceso_memoria));
+    if(proceso == NULL) {
+        printf("Error al asignar memoria al proceso");
+        return NULL;
+    }
+    void* stream = buffer->stream;
+    int desplazamiento = 0;
 
-    memcpy(&pcb_memoria->pid, stream + size, sizeof(uint32_t));
-    size += sizeof(uint32_t);
+    memcpy(&(proceso->pid), stream + desplazamiento, sizeof(uint32_t));
+    desplamiento += sizeof(uitn32_t);
 
-    memcpy(&pcb_memoria->limite, stream + size, sizeof(uint32_t));
-    size += sizeof(uint32_t);
+    memcpy(&(proceso->limite), stream + desplazamiento, sizeof(uint32_t));
+    desplazamiento += sizeof(uint32_t);
 
-    memcpy(&pcb_memoria->contexto, stream + size, sizeof(t_contexto_ejecucion));
+    proceso->contexto = malloc(sizeof(t_contexto_ejecucion));
+    if (!proceso->contexto) {
+        free(proceso);
+        log_error(LOGGER_MEMORIA, "Error al asignar memoria para el contexto.");
+        return NULL;
+    }
 
-    return pcb_memoria;
+    memcpy(proceso->contexto, buffer->stream + offset, sizeof(t_contexto_ejecucion));
+
+    return proceso;
 }
 
 void eliminar_proceso_de_lista(uint32_t pid) {
@@ -258,17 +283,39 @@ void eliminar_proceso_de_lista(uint32_t pid) {
 //-----------------|
 // CREACION DE HILO|
 //-----------------|
+t_hilo_memoria* recibir_hilo(int socket){
+    t_paquete* paquete = recibir_paquete(socket);
+    t_hilo_memoria* hilo = deserializar_hilo_memoria(paquete->buffer);
+    eliminar_paquete(paquete);
+    return hilo;
+}
 
-t_hilo_memoria* deserializar_hilo_memoria(int socket, void* stream, int size) {
+t_hilo_memoria* deserializar_hilo_memoria(t_buffer* buffer) {
     t_hilo_memoria* hilo = malloc(sizeof(t_hilo_memoria));
+    if(!hilo) {
+        printf("Error al crear el hilo recibido");
+        return NULL;
+    }
 
-    memcpy(&hilo->tid, stream + size, sizeof(uint32_t));
-    size += sizeof(uint32_t);
+    int desplamiento = 0;
+    uint32_t tamanio_archivo;
 
-    memcpy(&hilo->pid_padre, stream + size, sizeof(uint32_t));
-    size += sizeof(uint32_t);
+    memcpy(&hilo->tid, stream + desplazamiento, sizeof(uint32_t));
+    desplazamiento += sizeof(uint32_t);
 
-    memcpy(&hilo->archivo, stream + size, sizeof(strlen(hilo->archivo) + 1));
+    memcpy(&hilo->pid_padre, stream + desplazamiento, sizeof(uint32_t));
+    desplazamiento += sizeof(uint32_t);
+
+    memcpy(&tamanio_archivo, stream + desplazamiento, sizeof(uint32_t));
+    desplazamiento += sizeof(uint32_t)
+
+    hilo->archivo = malloc(tamanio_archivo);
+    if(hilo->archivo == NULL) {
+        printf("Error al deserializar el tamaño del archivo");
+        return NULL;
+    }
+
+    memcpy(&hilo->archivo, stream + desplazamiento, tamanio_archivo);
 
     return hilo;
 }
@@ -382,6 +429,31 @@ void liberar_hilo(uint32_t tid) {
 //-----------|
 //MEMORY DUMP|
 //-----------|
+t_pid_tid* recibir_identificadores(int socket) {
+    t_paquete* paquete = recibir_paquete(socket);
+    t_pid_tid* ident = deserializar_identificadores(paquete->buffer);
+    eliminar_paquete(paquete);
+    return ident;
+}
+
+t_pid_tid* deserializar_identificadores(t_buffer* buffer) {
+    t_pid_tid* ident = malloc(sizeof(t_pid_tid));
+    if(ident == NULL) {
+        printf("Error al asignar memoria");
+        return NULL;
+    }
+   
+   void * stream = buffer->stream; 
+   int desplazamiento = 0;
+   
+   memcpy(&(ident->pid), stream + desplazamiento, sizeof(uint32_t));
+   desplamiento += sizeof(uitn32_t);
+
+   memcpy(&(ident->tid), stream + desplazamiento, sizeof(uint32_t));
+   
+   return ident;
+}
+
 int solicitar_archivo_filesystem(uint32_t pid, uint32_t tid) {
     char nombre_archivo[256];
     time_t t = time(NULL);
@@ -544,6 +616,57 @@ t_list* obtener_lista_instrucciones_por_tid(uint32_t tid) {
 // ------------------|
 // INSTRUCCIONES CPU |
 // ------------------|
+t_actualizar_contexto* recibir_actualizacion(int socket) {
+    t_paquete* paquete = recibir_paquete(socket);
+    t_actualizar_contexto* act_cont = deserializar_actualizacion(paquete->buffer);
+    eliminar_paquete(paquete);
+    return act_cont;
+}
+
+t_actualizar_contexto* deserializar_actualizacion(t_buffer* buffer) {
+    t_actualizar_contexto* act_cont = malloc(sizeof(t_actualizar_contexto));
+    if(!act_cont) {
+        printf("Error al crear el act_cont");
+        return NULL;
+    }
+
+    void* stream = buffer->stream;
+    int desplazamiento = 0;
+
+
+}
+
+t_hilo_memoria* deserializar_hilo_memoria(t_buffer* buffer) {
+    t_hilo_memoria* hilo = malloc(sizeof(t_hilo_memoria));
+    if(!hilo) {
+        printf("Error al crear el hilo recibido");
+        return NULL;
+    }
+
+    void* stream = buffer->stream;
+    int desplamiento = 0;
+    uint32_t tamanio_archivo;
+
+    memcpy(&hilo->tid, stream + desplazamiento, sizeof(uint32_t));
+    desplazamiento += sizeof(uint32_t);
+
+    memcpy(&hilo->pid_padre, stream + desplazamiento, sizeof(uint32_t));
+    desplazamiento += sizeof(uint32_t);
+
+    memcpy(&tamanio_archivo, stream + desplazamiento, sizeof(uint32_t));
+    desplazamiento += sizeof(uint32_t)
+
+    hilo->archivo = malloc(tamanio_archivo);
+    if(hilo->archivo == NULL) {
+        printf("Error al deserializar el tamaño del archivo");
+        return NULL;
+    }
+
+    memcpy(&hilo->archivo, stream + desplazamiento, tamanio_archivo);
+
+    return hilo;
+}
+
 int enviar_instruccion(int socket, t_instruccion* inst) {
     t_paquete* paquete = crear_paquete_con_codigo_de_operacion(INSTRUCCION);
     agregar_a_paquete(paquete, &inst, sizeof(t_instruccion));

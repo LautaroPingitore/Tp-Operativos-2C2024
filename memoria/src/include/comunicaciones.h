@@ -43,6 +43,16 @@ typedef struct {
     t_list* instrucciones; // tipo t_instrucciones
 } t_hilo_instrucciones;
 
+typedef struct {
+    uint32_t pid;
+    uint32_t tid;
+} t_pid_tid;
+
+typedef struct {
+    uint32_t pid;
+    uint32_t tid;
+    t_contexto_ejecucion* contexto;
+} t_actualizar_contexto;
 
 // FUNCIONES MEJORADAS 2.0247234214321473216487537826432
 t_proceso_memoria* deserializar_proceso(int, void*, int);
@@ -57,6 +67,13 @@ int  mandar_solicitud_dump_memory(char*, char*, uint32_t);
 void liberar_instrucciones(t_list*);
 t_proceso_memoria* obtener_proceso_memoria(uint32_t);
 t_list* convertir_registros_a_char(t_registros*);
+
+t_proceso_memoria* recibir_proceso(int);
+t_proceso_memoria* deserializar_proceso(t_buffer*);
+t_hilo_memoria* recibir_hilo(int);
+t_hilo_memoria* deserializar_hilo_memoria(t_buffer*);
+t_pid_tid* recibir_identificadores(int);
+t_pid_tid* deserializar_identificadores(t_buffer*);
 
 //t_proceso_memoria* recibir_proceso_kernel(int);
 void eliminar_proceso_de_lista(uint32_t);
