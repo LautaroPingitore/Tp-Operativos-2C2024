@@ -196,7 +196,7 @@ void* procesar_comunicaciones_cpu(void* void_args) {
         
         case DEVOLVER_CONTROL_KERNEL:
             // Procesar el TCB recibido desde la CPU (cuando el CPU termina de ejecutar una instrucción)
-            t_tcb* tcb = deserializar_paquete_tcb(stream, size);
+            t_tcb* tcb = deserializar_paquete_tcb(paquete->buffer);
             if(tcb->motivo_desalojo == INTERRUPCION_BLOQUEO) {
                 list_remove(cola_exec, 0);
 

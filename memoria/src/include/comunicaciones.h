@@ -80,7 +80,7 @@ t_list* convertir_registros_a_char(t_registros*);
 
 t_proceso_memoria* recibir_proceso(int);
 t_proceso_memoria* deserializar_proceso(t_buffer*);
-t_hilo_memoria* recibir_hilo(int);
+t_hilo_memoria* recibir_hilo_memoria(int);
 t_hilo_memoria* deserializar_hilo_memoria(t_buffer*);
 t_pid_tid* recibir_identificadores(int);
 t_pid_tid* deserializar_identificadores(t_buffer*);
@@ -93,6 +93,7 @@ t_write_mem* deserializar_write_mem(t_buffer*);
 uint32_t recibir_read_mem(int);
 t_pedido_instruccion* recibir_pedido_instruccion(int);
 t_pedido_instruccion* deserializar_pedido_instruccion(t_buffer*);
+int enviar_valor_uint_cpu(int, uint32_t, op_code);
 
 //t_proceso_memoria* recibir_proceso_kernel(int);
 void eliminar_proceso_de_lista(uint32_t);

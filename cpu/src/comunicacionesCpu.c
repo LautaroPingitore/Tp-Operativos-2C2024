@@ -17,7 +17,7 @@ t_tcb* recibir_hilo_kernel(int socket_cliente) {
         return NULL;
     }
 
-    t_tcb* hilo = deserializar_paquete_tcb(paquete->buffer->stream, paquete->buffer->size);
+    t_tcb* hilo = deserializar_paquete_tcb(paquete->buffer);
 
     log_info(LOGGER_CPU, "Hilo recibido: <%d>, PRIORIDAD=%d, PID_PADRE=%d, ESTADO=%d",
              hilo->TID, hilo->PRIORIDAD, hilo->PID_PADRE, hilo->ESTADO);
@@ -26,18 +26,29 @@ t_tcb* recibir_hilo_kernel(int socket_cliente) {
     return hilo;
 }
 
-t_proceso_cpu* deserializar_proceso() {
-    t_proceso_cpu* pcb = malloc(sizeof(t_pcb));
-    t_paquete* paquete = recibir_paquete(socket_cpu_dispatch_kernel);
-    void* stream = paquete->buffer->stream;
-    int size = paquete->buffer->size;
-    
-    memcpy(&pcb->PID, stream + size, sizeof(uint32_t));
-    size += sizeof(uint32_t);
-
-    memcpy(&pcb->CONTEXTO, stream + size, sizeof(t_contexto_ejecucion));
-
+t_proceso_cpu* recibir_proceso(int socket) {
+    t_paquete* paquete = recibir_paquete(socket);
+    t_proceso_cpu* pcb = deserializar_proceso(paquete->buffer);
     eliminar_paquete(paquete);
+    return pcb;
+}
+
+t_proceso_cpu* deserializar_proceso(t_buffer* buffer) {
+    t_proceso_cpu* pcb = malloc(sizeof(t_pcb));
+    void* stream = buffer->stream;
+    int desplazamiento = 0;
+    
+    memcpy(&pcb->PID, stream + desplazamiento, sizeof(uint32_t));
+    desplazamiento += sizeof(uint32_t);
+
+    pcb->CONTEXTO = malloc(sizeof(t_contexto_ejecucion));
+    if(!pcb->CONTEXTO) {
+        printf("Error al crear el contexto");
+        free(pcb);
+        return NULL;
+    }
+    memcpy(&pcb->CONTEXTO, stream + desplazamiento, sizeof(t_contexto_ejecucion));
+
     return pcb;
 }
 
@@ -174,19 +185,12 @@ void enviar_solicitud_valor_memoria(int socket, uint32_t direccion_fisica) {
     eliminar_paquete(paquete);
 }
 
-void recibir_valor_de_memoria(int socket, uint32_t direccion_fisica, uint32_t valor_leido) {
+uint32_t recibir_valor_de_memoria(int socket) {
     t_paquete* paquete = recibir_paquete(socket);
-    void* stream = paquete->buffer->stream;
-
-    if (paquete->buffer->size < sizeof(uint32_t) + sizeof(uint32_t)) {
-        log_error(LOGGER_CPU, "Error al recibir valor desde memoria en la direccion fisica %d.", direccion_fisica);
-        return;
-    }
-
-    memcpy(&direccion_fisica, stream, sizeof(uint32_t));
-    memcpy(&valor_leido, stream + sizeof(uint32_t), sizeof(uint32_t));
-
-    log_info(LOGGER_CPU, "Valor recibido de Memoria: Dirección Física %d - Valor %d", direccion_fisica, valor_leido);
+    uint32_t valor;
+    memcpy(&valor, paquete->buffer->stream, sizeof(uint32_t));
+    eliminar_paquete(paquete);
+    return valor;
 }
 
 // FUNCIONES MMU

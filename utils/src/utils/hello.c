@@ -1,72 +1,129 @@
 #include "include/hello.h"
 
-t_tcb* deserializar_paquete_tcb(void* stream, int size) {
+t_tcb* recibir_hilo(int socket) {
+	t_paquete* paquete = recibir_paquete(socket);
+	t_tcb* hilo = deserializar_paquete_tcb(paquete->buffer);
+	eliminar_paquete(paquete);
+	return hilo;
+}
+
+t_tcb* deserializar_paquete_tcb(t_buffer* buffer) {
 	t_tcb* tcb = malloc(sizeof(t_tcb));
+	if(!tcb) {
+		printf("Error al crear el tcb");
+		return NULL;
+	}
 
-	memcpy(&tcb->TID, stream + size, sizeof(uint32_t));
-    size += sizeof(uint32_t);
+	void* stream = buffer->stream;
+	int desplazamiento = 0;
 
-    memcpy(&tcb->PRIORIDAD, stream + size, sizeof(uint32_t));
-    size += sizeof(uint32_t);
+	memcpy(&tcb->TID, stream + desplazamiento, sizeof(uint32_t));
+    desplazamiento += sizeof(uint32_t);
 
-    memcpy(&tcb->PID_PADRE, stream + size, sizeof(uint32_t));
-    size += sizeof(uint32_t);
+    memcpy(&tcb->PRIORIDAD, stream + desplazamiento, sizeof(uint32_t));
+    desplazamiento += sizeof(uint32_t);
 
-    memcpy(&tcb->ESTADO, stream + size, sizeof(uint32_t));
-	size += sizeof(uint32_t);
+    memcpy(&tcb->PID_PADRE, stream + desplazamiento, sizeof(uint32_t));
+    desplazamiento += sizeof(uint32_t);
 
-	memcpy(&tcb->PC, stream + size, sizeof(uint32_t));
+    memcpy(&tcb->ESTADO, stream + desplazamiento, sizeof(uint32_t));
+	desplazamiento += sizeof(uint32_t);
+
+	memcpy(&tcb->PC, stream + desplazamiento, sizeof(uint32_t));
 
 	return tcb;
 }
 
-t_instruccion* deserializar_instruccion(void* stream, int offset) {
+t_instruccion* recibir_instruccion(int socket) {
+	t_paquete* paquete = recibir_paquete(socket);
+	t_instruccion* inst = deserializar_instruccion(paquete->buffer);
+	eliminar_paquete(paquete);
+	return inst;
+}
 
-    // Reservar memoria para la instrucción
+t_instruccion* deserializar_instruccion(t_buffer* buffer) {
     t_instruccion* instruccion = malloc(sizeof(t_instruccion));
     if (!instruccion) {
         fprintf(stderr, "Error: No se pudo asignar memoria para t_instruccion\n");
         return NULL;
     }
 
-    // Deserializar nombre
-    memcpy(&instruccion->nombre, (char*)stream + offset, sizeof(instruccion->nombre));
-    offset += sizeof(instruccion->nombre);
+	void* stream = buffer->stream;
+	int desplazamiento = 0;
+	uint32_t tam_nom, tam_p1, tam_p2;
 
-    // Deserializar parametro1
-    uint32_t tamanio_parametro1;
-    memcpy(&tamanio_parametro1, (char*)stream + offset, sizeof(uint32_t));
-    offset += sizeof(uint32_t);
+	memcpy(&tam_nom, stream + desplazamiento, sizeof(uint32_t));
+	desplazamiento += sizeof(uint32_t);
 
-    instruccion->parametro1 = malloc(tamanio_parametro1);
-    if (!instruccion->parametro1) {
-        fprintf(stderr, "Error: No se pudo asignar memoria para parametro1\n");
-        free(instruccion);
-        return NULL;
-    }
-    memcpy(instruccion->parametro1, (char*)stream + offset, tamanio_parametro1);
-    offset += tamanio_parametro1;
+	instruccion->nombre = malloc(tam_nom);
+	if(!instruccion->nombre) {
+		printf("Error");
+		free(instruccion);
+		return NULL;
+	}
+	memcpy(&instruccion->nombre, stream + desplazamiento, tam_nom);
+	desplazamiento += tam_nom;
 
-    // Deserializar parametro2
-    uint32_t tamanio_parametro2;
-    memcpy(&tamanio_parametro2, (char*)stream + offset, sizeof(uint32_t));
-    offset += sizeof(uint32_t);
+	memcpy(&tam_p1, stream + desplazamiento, sizeof(uint32_t));
+	desplazamiento += sizeof(uint32_t);
 
-    instruccion->parametro2 = malloc(tamanio_parametro2);
-    if (!instruccion->parametro2) {
-        fprintf(stderr, "Error: No se pudo asignar memoria para parametro2\n");
-        free(instruccion->parametro1);
-        free(instruccion);
-        return NULL;
-    }
-    memcpy(instruccion->parametro2, (char*)stream + offset, tamanio_parametro2);
-    offset += tamanio_parametro2;
+	instruccion->parametro1 = malloc(tam_p1);
+	if(!instruccion->parametro1) {
+		printf("Error");
+		free(instruccion->nombre);
+		free(instruccion);
+		return NULL;
+	}
+	memcpy(&instruccion->parametro1, stream + desplazamiento, tam_p1);
+	desplazamiento += tam_p1;
 
-    // Deserializar parametro3 (entero)
-    memcpy(&instruccion->parametro3, (char*)stream + offset, sizeof(int));
-    offset += sizeof(int);
+	memcpy(&tam_p2, stream + desplazamiento, sizeof(uint32_t));
+	desplazamiento += sizeof(uint32_t);
 
+	instruccion->parametro2 = malloc(tam_p2);
+	if(!instruccion->parametro2) {
+		printf("Error");
+		free(instruccion->nombre);
+		free(instruccion->parametro1);
+		free(instruccion);
+		return NULL;
+	}
+	memcpy(&instruccion->parametro2, stream + desplazamiento, tam_p2);
+	desplazamiento += tam_p2;
+
+	memcpy(&instruccion->parametro3, stream + desplazamiento, sizeof(int));
+    
     return instruccion;
+}
+
+char* deserializar_mensaje(int socket_cliente) {
+    // Recibir el tamaño del mensaje
+    uint32_t size;
+    if (recv(socket_cliente, &size, sizeof(uint32_t), 0) <= 0) {
+        return NULL; // Error al recibir el tamaño
+    }
+
+    // Reservar memoria para el mensaje
+    char* mensaje = malloc(size);
+    if (!mensaje) {
+        return NULL; // Error al asignar memoria
+    }
+
+    // Recibir el mensaje
+    if (recv(socket_cliente, mensaje, size, 0) <= 0) {
+        free(mensaje);
+        return NULL; // Error al recibir el mensaje
+    }
+
+    return mensaje; // Retorna el mensaje deserializado
+}
+
+uint32_t recibir_pid(int socket) {
+    t_paquete* paquete = recibir_paquete(socket);
+    uint32_t pid;
+    memcpy(&pid, paquete->buffer->stream, sizeof(uint32_t));
+    eliminar_paquete(paquete);
+    return pid;
 }
 
 // SERVIDORES.C

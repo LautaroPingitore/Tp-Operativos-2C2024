@@ -47,71 +47,52 @@ void set_registro(char* registro, char *valor) {
 //la Direccion Logica que se encuentra en el Registro Direccion
 //y lo almacena en el Registro Datos.
 void read_mem(char* reg_datos, char* reg_direccion, int socket) {
-    // Obtener los punteros a los registros
     uint32_t *registro_datos = obtener_registro(reg_datos);
     uint32_t *registro_direccion = obtener_registro(reg_direccion);
 
-    // Validar que los registros sean validos
     if (!registro_datos || !registro_direccion) {
-        log_warning(LOGGER_CPU, "Error: Registro invalido en read_mem.");
+        log_warning(LOGGER_CPU, "Error: Registro inválido en read_mem.");
         return;
     }
 
-    // Traducir la direccion logica a direccion fisica
     uint32_t direccion_fisica = traducir_direccion(*registro_direccion, pcb_actual->PID);
-
-    // Verificar si la traduccion resulto en un Segmentation Fault
     if (direccion_fisica == SEGMENTATION_FAULT) {
         enviar_interrupcion_segfault(pcb_actual->PID, socket);
         return;
     }
 
     enviar_solicitud_valor_memoria(socket, direccion_fisica);
-    uint32_t valor_leido = 0;
+    sem_wait(&sem_valor_memoria); // Bloquea hasta que se reciba el valor
 
-    // Leer el valor de memoria desde la direccion fisica y se lo asigna al valor leido
-    recibir_valor_de_memoria(socket, direccion_fisica, valor_leido);
-    if (!valor_leido) {
-        log_warning(LOGGER_CPU, "Error al leer memoria en read_mem.");
-        return;
-    }
+    sem_wait(&sem_mutex_base_limite);
+    *registro_datos = valor_memoria;
+    sem_post(&sem_mutex_base_limite);
 
-    // Almacenar el valor en el registro de datos
-    *registro_datos = valor_leido;
-
-    // Loguear la accion de lectura
-    log_info(LOGGER_CPU, "PID: %d - Leer Memoria - Direccion Fisica: %d - Valor: %d",
-             pcb_actual->PID, direccion_fisica, valor_leido);
+    log_info(LOGGER_CPU, "PID: %d - Leer Memoria - Dirección Física: %d - Valor: %d",
+             pcb_actual->PID, direccion_fisica, *registro_datos);
 }
 
 //Lee el valor del Registro Datos y lo escribe en la 
 //direccion fisica de memoria obtenida a partir de la 
 //Direccion Logica almacenada en el Registro Direccion.
 void write_mem(char* reg_direccion, char* reg_datos, int socket) {
-    // Obtener los punteros a los registros
     uint32_t *reg_dire = obtener_registro(reg_direccion);
     uint32_t *reg_dat = obtener_registro(reg_datos);
 
-    // Validar que los registros sean validos
     if (!reg_dire || !reg_dat) {
-        log_warning(LOGGER_CPU, "Error: Registro invalido en write_mem.");
+        log_warning(LOGGER_CPU, "Error: Registro inválido en write_mem.");
         return;
     }
 
-    // Traducir la direccion logica a direccion fisica
     uint32_t direccion_fisica = traducir_direccion(*reg_dire, pcb_actual->PID);
-    
-    // Verificar si la traduccion resulto en un Segmentation Fault
     if (direccion_fisica == SEGMENTATION_FAULT) {
         enviar_interrupcion_segfault(pcb_actual->PID, socket);
         return;
     }
 
-    // Enviar el valor a la memoria para escribir en la direccion fisica
     enviar_valor_a_memoria(socket, direccion_fisica, reg_dat);
 
-    // Loguear la accion de escritura
-    log_info(LOGGER_CPU, "PID: %d - Escribir Memoria - Direccion Fisica: %d - Valor: %d",
+    log_info(LOGGER_CPU, "PID: %d - Escribir Memoria - Dirección Física: %d - Valor: %d",
              pcb_actual->PID, direccion_fisica, *reg_dat);
 }
 

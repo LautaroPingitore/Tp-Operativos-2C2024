@@ -15,12 +15,13 @@ void enviar_syscall_kernel(t_instruccion*, op_code);
 void enviar_interrupcion_segfault(uint32_t, int);
 void enviar_valor_a_memoria(int, uint32_t, uint32_t*);
 void enviar_solicitud_valor_memoria(int, uint32_t);
-void recibir_valor_de_memoria(int, uint32_t, uint32_t);
+uint32_t recibir_valor_de_memoria(int);
 
 // MMU
 void enviar_solicitud_memoria(int, uint32_t, op_code, const char*);
 uint32_t recibir_entero(int, const char*);
 
-t_proceso_cpu* deserializar_proceso();
+t_proceso_cpu* recibir_proceso(int);
+t_proceso_cpu* deserializar_proceso(t_buffer*);
 
 #endif //COMUNICACIONESCPU_H_

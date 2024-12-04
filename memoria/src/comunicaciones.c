@@ -85,7 +85,7 @@ void* procesar_conexion_memoria(void *void_args){
                 break;
 
             case THREAD_CREATE:
-                t_hilo_memoria* hilo_a_crear = recibir_hilo(cliente_socket);
+                t_hilo_memoria* hilo_a_crear = recibir_hilo_memoria(cliente_socket);
                 if(!hilo_a_crear) {
                     enviar_mensaje("ERROR", cliente_socket);
                     break;
@@ -97,7 +97,7 @@ void* procesar_conexion_memoria(void *void_args){
                 break;
 
             case THREAD_EXIT:
-                t_hilo_memoria* hilo_a_eliminar = recibir_hilo(cliente_socke);
+                t_hilo_memoria* hilo_a_eliminar = recibir_hilo_memoria(cliente_socke);
                 if(!hilo_a_eliminar) {
                     enviar_mensaje("ERROR", cliente_socket);
                     break;
@@ -159,7 +159,7 @@ void* procesar_conexion_memoria(void *void_args){
         
                 uint32_t valor_leido = leer_memoria(dire_fisica_rm);
                 if (valor_leido != SEGF_FAULT) {
-                    send(cliente_socket, &valor_leido, sizeof(uint32_t), 0);
+                    enviar_valor_uint_cpu(cliente_socket, valor_leido, PEDIDO_READ_MEM);
                     log_info(LOGGER_MEMORIA, "Lectura exitosa - Dirección: %u, Valor: %u.", dire_fisica_rm, valor_leido);
                 } else {
                     enviar_mensaje("SEGMENTATION_FAULT", cliente_socket);
@@ -178,6 +178,28 @@ void* procesar_conexion_memoria(void *void_args){
                     enviar_mensaje("NO_INSTRUCCION", cliente_socket);
                 }
     
+                break;
+
+            case SOLICITUD_BASE_MEMORIA:
+                uint32_t pid = recibir_pid(cliente_socket);
+                t_proceso_memoria* pcb = obtener_proceso_memoria(pid);
+                int resultado = enviar_valor_uint_cpu(cliente_socket, pcb->base, SOLICITUD_BASE_MEMORIA);
+                if(resultado == 0) {
+                    log_info(logger, "Paquete enviado correctamente");
+                } else {
+                    log_error(logger, "Error al enviar el paquete");
+                }
+                break;
+
+            case SOLICITUD_LIMITE_MEMORIA:
+                uint32_t pid = recibir_pid(cliente_socket);
+                t_proceso_memoria* pcb = obtener_proceso_memoria(pid);
+                int resultado = enviar_valor_uint_cpu(cliente_socket, pcb->limite, SOLICITUD_LIMITE_MEMORIA);
+                if(resultado == 0) {
+                    log_info(logger, "Paquete enviado correctamente");
+                } else {
+                    log_error(logger, "Error al enviar el paquete");
+                }
                 break;
 
             case ERROROPCODE:
@@ -253,7 +275,7 @@ void eliminar_proceso_de_lista(uint32_t pid) {
 //-----------------|
 // CREACION DE HILO|
 //-----------------|
-t_hilo_memoria* recibir_hilo(int socket){
+t_hilo_memoria* recibir_hilo_memoria(int socket){
     t_paquete* paquete = recibir_paquete(socket);
     t_hilo_memoria* hilo = deserializar_hilo_memoria(paquete->buffer);
     eliminar_paquete(paquete);
@@ -656,10 +678,21 @@ t_actualizar_contexto* deserializar_actualizacion(t_buffer* buffer) {
 
 int enviar_instruccion(int socket, t_instruccion* inst) {
     t_paquete* paquete = crear_paquete_con_codigo_de_operacion(INSTRUCCION);
-    agregar_a_paquete(paquete, &inst, sizeof(t_instruccion));
-    serializar_paquete(paquete, paquete->buffer->size);
+    uint32_t tam_nom = strlen(inst->nombre);
+    agregar_a_paquete(paquete, &tam_nom, sizeof(uint32_t));
+    agregar_a_paquete(paquete, &inst->nombre, tam_nom);
 
-    int resultado = enviar_paquete(paquete, socket) == 0;
+    uint32_t tam_p1 = strlen(inst->parametro1);
+    agregar_a_paquete(paquete, &tam_p1, sizeof(uint32_t));
+    agregar_a_paquete(paquete, &inst->parametro1, tam_p1);
+
+    uint32_t tam_p2 = strlen(inst->parametro2);
+    agregar_a_paquete(paquete, &tam_p2, sizeof(uint32_t));
+    agregar_a_paquete(paquete, &inst->parametro2, tam_p2);
+
+    agregar_a_paquete(paquete, &inst->parametro3, sizeof(int));
+   
+    int resultado = enviar_paquete(paquete, socket);
     eliminar_paquete(paquete);
 
     return resultado;
@@ -669,8 +702,7 @@ void enviar_valor_leido_cpu(int socket, uint32_t dire_fisica, uint32_t valor) {
     t_paquete* paquete = crear_paquete_con_codigo_de_operacion(PEDIDO_READ_MEM);
     agregar_a_paquete(paquete, &dire_fisica, sizeof(uint32_t));
     agregar_a_paquete(paquete, &valor, sizeof(uint32_t));
-    serializar_paquete(paquete, paquete->buffer->size);
-
+   
     if(enviar_paquete(paquete, socket) == 0) {
         log_info(LOGGER_MEMORIA, "Valor enviado a Cpu");
     } else {
@@ -716,8 +748,7 @@ int enviar_contexto_cpu(t_proceso_memoria* proceso) {
     agregar_a_paquete(paquete, &proceso->pid, sizeof(uint32_t));
     agregar_a_paquete(paquete, &proceso->contexto->registros, sizeof(t_registros));
     agregar_a_paquete(paquete, &proceso->contexto->motivo_finalizacion, sizeof(finalizacion_proceso));
-    serializar_paquete(paquete, paquete->buffer->size);
-    
+       
     int resultado = enviar_paquete(paquete, socket_memoria_cpu);
     eliminar_paquete(paquete);
     return resultado;
@@ -746,8 +777,7 @@ int mandar_solicitud_dump_memory(char* nombre_archivo, char* contenido_proceso, 
     agregar_a_paquete(paquete, &nombre_archivo, tamanio_nombre); //
     agregar_a_paquete(paquete, &tamanio, sizeof(uint32_t));
     agregar_a_paquete(paquete, &contenido_proceso, tamanio);// 
-    serializar_paquete(paquete, paquete->buffer->size);
-
+   
     int resultado = enviar_paquete(paquete, socket_memoria_filesystem);
     eliminar_paquete(paquete);
     
@@ -868,4 +898,15 @@ t_pedido_instruccion* deserializar_pedido_instruccion(t_buffer* buffer) {
     desplazamiento += sizeof(uint32_t);
     
     return ped_inst; 
+}
+
+// =============================|
+// BASE_MEMORIA y LIMITE_MEMORIA|
+// =============================|
+int enviar_valor_uint_cpu(int socket, uint32_t valor, op_code codigo) {
+    t_paquete* paquete = crear_paquete_con_codigo_de_operacion(codigo);
+    agregar_a_paquete(paquete, &valor, sizeof(uint32_t));
+    int resultado = enviar_paquete(paquete, socket);
+    eliminar_paquete(paquete);
+    return resultado;
 }

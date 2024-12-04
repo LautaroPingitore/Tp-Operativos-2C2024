@@ -50,7 +50,7 @@ t_instruccion *fetch(uint32_t tid, uint32_t pc) {
         return NULL;
     }
 
-    t_instruccion *instruccion = deserializar_instruccion(paquete->buffer->stream, paquete->buffer->size);
+    t_instruccion *instruccion = deserializar_instruccion(paquete->buffer);
     if (!instruccion) {
         log_error(LOGGER_CPU, "Fallo al deserializar la instrucción.");
         return NULL;

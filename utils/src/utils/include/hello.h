@@ -221,7 +221,10 @@ typedef struct {
     //char* ARCHIVO;
 } t_pcb;
 
-t_tcb* deserializar_paquete_tcb(void*, int);
-t_instruccion* deserializar_instruccion(void*, int);
+t_tcb* recibir_hilo(int);
+t_tcb* deserializar_paquete_tcb(t_buffer*);
+t_instruccion* deserializar_instruccion(t_buffer*);
+char* deserializar_mensaje(int);
+uint32_t recibir_pid(int);
 
 #endif

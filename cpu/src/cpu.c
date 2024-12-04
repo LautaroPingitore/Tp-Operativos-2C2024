@@ -123,39 +123,72 @@ void* procesar_conexion_dispatch(void* void_args) {
             break; // Salir del bucle y cerrar el hilo
         }
 
-        t_paquete* paquete = recibir_paquete(socket);
-        void* stream = paquete->buffer->stream;
-        int size = paquete->buffer->size;
-
         switch(cod) {
             case HANDSHAKE_kernel:
                 recibir_mensaje(socket, logger);
                 break;
 
             case HILO:
-                hilo_actual = deserializar_paquete_tcb(stream, size);
+                hilo_actual = recibir_hilo(socket);
                 ejecutar_ciclo_instruccion();
                 break;
 
             case PROCESO:
-                pcb_actual = deserializar_proceso(stream, size);
+                pcb_actual = recibir_proceso(socket);
                 break;
 
             case MENSAJE:
-                char* respuesta = (char*)stream;
-                if (strcmp(respuesta, "OK") == 0) {
-                    log_info(logger, "Se pudo escribir en memoria");
+                char* respuesta = deserializar_mensaje(socket);
+                if (respuesta == NULL) {
+                    log_warning(logger, "Error al recibir el mensaje.");
                 } else {
-                    log_warning(logger, "Error al escribir en memoria.");
+                    if (strcmp(respuesta, "OK") == 0) {
+                        log_info(logger, "Se pudo escribir en memoria");
+                    } else {
+                        log_warning(logger, "Error al escribir en memoria.");
+                    }
+                    free(respuesta); // Liberar la memoria del mensaje recibido
                 }
+                break;
+
+            case SOLICITUD_BASE_MEMORIA: 
+                uint32_t pid_bm = recibir_pid(socket);
+                uint32_t base = consultar_base_particion(pid_bm);
+
+                sem_wait(&sem_mutex_base_limite);
+                base_pedida = base;
+                sem_post(&sem_mutex_base_limite);
+
+                log_info(logger, "Base recibida: %d para PID: %d", base, pid_bm);
+                sem_post(&sem_base); // Desbloquea al hilo que espera
+                break;
+
+            case SOLICITUD_LIMITE_MEMORIA: 
+                uint32_t pid_lm = recibir_pid(socket);
+                uint32_t limite = consultar_limite_particion(pid_lm);
+
+                sem_wait(&sem_mutex_base_limite);
+                limite_pedido = limite;
+                sem_post(&sem_mutex_base_limite);
+
+                log_info(logger, "Límite recibido: %d para PID: %d", limite, pid_lm);
+                sem_post(&sem_limite); // Desbloquea al hilo que espera
+                break;
+            
+            case PEDIDO_READ_MEM:
+                uint32_t valor = recibir_valor_de_memoria(socket); // Función para recibir el valor
+                sem_wait(&sem_mutex_base_limite);
+                valor_memoria = valor;
+                sem_post(&sem_mutex_base_limite);
+
+                log_info(logger, "Valor recibido: %d", valor_memoria);
+                sem_post(&sem_valor_memoria);
                 break;
 
             default:
                 log_error(logger, "Codigo de operacion desconocida: %d", cod);
                 break;
         }
-
-        eliminar_paquete(paquete);
     }
 
     close(socket);
