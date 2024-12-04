@@ -202,8 +202,9 @@ void syscall_io(uint32_t pid, uint32_t tid, int milisegundos) {
     io(pcb, tid, milisegundos);  // Invoca la funcion que gestiona la operacion IO
 }
 
-void manejar_syscall(t_paquete* paquete) {
-    t_instruccion* inst = deserializar_instruccion(paquete->buffer->stream, paquete->buffer->size);
+void manejar_syscall(int socket) {
+    t_paquete* paquete = recibir_paquete(socket);
+    t_instruccion* inst = deserializar_instruccion(paquete->buffer->stream);
     t_tcb* hilo_actual = list_remove(cola_exec, 0);
 
     switch (paquete->codigo_operacion) {
