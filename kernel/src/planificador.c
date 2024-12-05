@@ -37,16 +37,6 @@ al hilo ejectandose y devolver el control al kernel para que este vuelva a plani
            Al finalizar un hilo KERNEL le debe mandar a MEMORIA el TCB, liberar
            el TCB asociado y mover a READY todos los hilos bloqueados por ese TID
 
-=== LOGS OBLIGATORIOS (MARCAR CON X AQUELLOS QUE YA ESTEN) ===
-X Syscall recibida: ## (<PID>:<TID>) - Solicitó syscall: <NOMBRE_SYSCALL>
-X Creación de Proceso: ## (<PID>:0) Se crea el proceso - Estado: NEW 
-X Creación de Hilo: ## (<PID>:<TID>) Se crea el Hilo - Estado: READY
-- Motivo de Bloqueo: ## (<PID>:<TID>) - Bloqueado por: <PTHREAD_JOIN / MUTEX / IO>
-X Fin de IO: ## (<PID>:<TID>) finalizó IO y pasa a READY
-X Fin de Quantum: ## (<PID>:<TID>) - Desalojado por fin de Quantum
-X Fin de Proceso: ## Finaliza el proceso <PID>
-X Fin de Hilo: ## (<PID>:<TID>) Finaliza el hilo
-
 */
 
 
@@ -620,115 +610,6 @@ void empezar_quantum(int quantum) {
 }
 */
 
-
-/*
-void ejecutar_hilo_rr(t_tcb* hilo, int quantum) {
-    log_info(LOGGER_KERNEL, "(<%d>:<%d>) Enviando hilo a CPU para ejecución con quantum %d", 
-             hilo->PID_PADRE, hilo->TID, quantum);
-
-    hilo->ESTADO = EXECUTE;
-    enviar_hilo_a_cpu(hilo, quantum);  // Enviar hilo a la CPU para ejecución
-
-    // Esperar retorno desde CPU
-    t_retorno_cpu* retorno = recibir_mensaje_cpu();  // Función ficticia para recibir mensajes desde CPU
-
-    if (retorno == NULL) {
-        log_error(LOGGER_KERNEL, "Error al recibir respuesta de la CPU. Reiniciando planificación.");
-        hilo->ESTADO = READY;
-        pthread_mutex_lock(&mutex_cola_ready);
-        list_add(cola_ready, hilo);
-        pthread_mutex_unlock(&mutex_cola_ready);
-        return;
-    }
-
-    manejar_retorno_cpu(hilo, retorno);  // Manejar el motivo de retorno
-    free(retorno);
-}
-
-*/
-
-// void ejecutar_hilo_rr(t_tcb* hilo, int quantum) {
-//     log_info(LOGGER_KERNEL, "(<%d>:<%d>) Ejecutando hilo con quantum %d", hilo->PID_PADRE, hilo->TID, quantum);
-
-//     struct timespec inicio, actual;
-//     clock_gettime(CLOCK_MONOTONIC, &inicio);
-
-//     int tiempo_transcurrido = 0;
-//     while (tiempo_transcurrido < quantum) {
-//         ejecutar_hilo(hilo);  // Llamada a función ficticia para ejecutar una instrucción
-//         clock_gettime(CLOCK_MONOTONIC, &actual);
-//         tiempo_transcurrido = (actual.tv_sec - inicio.tv_sec) * 1000 +
-//                               (actual.tv_nsec - inicio.tv_nsec) / 1000000;
-
-//         if (check_interrupt()) {
-//             log_info(LOGGER_KERNEL, "(<%d>:<%d>) Interrupción recibida. Devolviendo control al Kernel.", hilo->PID_PADRE, hilo->TID);
-//             hilo->ESTADO = READY;
-//             pthread_mutex_lock(&mutex_cola_ready);
-//             list_add(cola_ready, hilo);
-//             pthread_mutex_unlock(&mutex_cola_ready);
-//             return;
-//         }
-//     }
-//     // Si termina quantum sin salir, mover a READY
-//     log_info(LOGGER_KERNEL, "(<%d>:<%d>) Finalizó quantum. Desalojado por fin de Quantum.", hilo->PID_PADRE, hilo->TID);
-//     hilo->ESTADO = READY;
-//     pthread_mutex_lock(&mutex_cola_ready);
-//     list_add(cola_ready, hilo);
-//     pthread_mutex_unlock(&mutex_cola_ready);
-
-//     cpu_libre = true;
-// }
-
-
-
-
-
-
-// OJO PORQUE ACA LA EJECUCION LA HACE KERNEL Y NO CPU
-// void ejecutar_hilo_rr(t_tcb* hilo, t_list* cola, int quantum) {
-//     pthread_mutex_lock(&mutex_estado);
-//     hilo->ESTADO = EXECUTE;
-//     pthread_mutex_unlock(&mutex_estado);
-
-//     log_info(LOGGER_KERNEL, "Ejecutando hilo TID %d del proceso por %d ms %d", hilo->TID, hilo->PID_PADRE, quantum);
-
-//     struct timespec inicio, actual;
-//     clock_gettime(CLOCK_MONOTONIC, &inicio);
-
-//     int tiempo_transcurrido = 0;
-//     while (tiempo_transcurrido < quantum) {
-//         ejecutar_hilo(hilo);
-
-//         clock_gettime(CLOCK_MONOTONIC, &actual);
-//         tiempo_transcurrido = (actual.tv_sec - inicio.tv_sec) * 1000 + 
-//                                 (actual.tv_nsec - inicio.tv_nsec) / 1000000;
-//         usleep(1000);
-//     }
-
-//     log_info(LOGGER_KERNEL, "Hilo TID %d ejecutado durante %d ms", hilo->TID, quantum);
-
-//     pthread_mutex_lock(&mutex_estado);
-//     if(hilo->ESTADO != EXIT) {
-//         hilo->ESTADO = READY;
-//         pthread_mutex_unlock(&mutex_estado);
-
-//         pthread_mutex_lock(&mutex_cola_ready); 
-//         list_add(cola, hilo);
-//         pthread_mutex_unlock(&mutex_cola_ready);
-
-//         log_info(LOGGER_KERNEL, "Hilo TID %d movido a READY después del quantum", hilo->TID);
-//     } else {
-//         pthread_mutex_unlock(&mutex_estado);
-
-//         log_info(LOGGER_KERNEL, "Hilo TID %d finalizado", hilo->TID);
-//         liberar_recursos_hilo(hilo);
-//     }
-
-//     pthread_mutex_lock(&mutex_estado);
-//     cpu_libre = true;
-//     pthread_mutex_unlock(&mutex_estado);
-// }
-
 // ENTRADA Y SALIDA ====================
 
 void io(t_pcb* pcb, uint32_t tid, int milisegundos) {
@@ -739,7 +620,7 @@ void io(t_pcb* pcb, uint32_t tid, int milisegundos) {
     }
 
     tcb->ESTADO = BLOCK_IO;
-    log_info(LOGGER_KERNEL, "Hilo %d en proceso %d ha iniciado IO por %d ms", tid, pcb->PID, milisegundos);
+    log_info(LOGGER_KERNEL, "## (<%d>:<%d>) - Bloqueado por <IO> durante %d", tid, pcb->PID, milisegundos);
 
     intentar_mover_a_execute();
 

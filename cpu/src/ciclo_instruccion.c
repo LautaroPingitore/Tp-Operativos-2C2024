@@ -49,7 +49,7 @@ t_instruccion *fetch(uint32_t tid, uint32_t pc) {
         return NULL;
     }
 
-    log_info(LOGGER_CPU, "TID: %d - FETCH - Program Counter: %d", tid, pc);
+    log_info(LOGGER_CPU, "“## TID: <%d> - FETCH - Program Counter: <%d>”", tid, pc);
 
     return inst;
 }
@@ -124,52 +124,64 @@ void execute(t_instruccion *instruccion, int socket, t_tcb* tcb) {
             sub_registros(instruccion->parametro1, instruccion->parametro2);
             break;
         case LOG:
-            loguear_y_sumar_pc(instruccion);
+            log_registro(instruccion->parametro1);
+            hilo_actual->PC++;
             break;
 
         // SYSCALLS QUE DEVUELVEN EL CONTROL A KERNEL
         case INST_DUMP_MEMORY:
             loguear_y_sumar_pc(instruccion);
+            actualizar_contexto_memoria();
             enviar_syscall_kernel(instruccion, DUMP_MEMORY);
             break;
         case INST_IO:
             loguear_y_sumar_pc(instruccion);
+            actualizar_contexto_memoria();
             enviar_syscall_kernel(instruccion, IO);
             break;
         case INST_PROCESS_CREATE:
             loguear_y_sumar_pc(instruccion);
+            actualizar_contexto_memoria();
             enviar_syscall_kernel(instruccion, PROCESS_CREATE);
             break;
         case INST_THREAD_CREATE:
             loguear_y_sumar_pc(instruccion);
+            actualizar_contexto_memoria();
             enviar_syscall_kernel(instruccion, THREAD_CREATE);
             break;
         case INST_THREAD_JOIN:
             loguear_y_sumar_pc(instruccion);
+            actualizar_contexto_memoria();
             enviar_syscall_kernel(instruccion, THREAD_JOIN);
             break;
         case INST_THREAD_CANCEL:
             loguear_y_sumar_pc(instruccion);
+            actualizar_contexto_memoria();
             enviar_syscall_kernel(instruccion, THREAD_CANCEL);
             break;
         case INST_MUTEX_CREATE:
             loguear_y_sumar_pc(instruccion);
+            actualizar_contexto_memoria();
             enviar_syscall_kernel(instruccion, MUTEX_CREATE);
             break;
         case INST_MUTEX_LOCK:
             loguear_y_sumar_pc(instruccion);
+            actualizar_contexto_memoria();
             enviar_syscall_kernel(instruccion, MUTEX_LOCK);
             break;
         case INST_MUTEX_UNLOCK:
             loguear_y_sumar_pc(instruccion);
+            actualizar_contexto_memoria();
             enviar_syscall_kernel(instruccion, MUTEX_UNLOCK);
             break;
         case INST_THREAD_EXIT:
             loguear_y_sumar_pc(instruccion);
+            actualizar_contexto_memoria();
             enviar_syscall_kernel(instruccion, THREAD_EXIT);
             break;
         case INST_PROCESS_EXIT:
             loguear_y_sumar_pc(instruccion);
+            actualizar_contexto_memoria();
             enviar_syscall_kernel(instruccion, PROCESS_EXIT);
             break;
         default:
@@ -184,7 +196,7 @@ void execute(t_instruccion *instruccion, int socket, t_tcb* tcb) {
 void check_interrupt() {
     //recibir_interrupcion(socket_cpu_interrupt_kernel);
     if(hay_interrupcion) {
-        log_info(LOGGER_CPU, "Interrupción recibida. Actualizando contexto y devolviendo control al Kernel.");
+        log_info(LOGGER_CPU, "## Llega interrupción al puerto Interrupt");
         actualizar_contexto_memoria();
         devolver_control_al_kernel();
     }
@@ -192,7 +204,11 @@ void check_interrupt() {
 
 // MUESTRA EN CONSOLA LA INSTRUCCION EJECUTADA Y LE SUMA 1 AL PC
 void loguear_y_sumar_pc(t_instruccion *instruccion) {
-    log_info(LOGGER_CPU, "TID: %d - Ejecutando: %s - Parametros: %s %s %d", hilo_actual->TID, instruccion->nombre, instruccion->parametro1, instruccion->parametro2, instruccion->parametro3);
+    if(instruccion->parametro3 == -1) {
+        log_info(LOGGER_CPU, "## TID: %d - Ejecutando: %s - Parametros: %s %s", hilo_actual->TID, instruccion->nombre, instruccion->parametro1, instruccion->parametro2);
+    } else {
+        log_info(LOGGER_CPU, "## TID: %d - Ejecutando: %s - Parametros: %s %s %d", hilo_actual->TID, instruccion->nombre, instruccion->parametro1, instruccion->parametro2, instruccion->parametro3);
+    }
     hilo_actual->PC++;
 }
 
@@ -205,17 +221,16 @@ void liberar_instruccion(t_instruccion *instruccion) {
 
 void actualizar_contexto_memoria() {
     // Se puede suponer que la actualización del contexto implica actualizar los registros y el PC
-    log_info(LOGGER_CPU, "Actualizando el contexto de la CPU en memoria...");
     if (!hilo_actual) {
         log_error(LOGGER_CPU, "No hay Hilo actual. No se puede actualizar contexto.");
         return;
     }
 
+    log_info(LOGGER_CPU, "## TID <%d> - Actualizo Contexto Ejecucion", hilo_actual->TID);
     // Enviar los registros y el program counter a memoria
     // A través de la memoria se actualizaría el PCB
     enviar_contexto_memoria(hilo_actual->PID_PADRE, hilo_actual->TID, pcb_actual->CONTEXTO->registros, hilo_actual->PC, socket_cpu_memoria);
 
-    log_info(LOGGER_CPU, "Contexto de la CPU actualizado en memoria.");
 }
 
 void devolver_control_al_kernel() {

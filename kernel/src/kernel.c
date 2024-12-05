@@ -249,6 +249,7 @@ void* procesar_conexiones_cpu(void* void_args) {
             t_tcb* tcb = recibir_hilo(socket);
             if(tcb->motivo_desalojo == INTERRUPCION_BLOQUEO) {
                 list_remove(cola_exec, 0);
+                log_info(LOGGER_KERNEL, "## (<%d>:<%d>) - Desalojado por fin de Quantum", tcb->PID_PADRE, tcb->PID_PADRE)
 
                 pthread_mutex_lock(&mutex_cola_ready);
                 list_add(cola_ready, tcb);  // Agregar el TCB a la cola de ready

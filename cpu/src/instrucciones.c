@@ -68,8 +68,7 @@ void read_mem(char* reg_datos, char* reg_direccion, int socket) {
     *registro_datos = valor_memoria;
     sem_post(&sem_mutex_globales);
 
-    log_info(LOGGER_CPU, "PID: %d - Leer Memoria - Dirección Física: %d - Valor: %d",
-             pcb_actual->PID, direccion_fisica, *registro_datos);
+    log_info(LOGGER_CPU, "## TID: <%d> - Accion: <LEER> - Direccion Fisica: <%d>", hilo_actual->TID, direccion_fisica);
 }
 
 //Lee el valor del Registro Datos y lo escribe en la 
@@ -92,8 +91,7 @@ void write_mem(char* reg_direccion, char* reg_datos, int socket) {
 
     enviar_valor_a_memoria(socket, direccion_fisica, reg_dat);
 
-    log_info(LOGGER_CPU, "PID: %d - Escribir Memoria - Dirección Física: %d - Valor: %d",
-             pcb_actual->PID, direccion_fisica, *reg_dat);
+    log_info(LOGGER_CPU, "## TID: <%d> - Accion: <ESCRIBIR> - Direccion Fisica: <%d>", hilo_actual->TID, direccion_fisica);
 }
 
 //Suma al Registro Destino el Registro Origen y deja el resultado en el Registro Destino.

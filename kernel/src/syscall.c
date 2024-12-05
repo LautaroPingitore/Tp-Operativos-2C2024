@@ -48,7 +48,8 @@ void syscall_thread_join(uint32_t pid, uint32_t tid_actual, uint32_t tid_esperad
 
     t_pcb* pcb = obtener_pcb_padre_de_hilo(pid);
 
-    log_info(LOGGER_KERNEL, "Syscall THREAD_JOIN ejecutada en proceso %d: hilo %d espera a hilo %d", pcb->PID, tid_actual, tid_esperado);
+    log_info(LOGGER_KERNEL, "## (<%d>:<%d>) - Bloqueado por <THREAD_JOIN>", pid, tid_actual);
+    log_info(LOGGER_KERNEL, "Se desbloqueara al terminarse el hilo %d", tid_esperado);
     thread_join(pcb, tid_actual, tid_esperado);
 }
 
@@ -117,6 +118,8 @@ void syscall_mutex_lock(t_tcb* hilo_actual, uint32_t pid, char* nombre) {
         list_add(cola_blocked, hilo_actual);
         pthread_mutex_unlock(&mutex_cola_blocked);
 
+        log_info(LOGGER_KERNEL, "## (<%d>:<%d>) - Bloqueado por <%s>", pid, hilo_bloqueado->TID, recurso->nombre_recurso);
+
         // ESPERA A QUE SE LIBERE Y EL PRIMER RECURSO QUE SE
         // BLOQUEO POR EL MUTEX LO TOMA
         pthread_cond_wait(&recurso->cond_mutex, &recurso->mutex);
@@ -125,7 +128,7 @@ void syscall_mutex_lock(t_tcb* hilo_actual, uint32_t pid, char* nombre) {
         eliminar_tcb_lista(recurso->hilos_bloqueados, hilo_bloqueado->TID);
         pthread_mutex_unlock(&mutex_cola_blocked);
 
-        log_info(LOGGER_KERNEL, "(<%d>:<%d>) Desbloqueado del Mutex: %s", hilo_bloqueado->PID_PADRE, hilo_bloqueado->TID, recurso->nombre_recurso);
+        log_info(LOGGER_KERNEL, "(<%d>:<%d>) Desbloqueado de %s", hilo_bloqueado->PID_PADRE, hilo_bloqueado->TID, recurso->nombre_recurso);
     } else {
         log_info(LOGGER_KERNEL, "Syscall MUTEX_LOCK ejecutada.");
     }
