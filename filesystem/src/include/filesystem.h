@@ -25,11 +25,6 @@ typedef struct {
     uint32_t tamanio_contenido;
 } t_archivo_dump;
 
-typedef struct {
-    int socket_cliente;
-    struct sockaddr_in direccion_cliente;
-} t_datos_cliente;
-
 void inicializar_config(char*);
 void inicializar_archivo(char*, size_t, char*);
 void iniciar_archivos();

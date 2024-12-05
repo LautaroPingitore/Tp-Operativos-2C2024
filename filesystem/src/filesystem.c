@@ -128,6 +128,7 @@ void* gestionar_conexiones(void* void_args) {
     t_procesar_conexion_args *args = (t_procesar_conexion_args *)void_args;
     t_log *logger = args->log;
     int socket_cliente = args->fd;
+    char* server_name = args->server_name;
 
     free(args);
 
@@ -142,7 +143,7 @@ void* gestionar_conexiones(void* void_args) {
 
         switch (cod) {
             case HANDSHAKE_memoria:
-                log_info(logger, "## MEMORIA Conectado - FD del socket <%d>", socket_cliente);
+                log_info(logger, "## %s Conectado - FD del socket: <%d>", server_name, socket);
                 break;
 
             case MENSAJE:

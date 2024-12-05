@@ -121,6 +121,7 @@ void* procesar_conexion_dispatch(void* void_args) {
     t_procesar_conexion_args *args = (t_procesar_conexion_args *)void_args;
     t_log *logger = args->log;
     int socket = args->fd;
+    char* server_name = args->server_name;
 
     free(args);
 
@@ -135,7 +136,7 @@ void* procesar_conexion_dispatch(void* void_args) {
 
         switch(cod) {
             case HANDSHAKE_kernel:
-                recibir_mensaje(socket, logger);
+                log_info(logger, "## %s Conectado - FD del socket: <%d>", server_name, socket);
                 break;
 
             case HILO:

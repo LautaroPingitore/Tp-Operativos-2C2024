@@ -37,7 +37,7 @@ void* procesar_conexion_memoria(void *void_args){
 
         switch (cod) {
             case HANDSHAKE_kernel: // Simplemente avisa que se conecta a kernel 
-                log_info(logger, "## Kernel Conectado - FD del socket: <%d>", cliente_socket);
+                log_info(logger, "## %s Conectado - FD del socket: <%d>", server_name, socket);
                 break;
 
             case PROCESS_CREATE:
@@ -127,7 +127,7 @@ void* procesar_conexion_memoria(void *void_args){
                 break;
 
             case HANDSHAKE_cpu: //AVISA QUE SE CONECTO A CPU
-                log_info(logger, "## CPU Conectado - FD del socket: <%d>", cliente_socket);
+                log_info(logger, "## %s Conectado - FD del socket: <%d>", server_name, socket);
                 break;
 
             case CONTEXTO:
