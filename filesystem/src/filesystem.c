@@ -68,7 +68,7 @@ void inicializar_archivo(char* path, size_t size, char* nombre) {
             fputc('\0', file);
         }
     }
-    log_info(LOGGER_FILESYSTEM, "El archivo ya se encuentra creado");
+    log_info(LOGGER_FILESYSTEM, "El archivo %s ya se encuentra creado", nombre);
     fclose(file);
 }
 
@@ -127,7 +127,7 @@ int server_escuchar(t_log* logger, char* servidor, int socket_server) {
 
         if (pthread_create(&hilo_cliente, NULL, gestionar_conexiones, (void *)args) != 0) {
             log_error(logger, "[%s] Error al crear hilo para cliente.", servidor);
-            free(args->server_name);
+            
             free(args);
             close(socket_cliente);
             continue;
@@ -146,16 +146,15 @@ void* gestionar_conexiones(void* void_args) {
     int socket_cliente = args->fd;
     char* server_name = args->server_name;
 
-    free(args);
-
     op_code cod;
     while (1) {
         // Recibir código de operación
         ssize_t bytes_recibidos = recv(socket_cliente, &cod, sizeof(op_code), MSG_WAITALL);
-        if (bytes_recibidos != sizeof(op_code)) { // El cliente cerró la conexión o hubo un error
-            log_error(logger, "El cliente cerró la conexión.");
-            break; // Salir del bucle y cerrar el hilo
+        if (bytes_recibidos != sizeof(op_code)) {
+            log_error(logger, "Error al recibir código de operación, bytes recibidos: %zd", bytes_recibidos);
+            break;
         }
+        log_info(logger, "Se recibió el código de operación: %d", cod);
 
         switch (cod) {
             case HANDSHAKE_memoria:
@@ -190,6 +189,8 @@ void* gestionar_conexiones(void* void_args) {
 
     log_warning(logger, "Finalizando conexión con el cliente.");
     close(socket_cliente); // Cerrar el socket del cliente
+    free(args->server_name);
+    free(args);
 
     return NULL;
 }

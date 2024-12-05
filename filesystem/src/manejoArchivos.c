@@ -24,8 +24,6 @@ void cargar_bitmap() {
     // Leer el contenido del archivo en la memoria
     fread(bitmap_memoria, 1, bitmap_size, bitmap);
     fclose(bitmap);
-
-    log_info(LOGGER_FILESYSTEM, "Bitmap cargado desde %s", bitmap_path);
 }
 
 void guardar_bitmap() {

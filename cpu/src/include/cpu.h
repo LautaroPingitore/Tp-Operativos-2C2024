@@ -35,7 +35,7 @@ void iniciar_conexiones();
 void* escuchar_cpu();
 void* escuchar_cpu_dispatch();
 void* escuchar_cpu_interrupt();
-int server_escuchar(t_log*, char*, int);
+int server_escuchar(char*, int);
 void* procesar_conexion_dispatch(void*);
 void* procesar_conexion_interrupt(void*);
 

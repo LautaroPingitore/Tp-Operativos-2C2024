@@ -29,7 +29,7 @@ sem_t sem_mutex_globales;
 
 int main() {
     inicializar_config("../configs/cpu");
-    log_info(LOGGER_CPU, "Iniciando CPU \n");
+    log_info(LOGGER_CPU, "Iniciando CPU");
 
     iniciar_semaforos();
     iniciar_conexiones();
@@ -99,7 +99,7 @@ void iniciar_conexiones() {
 
 void* escuchar_cpu() {
     log_info(LOGGER_CPU, "El hilo de escuchar_cpu ha iniciado.");
-    while (server_escuchar(LOGGER_CPU, "CPU_INTERRUPT", socket_cpu_interrupt)) {
+    while (server_escuchar("CPU_INTERRUPT", socket_cpu_interrupt)) {
         log_info(LOGGER_CPU, "Conexión procesada.");
     }
     log_warning(LOGGER_CPU, "El servidor de CPU_INTERRUPT terminó inesperadamente.");
@@ -108,7 +108,7 @@ void* escuchar_cpu() {
 
 void* escuchar_cpu_dispatch() {
     log_info(LOGGER_CPU, "El hilo de escucha para CPU_DISPATCH ha iniciado.");
-    while (server_escuchar(LOGGER_CPU, "CPU_DISPATCH", socket_cpu_dispatch)) {
+    while (server_escuchar("CPU_DISPATCH", socket_cpu_dispatch)) {
         log_info(LOGGER_CPU, "Conexión procesada en CPU_DISPATCH.");
     }
     log_warning(LOGGER_CPU, "El servidor de CPU_DISPATCH terminó inesperadamente.");
@@ -117,37 +117,41 @@ void* escuchar_cpu_dispatch() {
 
 void* escuchar_cpu_interrupt() {
     log_info(LOGGER_CPU, "El hilo de escucha para CPU_INTERRUPT ha iniciado.");
-    while (server_escuchar(LOGGER_CPU, "CPU_INTERRUPT", socket_cpu_interrupt)) {
+    while (server_escuchar("CPU_INTERRUPT", socket_cpu_interrupt)) {
         log_info(LOGGER_CPU, "Conexión procesada en CPU_INTERRUPT.");
     }
     log_warning(LOGGER_CPU, "El servidor de CPU_INTERRUPT terminó inesperadamente.");
     return NULL;
 }
 
-int server_escuchar(t_log *logger, char *server_name, int server_socket) {
+int server_escuchar(char *server_name, int server_socket) {
     while (1) {
-        int cliente_socket = esperar_cliente(server_socket, logger);
+        int cliente_socket = esperar_cliente(server_socket, LOGGER_CPU);
         if (cliente_socket == -1) {
-            log_warning(logger, "[%s] Error al aceptar conexión. Reintentando...", server_name);
+            log_warning(LOGGER_CPU, "[%s] Error al aceptar conexión. Reintentando...", server_name);
             continue;
         }
 
         pthread_t hilo_cliente;
         t_procesar_conexion_args *args = malloc(sizeof(t_procesar_conexion_args));
         if (!args) {
-            log_error(logger, "[%s] Error al asignar memoria para las conexiones.", server_name);
+            log_error(LOGGER_CPU, "[%s] Error al asignar memoria para las conexiones.", server_name);
             close(cliente_socket);
             continue;
         }
 
-        args->log = logger;
+        args->log = LOGGER_CPU;
         args->fd = cliente_socket;
         args->server_name = strdup(server_name);
 
         if (strcmp(server_name, "CPU_DISPATCH") == 0) {
-            pthread_create(&hilo_cliente, NULL, procesar_conexion_dispatch, args);
+            pthread_create(&hilo_cliente, NULL, procesar_conexion_dispatch, (void*) args);
+            
+            free(args);
         } else if (strcmp(server_name, "CPU_INTERRUPT") == 0) {
-            pthread_create(&hilo_cliente, NULL, procesar_conexion_interrupt, args);
+            pthread_create(&hilo_cliente, NULL, procesar_conexion_interrupt, (void*) args);
+            
+            free(args);
         }
 
         pthread_detach(hilo_cliente);
@@ -158,24 +162,23 @@ int server_escuchar(t_log *logger, char *server_name, int server_socket) {
 
 void* procesar_conexion_dispatch(void* void_args) {
     t_procesar_conexion_args *args = (t_procesar_conexion_args *)void_args;
-    t_log *logger = args->log;
+    //t_log *logger = args->log;
     int socket = args->fd;
     char* server_name = args->server_name;
-
-    free(args);
 
     op_code cod;
     while(1) {
         // Recibir código de operación
         ssize_t bytes_recibidos = recv(socket, &cod, sizeof(op_code), MSG_WAITALL);
-        if (bytes_recibidos != sizeof(op_code)) { // El cliente cerró la conexión o hubo un error
-            log_error(logger, "El cliente cerró la conexión.");
-            break; // Salir del bucle y cerrar el hilo
+        if (bytes_recibidos != sizeof(op_code)) {
+            log_error(LOGGER_CPU, "Error al recibir código de operación, bytes recibidos: %zd", bytes_recibidos);
+            break;
         }
+        log_info(LOGGER_CPU, "Se recibió el código de operación: %d", cod);
 
         switch(cod) {
             case HANDSHAKE_dispatch:
-                log_info(logger, "## %s Conectado - FD del socket: <%d>", server_name, socket);
+                log_info(LOGGER_CPU, "## %s Conectado - FD del socket: <%d>", server_name, socket);
                 break;
 
             case HILO:
@@ -190,12 +193,12 @@ void* procesar_conexion_dispatch(void* void_args) {
             case MENSAJE:
                 char* respuesta = deserializar_mensaje(socket);
                 if (respuesta == NULL) {
-                    log_warning(logger, "Error al recibir el mensaje.");
+                    log_warning(LOGGER_CPU, "Error al recibir el mensaje.");
                 } else {
                     if (strcmp(respuesta, "OK") == 0) {
-                        log_info(logger, "Se pudo escribir en memoria");
+                        log_info(LOGGER_CPU, "Se pudo escribir en memoria");
                     } else {
-                        log_warning(logger, "Error al escribir en memoria.");
+                        log_warning(LOGGER_CPU, "Error al escribir en memoria.");
                     }
                     free(respuesta); // Liberar la memoria del mensaje recibido
                 }
@@ -217,7 +220,7 @@ void* procesar_conexion_dispatch(void* void_args) {
                 base_pedida = base;
                 sem_post(&sem_mutex_globales);
 
-                log_info(logger, "Base recibida: %d para PID: %d", base, pid_bm);
+                log_info(LOGGER_CPU, "Base recibida: %d para PID: %d", base, pid_bm);
                 sem_post(&sem_base); // Desbloquea al hilo que espera
                 break;
 
@@ -229,7 +232,7 @@ void* procesar_conexion_dispatch(void* void_args) {
                 limite_pedido = limite;
                 sem_post(&sem_mutex_globales);
 
-                log_info(logger, "Límite recibido: %d para PID: %d", limite, pid_lm);
+                log_info(LOGGER_CPU, "Límite recibido: %d para PID: %d", limite, pid_lm);
                 sem_post(&sem_limite); // Desbloquea al hilo que espera
                 break;
             
@@ -239,43 +242,44 @@ void* procesar_conexion_dispatch(void* void_args) {
                 valor_memoria = valor;
                 sem_post(&sem_mutex_globales);
 
-                log_info(logger, "Valor recibido: %d", valor_memoria);
+                log_info(LOGGER_CPU, "Valor recibido: %d", valor_memoria);
                 sem_post(&sem_valor_memoria);
                 break;
 
             default:
-                log_error(logger, "Codigo de operacion desconocida: %d", cod);
+                log_error(LOGGER_CPU, "Codigo de operacion desconocida: %d", cod);
                 break;
         }
     }
 
-    log_warning(logger, "El cliente se desconectó de %s.", server_name);
-    close(socket);
+    log_warning(LOGGER_CPU, "Finalizando conexión con el cliente.");
+    close(socket); // Cerrar el socket del cliente
+    free(args->server_name);
+    free(args);
     return NULL;
 }
 
 void* procesar_conexion_interrupt(void* void_args) {
     t_procesar_conexion_args *args = (t_procesar_conexion_args *)void_args;
-    t_log *logger = args->log;
+    //t_log *logger = args->log;
     int socket = args->fd;
     char* server_name = args->server_name;
-
-    free(args);
 
     op_code cod;
     while(1) {
         // Recibir código de operación
         ssize_t bytes_recibidos = recv(socket, &cod, sizeof(op_code), MSG_WAITALL);
-        if (bytes_recibidos != sizeof(op_code)) { // El cliente cerró la conexión o hubo un error
-            log_error(logger, "El cliente cerró la conexión.");
-            break; // Salir del bucle y cerrar el hilo
+        if (bytes_recibidos != sizeof(op_code)) {
+            log_error(LOGGER_CPU, "Error al recibir código de operación, bytes recibidos: %zd", bytes_recibidos);
+            break;
         }
+        log_info(LOGGER_CPU, "Se recibió el código de operación: %d", cod);
 
         t_paquete* paquete = recibir_paquete(socket);
 
         switch (cod) {
             case HANDSHAKE_interrupt:
-                log_info(logger, "## %s Conectado - FD del socket: <%d>", server_name, socket);
+                log_info(LOGGER_CPU, "## %s Conectado - FD del socket: <%d>", server_name, socket);
                 break;
 
             case FINALIZACION_QUANTUM:
@@ -283,7 +287,7 @@ void* procesar_conexion_interrupt(void* void_args) {
                 break;
             
             default:
-                log_error(logger, "Codigo de operacion desconocida: %d", cod);
+                log_error(LOGGER_CPU, "Codigo de operacion desconocida: %d", cod);
                 break;
         }
 
@@ -291,8 +295,10 @@ void* procesar_conexion_interrupt(void* void_args) {
 
     }
 
-    log_warning(logger, "El cliente se desconectó de %s.", server_name);
-    close(socket);
+    log_warning(LOGGER_CPU, "Finalizando conexión con el cliente.");
+    close(socket); // Cerrar el socket del cliente 
+    free(args->server_name);
+    free(args);
     return NULL;
 }
 

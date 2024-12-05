@@ -158,7 +158,7 @@ int server_escuchar(t_log *logger, char *server_name, int server_socket) {
 
         if (pthread_create(&hilo_cliente, NULL, procesar_conexion_memoria, (void*)args) != 0) {
             log_error(logger, "[%s] Error al crear hilo para cliente.", server_name);
-            free(args->server_name);
+            
             free(args);
             close(cliente_socket);
             continue;
@@ -175,16 +175,16 @@ void* procesar_conexion_memoria(void *void_args){
     t_log *logger = args->log;
     int cliente_socket = args->fd;
     char *server_name = args->server_name;
-    free(args);
 
     op_code cod;
     while (1) {
         // Recibir código de operación
-        ssize_t bytes_recibidos = recv(socket, &cod, sizeof(op_code), MSG_WAITALL);
-        if (bytes_recibidos != sizeof(op_code)) { // El cliente cerró la conexión o hubo un error
-            log_error(logger, "El cliente cerró la conexión.");
-            break; // Salir del bucle y cerrar el hilo
+        ssize_t bytes_recibidos = recv(cliente_socket, &cod, sizeof(op_code), MSG_WAITALL);
+        if (bytes_recibidos != sizeof(op_code)) {
+            log_error(logger, "Error al recibir código de operación, bytes recibidos: %zd", bytes_recibidos);
+            break;
         }
+        log_info(logger, "Se recibió el código de operación: %d", cod);
 
         switch (cod) {
             case HANDSHAKE_kernel: // Simplemente avisa que se conecta a kernel 
@@ -372,7 +372,9 @@ void* procesar_conexion_memoria(void *void_args){
     }
 
 
-    log_warning(logger, "El cliente se desconectó de %s server", server_name);
-    close(cliente_socket);
+    log_warning(logger, "Finalizando conexión con el cliente.");
+    close(cliente_socket); // Cerrar el socket del cliente
+    free(args->server_name);
+    free(args);
     return NULL;
 }

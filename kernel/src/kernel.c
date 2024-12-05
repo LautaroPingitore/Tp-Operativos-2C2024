@@ -52,7 +52,7 @@ int main(int argc, char* argv[]) {
     inicializar_kernel();
 
     // CREAR PROCESOS INICIAL Y LO EJECUTA
-    crear_proceso(archivo_pseudocodigo, tamanio_proceso, 0);
+    crear_proceso(pseudo_path, tamanio_proceso, 0);
     intentar_mover_a_execute();
 
     // NO SE SI HACE FALTA ESTE WHILE, YA QUE CUANDO HACES EL
@@ -98,7 +98,7 @@ void iniciar_conexiones() {
         log_error(LOGGER_KERNEL, "No se pudo conectar con el módulo Memoria");
         exit(EXIT_FAILURE);
     }
-    enviar_handshake(socket_kernel_memoria, HANDSHAKE_memoria);
+    enviar_handshake(socket_kernel_memoria, HANDSHAKE_kernel);
     pthread_create(&hilo_kernel_memoria, NULL, escuchar_kernel_memoria, NULL);
     pthread_detach(hilo_kernel_memoria);
 
@@ -125,41 +125,41 @@ void iniciar_conexiones() {
 
 void* escuchar_kernel_memoria() {
     log_info(LOGGER_KERNEL, "Hilo de escucha para Memoria iniciado.");
-    while (server_escuchar(LOGGER_KERNEL, "KERNEL-MEMORIA", socket_kernel_memoria)) {
+    while (server_escuchar("KERNEL-MEMORIA", socket_kernel_memoria)) {
         log_info(LOGGER_KERNEL, "Conexión procesada.");
     }
     log_warning(LOGGER_KERNEL, "El servidor para Memoria terminó inesperadamente.");
     return NULL;
 }
 
-int server_escuchar(t_log *logger, char *server_name, int server_socket) {
+int server_escuchar(char *server_name, int server_socket) {
     while (1) {
-        log_info(logger, "[%s] Esperando conexión de cliente...", server_name);
+        log_info(LOGGER_KERNEL, "[%s] Esperando conexión de cliente...", server_name);
 
-        int cliente_socket = esperar_cliente(server_socket, logger);
+        int cliente_socket = esperar_cliente(server_socket, LOGGER_KERNEL);
 
         if (cliente_socket == -1) {
-            log_warning(logger, "[%s] Error al aceptar conexión del cliente. Reintentando...", server_name);
+            log_warning(LOGGER_KERNEL, "[%s] Error al aceptar conexión del cliente. Reintentando...", server_name);
             continue;
         }
 
-        log_info(logger, "[%s] Cliente conectado. Procesando conexión...", server_name);
+        log_info(LOGGER_KERNEL, "[%s] Cliente conectado. Procesando conexión...", server_name);
 
         pthread_t hilo_cliente;
         t_procesar_conexion_args *args = malloc(sizeof(t_procesar_conexion_args));
         if (!args) {
-            log_error(logger, "[%s] Error al asignar memoria para las conexiones.", server_name);
+            log_error(LOGGER_KERNEL, "[%s] Error al asignar memoria para las conexiones.", server_name);
             close(cliente_socket);
             continue;
         }
 
-        args->log = logger;
+        args->log = LOGGER_KERNEL;
         args->fd = cliente_socket;
         args->server_name = strdup(server_name);
 
         if (pthread_create(&hilo_cliente, NULL, procesar_conexiones, (void *)args) != 0) {
-            log_error(logger, "[%s] Error al crear hilo para cliente.", server_name);
-            free(args->server_name);
+            log_error(LOGGER_KERNEL, "[%s] Error al crear hilo para cliente.", server_name);
+            
             free(args);
             close(cliente_socket);
             continue;
@@ -168,18 +168,18 @@ int server_escuchar(t_log *logger, char *server_name, int server_socket) {
         // Separar el hilo del flujo principal
         pthread_detach(hilo_cliente);
 
-        log_info(logger, "[%s] Hilo creado para procesar la conexión.", server_name);
+        log_info(LOGGER_KERNEL, "[%s] Hilo creado para procesar la conexión.", server_name);
     }
 
     // Este punto no se alcanzará debido al ciclo infinito.
-    log_warning(logger, "[%s] Server terminado inesperadamente.", server_name);
+    log_warning(LOGGER_KERNEL, "[%s] Server terminado inesperadamente.", server_name);
     return -1; // Para mantener compatibilidad, aunque no debería retornar.
 }
 
 
 void* escuchar_kernel_cpu_dispatch() {
     log_info(LOGGER_KERNEL, "Hilo de escucha para CPU Dispatch iniciado.");
-    while (server_escuchar(LOGGER_KERNEL, "KERNEL-CPU_DISPATCH", socket_kernel_cpu_dispatch)) {
+    while (server_escuchar("KERNEL-CPU_DISPATCH", socket_kernel_cpu_dispatch)) {
         log_info(LOGGER_KERNEL, "Conexión procesada.");
     }
     log_warning(LOGGER_KERNEL, "El servidor para CPU Dispatch terminó inesperadamente.");
@@ -188,7 +188,7 @@ void* escuchar_kernel_cpu_dispatch() {
 
 void* escuchar_kernel_cpu_interrupt() {
     log_info(LOGGER_KERNEL, "Hilo de escucha para CPU Interrupt iniciado.");
-    while (server_escuchar(LOGGER_KERNEL, "KERNEL-CPU_INTERRUPT", socket_kernel_cpu_interrupt)) {
+    while (server_escuchar("KERNEL-CPU_INTERRUPT", socket_kernel_cpu_interrupt)) {
         log_info(LOGGER_KERNEL, "Conexión procesada.");
     }
     log_warning(LOGGER_KERNEL, "El servidor para CPU Interrupt terminó inesperadamente.");
@@ -197,36 +197,35 @@ void* escuchar_kernel_cpu_interrupt() {
 
 void* procesar_conexiones(void* void_args) {
     t_procesar_conexion_args *args = (t_procesar_conexion_args *)void_args;
-    t_log *logger = args->log;
+    //t_log *logger = args->log;
     int socket = args->fd;
     char* server_name = args->server_name;
-
-    free(args);
 
     op_code cod;
     while(1) {
         ssize_t bytes_recibidos = recv(socket, &cod, sizeof(op_code), MSG_WAITALL);
-        if (bytes_recibidos != sizeof(op_code)) { // El cliente cerró la conexión o hubo un error
-            log_error(logger, "El cliente cerró la conexión.");
-            break; // Salir del bucle y cerrar el hilo
+        if (bytes_recibidos != sizeof(op_code)) {
+            log_error(LOGGER_KERNEL, "Error al recibir código de operación, bytes recibidos: %zd", bytes_recibidos);
+            break;
         }
+        log_info(LOGGER_KERNEL, "Se recibió el código de operación: %d", cod);
         
         switch (cod) {
             case HANDSHAKE_memoria:
-                log_info(logger, "## %s Conectado - FD del socket: <%d>", server_name, socket);
+                log_info(LOGGER_KERNEL, "## %s Conectado - FD del socket: <%d>", server_name, socket);
                 break;
 
             case MENSAJE:
                 char* respuesta = deserializar_mensaje(socket);
                 if (strcmp(respuesta, "OK") == 0) {
-                    log_info(logger, "Proceso creado en memoria.");
+                    log_info(LOGGER_KERNEL, "Proceso creado en memoria.");
                 } else {
-                    log_warning(logger, "Error al crear proceso en memoria.");
+                    log_warning(LOGGER_KERNEL, "Error al crear proceso en memoria.");
                 }
                 break;
             
             case HANDSHAKE_cpu:
-                log_info(logger, "## %s Conectado - FD del socket: <%d>", server_name, socket);
+                log_info(LOGGER_KERNEL, "## %s Conectado - FD del socket: <%d>", server_name, socket);
                 break;
         
             case DEVOLVER_CONTROL_KERNEL:
@@ -247,77 +246,83 @@ void* procesar_conexiones(void* void_args) {
                 if(strcmp(server_name, "CPU_DISPATCH") == 0) {
                     manejar_syscall(socket);  // Manejar syscalls para el kernel
                 } else {
-                    log_error(logger, "Operacion desconocida");
+                    log_error(LOGGER_KERNEL, "Operacion desconocida");
                 }
                 break;
 
         }
     }
 
-    log_warning(logger, "El cliente se desconectó de %s.", server_name);
-    close(socket);
+    log_warning(LOGGER_KERNEL, "Finalizando conexión con el cliente.");
+    close(socket); // Cerrar el socket del cliente
+    free(args->server_name);
+    free(args);
     return NULL;
 }
 
 // OJO CON ESTA PORQUE ES EXTREMADAMENTE RARA
 void* procesar_conexion_memoria(void* void_args) {
     t_procesar_conexion_args *args = (t_procesar_conexion_args *)void_args;
-    t_log *logger = args->log;
+    //t_log *logger = args->log;
     int socket = args->fd;
-    //char* server_name = args->server_name;
-
-    free(args);
+    char* server_name = args->server_name;
 
     op_code cod;
     while (1) {
         // Recibir código de operación
         ssize_t bytes_recibidos = recv(socket, &cod, sizeof(op_code), MSG_WAITALL);
-        if (bytes_recibidos != sizeof(op_code)) { // El cliente cerró la conexión o hubo un error
-            log_error(logger, "El cliente cerró la conexión.");
-            break; // Salir del bucle y cerrar el hilo
+        if (bytes_recibidos != sizeof(op_code)) {
+            log_error(LOGGER_KERNEL, "Error al recibir código de operación, bytes recibidos: %zd", bytes_recibidos);
+            break;
         }
+        log_info(LOGGER_KERNEL, "Se recibió el código de operación: %d", cod);
 
         switch (cod) {
         case HANDSHAKE_memoria:
-            recibir_mensaje(socket, logger);
+            log_info(LOGGER_KERNEL, "## %s Conectado - FD del socket: <%d>", server_name, socket);
             break;
 
         case MENSAJE:
             char* respuesta = deserializar_mensaje(socket);
             if (strcmp(respuesta, "OK") == 0) {
-                log_info(logger, "Proceso creado en memoria.");
+                log_info(LOGGER_KERNEL, "Proceso creado en memoria.");
             } else {
-                log_warning(logger, "Error al crear proceso en memoria.");
+                log_warning(LOGGER_KERNEL, "Error al crear proceso en memoria.");
             }
             break;
         
         default:
-            log_error(logger, "Operacion desconocida");
+            log_error(LOGGER_KERNEL, "Operacion desconocida");
             break;
         }
     }
+
+    log_warning(LOGGER_KERNEL, "Finalizando conexión con el cliente.");
+    close(socket); // Cerrar el socket del cliente
+    free(args->server_name);
+    free(args);
     return NULL;
 }
 
 void* procesar_conexiones_cpu(void* void_args) {
     t_procesar_conexion_args *args = (t_procesar_conexion_args *)void_args;
-    t_log *logger = args->log;
+    //t_log *LOGGER_KERNEL = args->log;
     int socket = args->fd;
-    //char *server_name = args->server_name;
-    free(args);
+    char *server_name = args->server_name;
 
     op_code cod;
     while(1) {
         // Recibir código de operación
         ssize_t bytes_recibidos = recv(socket, &cod, sizeof(op_code), MSG_WAITALL);
-        if (bytes_recibidos != sizeof(op_code)) { // El cliente cerró la conexión o hubo un error
-            log_error(logger, "El cliente cerró la conexión.");
-            break; // Salir del bucle y cerrar el hilo
+        if (bytes_recibidos != sizeof(op_code)) {
+            log_error(LOGGER_KERNEL, "Error al recibir código de operación, bytes recibidos: %zd", bytes_recibidos);
+            break;
         }
+        log_info(LOGGER_KERNEL, "Se recibió el código de operación: %d", cod);
 
         switch (cod) {
         case HANDSHAKE_cpu:
-            recibir_mensaje(socket, logger);
+            log_info(LOGGER_KERNEL, "## %s Conectado - FD del socket: <%d>", server_name, socket);
             break;
         
         case DEVOLVER_CONTROL_KERNEL:
@@ -340,6 +345,11 @@ void* procesar_conexiones_cpu(void* void_args) {
         }
 
     }
+
+    log_warning(LOGGER_KERNEL, "Finalizando conexión con el cliente.");
+    close(socket); // Cerrar el socket del cliente
+    free(args->server_name);
+    free(args);
 
     return NULL;
 }
