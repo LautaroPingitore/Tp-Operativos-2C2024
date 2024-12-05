@@ -27,6 +27,7 @@ void iniciar_conexiones();
 t_list* obtener_particiones_fijas(char**);
 void* escuchar_memoria();
 int server_escuchar(t_log*, char*, int);
+void* procesar_conexion_memoria(void *);
 
 
 #endif /* MEMORIA_H_ */

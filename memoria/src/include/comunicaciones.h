@@ -7,9 +7,6 @@ extern t_list* lista_instrucciones; // TIPO t_hilo_instrucciones
 extern pthread_mutex_t mutex_procesos;
 extern pthread_mutex_t mutex_instrucciones;
 
-// Funciones para manejar el servidor y la comunicación con otros módulos
-void* procesar_conexion_memoria(void *);
-
 t_instruccion* obtener_instruccion(uint32_t, uint32_t);
 t_contexto_ejecucion*  obtener_contexto(uint32_t);
 

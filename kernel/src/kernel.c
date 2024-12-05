@@ -22,21 +22,27 @@ pthread_t hilo_kernel_memoria;
 pthread_t hilo_kernel_dispatch;
 pthread_t hilo_kernel_interrupt;
 
+// EL ARHCIVO DE PSEUDOCODIGO ESTA EN UNA CARPETA DE HOME LLAMADA scripts-pruebas
 int main(int argc, char* argv[]) {
     // VERIFICACIÓN DE QUE SE PASARON AL MENOS 3 ARGUMENTOS (programa, archivo pseudocódigo, tamaño proceso)
-    if(argc < 3) {
-        printf("Uso: %s [archivo_pseudocodigo] [tamanio_proceso]\n", argv[0]);
+    if(argc != 4) {
+        printf("Uso: %s [archivo_config] [archivo_pseudocodigo] [tamanio_proceso]\n", argv[0]);
         return -1;
     }
 
     // OBTENCION DEL ARCHIVO DEL PSEUDOCODIGO Y EL TAMANIO DEL PROCESO
-    char* archivo_pseudocodigo = argv[1];
-    int tamanio_proceso = atoi(argv[2]);
+    char* config = argv[1];
+    
+    char pseudo_path[256];
+    strcpy(pseudo_path, "/home/utnso/scripts-pruebas/");
+    strcat(pseudo_path, argv[2]);
+
+    int tamanio_proceso = atoi(argv[3]);
     //lista_recursos recursos_globales;
     int sockets[] = {socket_kernel_memoria, socket_kernel_cpu_dispatch, socket_kernel_cpu_interrupt, -1};
 
     // INICIAR CONFIGURACION DE KERNEL
-    inicializar_config("kernel");
+    inicializar_config(config);
     log_info(LOGGER_KERNEL, "Iniciando KERNEL \n");
 
     // INICIAR CONEXIONES
@@ -68,7 +74,7 @@ void inicializar_config(char* arg){
     strcat(config_path, ".config");
     */
     char config_path[256];
-    strcpy(config_path, "../");
+    strcpy(config_path, "../configs/");
     strcat(config_path, arg);
     strcat(config_path, ".config");
 
@@ -199,8 +205,8 @@ void* procesar_conexiones(void* void_args) {
 
     op_code cod;
     while(1) {
-        ssize_t bytes_recibidos = recv(socket, &cod, sizeof(op_code), 0);
-        if (bytes_recibidos <= 0) { // El cliente cerró la conexión o hubo un error
+        ssize_t bytes_recibidos = recv(socket, &cod, sizeof(op_code), MSG_WAITALL);
+        if (bytes_recibidos != sizeof(op_code)) { // El cliente cerró la conexión o hubo un error
             log_error(logger, "El cliente cerró la conexión.");
             break; // Salir del bucle y cerrar el hilo
         }
@@ -265,8 +271,8 @@ void* procesar_conexion_memoria(void* void_args) {
     op_code cod;
     while (1) {
         // Recibir código de operación
-        ssize_t bytes_recibidos = recv(socket, &cod, sizeof(op_code), 0);
-        if (bytes_recibidos <= 0) { // El cliente cerró la conexión o hubo un error
+        ssize_t bytes_recibidos = recv(socket, &cod, sizeof(op_code), MSG_WAITALL);
+        if (bytes_recibidos != sizeof(op_code)) { // El cliente cerró la conexión o hubo un error
             log_error(logger, "El cliente cerró la conexión.");
             break; // Salir del bucle y cerrar el hilo
         }
@@ -303,8 +309,8 @@ void* procesar_conexiones_cpu(void* void_args) {
     op_code cod;
     while(1) {
         // Recibir código de operación
-        ssize_t bytes_recibidos = recv(socket, &cod, sizeof(op_code), 0);
-        if (bytes_recibidos <= 0) { // El cliente cerró la conexión o hubo un error 
+        ssize_t bytes_recibidos = recv(socket, &cod, sizeof(op_code), MSG_WAITALL);
+        if (bytes_recibidos != sizeof(op_code)) { // El cliente cerró la conexión o hubo un error
             log_error(logger, "El cliente cerró la conexión.");
             break; // Salir del bucle y cerrar el hilo
         }

@@ -28,7 +28,7 @@ sem_t sem_base, sem_limite, sem_valor_memoria, sem_instruccion;
 sem_t sem_mutex_globales;
 
 int main() {
-    inicializar_config("cpu");
+    inicializar_config("../configs/cpu");
     log_info(LOGGER_CPU, "Iniciando CPU \n");
 
     iniciar_semaforos();
@@ -49,7 +49,7 @@ void inicializar_config(char* arg){
     */
 
     char config_path[256];
-    strcpy(config_path, "../");
+    strcpy(config_path, "../configs/");
     strcat(config_path, arg);
     strcat(config_path, ".config");
 
@@ -167,8 +167,8 @@ void* procesar_conexion_dispatch(void* void_args) {
     op_code cod;
     while(1) {
         // Recibir código de operación
-        ssize_t bytes_recibidos = recv(socket, &cod, sizeof(op_code), 0);
-        if (bytes_recibidos <= 0) { // El cliente cerró la conexión o hubo un error
+        ssize_t bytes_recibidos = recv(socket, &cod, sizeof(op_code), MSG_WAITALL);
+        if (bytes_recibidos != sizeof(op_code)) { // El cliente cerró la conexión o hubo un error
             log_error(logger, "El cliente cerró la conexión.");
             break; // Salir del bucle y cerrar el hilo
         }
@@ -265,8 +265,8 @@ void* procesar_conexion_interrupt(void* void_args) {
     op_code cod;
     while(1) {
         // Recibir código de operación
-        ssize_t bytes_recibidos = recv(socket, &cod, sizeof(op_code), 0);
-        if (bytes_recibidos <= 0) { // El cliente cerró la conexión o hubo un error
+        ssize_t bytes_recibidos = recv(socket, &cod, sizeof(op_code), MSG_WAITALL);
+        if (bytes_recibidos != sizeof(op_code)) { // El cliente cerró la conexión o hubo un error
             log_error(logger, "El cliente cerró la conexión.");
             break; // Salir del bucle y cerrar el hilo
         }
