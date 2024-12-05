@@ -35,7 +35,7 @@ int main() {
     iniciar_conexiones();
 
     pthread_exit(NULL); // Evita que el hilo principal finalice y permite que los hilos creados sigan ejecutándose
-    int sockets[] = {socket_cpu_dispatch_kernel, socket_cpu_interrupt_kernel, socket_cpu_memoria, socket_cpu_dispatch, socket_cpu_interrupt, -1};
+    int sockets[] = {socket_cpu_dispatch_kernel, socket_cpu_interrupt_kernel, socket_cpu_memoria, -1};
     terminar_programa(CONFIG_CPU, LOGGER_CPU, sockets);
     return 0;
 }
@@ -68,15 +68,15 @@ void inicializar_config(char* arg){
 
 void iniciar_conexiones() {
     // Servidor CPU Dispatch
-    socket_cpu_dispatch = iniciar_servidor(PUERTO_ESCUCHA_DISPATCH, LOGGER_CPU, IP_CPU, "CPU_DISPATCH");
-    if (socket_cpu_dispatch == -1) {
+    socket_cpu_dispatch_kernel = iniciar_servidor(PUERTO_ESCUCHA_DISPATCH, LOGGER_CPU, IP_CPU, "CPU_DISPATCH");
+    if (socket_cpu_dispatch_kernel == -1) {
         log_error(LOGGER_CPU, "No se pudo iniciar el servidor CPU_DISPATCH.");
         exit(EXIT_FAILURE);
     }
 
     // Servidor CPU Interrupt
-    socket_cpu_interrupt = iniciar_servidor(PUERTO_ESCUCHA_INTERRUPT, LOGGER_CPU, IP_CPU, "CPU_INTERRUPT");
-    if (socket_cpu_interrupt == -1) {
+    socket_cpu_interrupt_kernel = iniciar_servidor(PUERTO_ESCUCHA_INTERRUPT, LOGGER_CPU, IP_CPU, "CPU_INTERRUPT");
+    if (socket_cpu_interrupt_kernel == -1) {
         log_error(LOGGER_CPU, "No se pudo iniciar el servidor CPU_INTERRUPT.");
         exit(EXIT_FAILURE);
     }
@@ -97,18 +97,18 @@ void iniciar_conexiones() {
 
 }
 
-void* escuchar_cpu() {
-    log_info(LOGGER_CPU, "El hilo de escuchar_cpu ha iniciado.");
-    while (server_escuchar("CPU_INTERRUPT", socket_cpu_interrupt)) {
-        log_info(LOGGER_CPU, "Conexión procesada.");
-    }
-    log_warning(LOGGER_CPU, "El servidor de CPU_INTERRUPT terminó inesperadamente.");
-    return NULL;
-}
+// void* escuchar_cpu() {
+//     log_info(LOGGER_CPU, "El hilo de escuchar_cpu ha iniciado.");
+//     while (server_escuchar("CPU_INTERRUPT", socket_cpu_interrupt)) {
+//         log_info(LOGGER_CPU, "Conexión procesada.");
+//     }
+//     log_warning(LOGGER_CPU, "El servidor de CPU_INTERRUPT terminó inesperadamente.");
+//     return NULL;
+// }
 
 void* escuchar_cpu_dispatch() {
     log_info(LOGGER_CPU, "El hilo de escucha para CPU_DISPATCH ha iniciado.");
-    while (server_escuchar("CPU_DISPATCH", socket_cpu_dispatch)) {
+    while (server_escuchar("CPU_DISPATCH", socket_cpu_dispatch_kernel)) {
         log_info(LOGGER_CPU, "Conexión procesada en CPU_DISPATCH.");
     }
     log_warning(LOGGER_CPU, "El servidor de CPU_DISPATCH terminó inesperadamente.");
@@ -117,7 +117,7 @@ void* escuchar_cpu_dispatch() {
 
 void* escuchar_cpu_interrupt() {
     log_info(LOGGER_CPU, "El hilo de escucha para CPU_INTERRUPT ha iniciado.");
-    while (server_escuchar("CPU_INTERRUPT", socket_cpu_interrupt)) {
+    while (server_escuchar("CPU_INTERRUPT", socket_cpu_interrupt_kernel)) {
         log_info(LOGGER_CPU, "Conexión procesada en CPU_INTERRUPT.");
     }
     log_warning(LOGGER_CPU, "El servidor de CPU_INTERRUPT terminó inesperadamente.");
@@ -170,6 +170,7 @@ void* procesar_conexion_dispatch(void* void_args) {
     while(1) {
         // Recibir código de operación
         ssize_t bytes_recibidos = recv(socket, &cod, sizeof(op_code), MSG_WAITALL);
+        log_warning(LOGGER_CPU, "Me llego el codigo nro %d", cod);
         if (bytes_recibidos != sizeof(op_code)) {
             log_error(LOGGER_CPU, "Error al recibir código de operación, bytes recibidos: %zd", bytes_recibidos);
             break;
@@ -264,11 +265,13 @@ void* procesar_conexion_interrupt(void* void_args) {
     //t_log *logger = args->log;
     int socket = args->fd;
     char* server_name = args->server_name;
-
+    
+    
     op_code cod;
     while(1) {
         // Recibir código de operación
         ssize_t bytes_recibidos = recv(socket, &cod, sizeof(op_code), MSG_WAITALL);
+        log_warning(LOGGER_CPU, "ME llego el codigo nro %d", cod);
         if (bytes_recibidos != sizeof(op_code)) {
             log_error(LOGGER_CPU, "Error al recibir código de operación, bytes recibidos: %zd", bytes_recibidos);
             break;

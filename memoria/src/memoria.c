@@ -172,7 +172,7 @@ int server_escuchar(t_log *logger, char *server_name, int server_socket) {
 
 void* procesar_conexion_memoria(void *void_args){
     t_procesar_conexion_args *args = (t_procesar_conexion_args *)void_args;
-    t_log *logger = args->log;
+    //t_log *logger = args->log;
     int cliente_socket = args->fd;
     char *server_name = args->server_name;
 
@@ -181,14 +181,14 @@ void* procesar_conexion_memoria(void *void_args){
         // Recibir código de operación
         ssize_t bytes_recibidos = recv(cliente_socket, &cod, sizeof(op_code), MSG_WAITALL);
         if (bytes_recibidos != sizeof(op_code)) {
-            log_error(logger, "Error al recibir código de operación, bytes recibidos: %zd", bytes_recibidos);
+            log_error(LOGGER_MEMORIA, "Error al recibir código de operación, bytes recibidos: %zd", bytes_recibidos);
             break;
         }
-        log_info(logger, "Se recibió el código de operación: %d", cod);
+        log_info(LOGGER_MEMORIA, "Se recibió el código de operación: %d", cod);
 
         switch (cod) {
             case HANDSHAKE_kernel: // Simplemente avisa que se conecta a kernel 
-                log_info(logger, "## %s Conectado - FD del socket: <%d>", server_name, cliente_socket);
+                log_info(LOGGER_MEMORIA, "## KERNEL Conectado - FD del socket: <%d>", cliente_socket);
                 break;
 
             case PROCESS_CREATE:
@@ -209,7 +209,7 @@ void* procesar_conexion_memoria(void *void_args){
                     pthread_mutex_unlock(&mutex_procesos);
 
                     enviar_mensaje("OK", cliente_socket);
-                    log_info(logger, "## Proceso <Creado> -  PID: <%d> - Tamaño: <%d>", proceso_nuevo->pid, proceso_nuevo->limite);
+                    log_info(LOGGER_MEMORIA, "## Proceso <Creado> -  PID: <%d> - Tamaño: <%d>", proceso_nuevo->pid, proceso_nuevo->limite);
                 }
                 break;
 
@@ -227,7 +227,7 @@ void* procesar_conexion_memoria(void *void_args){
                 eliminar_proceso_de_lista(proceso_a_eliminar->pid);
                 pthread_mutex_unlock(&mutex_procesos);
 
-                log_info(logger, "## Proceso <Destruido> -  PID: <%d> - Tamaño: <%d>", proceso_nuevo->pid, proceso_nuevo->limite);
+                log_info(LOGGER_MEMORIA, "## Proceso <Destruido> -  PID: <%d> - Tamaño: <%d>", proceso_nuevo->pid, proceso_nuevo->limite);
                 enviar_mensaje("OK", cliente_socket);
                 free(proceso_a_eliminar->contexto);
                 free(proceso_a_eliminar);
@@ -242,7 +242,7 @@ void* procesar_conexion_memoria(void *void_args){
                 
                 agregar_instrucciones_a_lista(hilo_a_crear->tid, hilo_a_crear->archivo);
                 enviar_mensaje("OK", cliente_socket);
-                log_info(logger, "## Hilo <Creado> - (PID:TID) - (<%d>:<%d>)", hilo_a_crear->pid_padre, hilo_a_crear->tid);
+                log_info(LOGGER_MEMORIA, "## Hilo <Creado> - (PID:TID) - (<%d>:<%d>)", hilo_a_crear->pid_padre, hilo_a_crear->tid);
                 free(hilo_a_crear->archivo);
                 free(hilo_a_crear);
                 break;
@@ -254,7 +254,7 @@ void* procesar_conexion_memoria(void *void_args){
                     break;
                 }
 
-                log_info(logger, "## Hilo <Destruido> - (PID:TID) - (<%d>:<%d>)", hilo_a_eliminar->pid_padre, hilo_a_eliminar->tid);
+                log_info(LOGGER_MEMORIA, "## Hilo <Destruido> - (PID:TID) - (<%d>:<%d>)", hilo_a_eliminar->pid_padre, hilo_a_eliminar->tid);
 
                 eliminar_espacio_hilo(hilo_a_eliminar);
 
@@ -268,7 +268,7 @@ void* procesar_conexion_memoria(void *void_args){
                     enviar_mensaje("ERROR", cliente_socket);
                 } 
                 if (solicitar_archivo_filesystem(ident_dm->pid, ident_dm->tid) == 0) {
-                    log_info(logger, "## Memory Dump solicitado - (PID:TID) - (<%d>:<%d>)",
+                    log_info(LOGGER_MEMORIA, "## Memory Dump solicitado - (PID:TID) - (<%d>:<%d>)",
                              ident_dm->pid, ident_dm->tid);
                     enviar_mensaje("OK", cliente_socket);
                 } else {
@@ -278,7 +278,7 @@ void* procesar_conexion_memoria(void *void_args){
                 break;
 
             case HANDSHAKE_cpu: //AVISA QUE SE CONECTO A CPU
-                log_info(logger, "## %s Conectado - FD del socket: <%d>", server_name, cliente_socket);
+                log_info(LOGGER_MEMORIA, "## CPU Conectado - FD del socket: <%d>", cliente_socket);
                 break;
 
             case CONTEXTO:
@@ -302,7 +302,7 @@ void* procesar_conexion_memoria(void *void_args){
                 t_write_mem* wri_mem = recibir_write_mem(cliente_socket);
                 escribir_memoria(wri_mem->dire_fisica_wm, wri_mem->valor_escribido);
                 uint32_t tam_valor_escribido = sizeof(wri_mem->valor_escribido);
-                log_info(logger, "## <Escritura> - (PID:TID) - (<%d>:<%d>) - Dir. Física: <%d> - Tamaño: <%d>",
+                log_info(LOGGER_MEMORIA, "## <Escritura> - (PID:TID) - (<%d>:<%d>) - Dir. Física: <%d> - Tamaño: <%d>",
                          wri_mem->pid, wri_mem->tid, wri_mem->dire_fisica_wm, tam_valor_escribido);
                 free(wri_mem);
                 break;
@@ -327,10 +327,10 @@ void* procesar_conexion_memoria(void *void_args){
                 t_instruccion* inst = obtener_instruccion(ped_inst->tid, ped_inst->pc);
                 if(enviar_instruccion(cliente_socket, inst) == 0) {
                     if(inst->parametro3 == -1) {
-                        log_info(logger, "## Obtener instrucción - (PID:TID) - (<%d>:<%d>) - Instrucción: <%s> <%s> <%s>",
+                        log_info(LOGGER_MEMORIA, "## Obtener instrucción - (PID:TID) - (<%d>:<%d>) - Instrucción: <%s> <%s> <%s>",
                                 ped_inst->pid, ped_inst->tid, inst->nombre, inst->parametro1, inst->parametro2);
                     } else {
-                        log_info(logger, "## Obtener instrucción - (PID:TID) - (<%d>:<%d>) - Instrucción: <%s> <%s> <%s> <%d>",
+                        log_info(LOGGER_MEMORIA, "## Obtener instrucción - (PID:TID) - (<%d>:<%d>) - Instrucción: <%s> <%s> <%s> <%d>",
                                 ped_inst->pid, ped_inst->tid, inst->nombre, inst->parametro1, inst->parametro2, inst->parametro3);
                     }
                 } else {
@@ -344,9 +344,9 @@ void* procesar_conexion_memoria(void *void_args){
                 t_proceso_memoria* pcb_bm = obtener_proceso_memoria(pid_bm);
                 int resultado_bm = enviar_valor_uint_cpu(cliente_socket, pcb_bm->base, SOLICITUD_BASE_MEMORIA);
                 if(resultado_bm == 0) {
-                    log_info(logger, "Paquete enviado correctamente");
+                    log_info(LOGGER_MEMORIA, "Paquete enviado correctamente");
                 } else {
-                    log_error(logger, "Error al enviar el paquete");
+                    log_error(LOGGER_MEMORIA, "Error al enviar el paquete");
                 }
                 break;
 
@@ -355,24 +355,24 @@ void* procesar_conexion_memoria(void *void_args){
                 t_proceso_memoria* pcb_lm = obtener_proceso_memoria(pid_lm);
                 int resultado_lm = enviar_valor_uint_cpu(cliente_socket, pcb_lm->limite, SOLICITUD_LIMITE_MEMORIA);
                 if(resultado_lm == 0) {
-                    log_info(logger, "Paquete enviado correctamente");
+                    log_info(LOGGER_MEMORIA, "Paquete enviado correctamente");
                 } else {
-                    log_error(logger, "Error al enviar el paquete");
+                    log_error(LOGGER_MEMORIA, "Error al enviar el paquete");
                 }
                 break;
 
             case ERROROPCODE:
-                log_error(logger, "Cliente desconectado de %s... con cod_op -1", server_name);
+                log_error(LOGGER_MEMORIA, "Cliente desconectado de %s... con cod_op -1", server_name);
                 break;
 
             default:
-                log_error(logger, "Codigo desconocido en el servidor de %s, Cod OP: %d", server_name, cod);
+                log_error(LOGGER_MEMORIA, "Codigo desconocido en el servidor de %s, Cod OP: %d", server_name, cod);
                 break;
         }
     }
 
 
-    log_warning(logger, "Finalizando conexión con el cliente.");
+    log_warning(LOGGER_MEMORIA, "Finalizando conexión con el cliente.");
     close(cliente_socket); // Cerrar el socket del cliente
     free(args->server_name);
     free(args);

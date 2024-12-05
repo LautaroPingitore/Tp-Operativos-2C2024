@@ -438,6 +438,8 @@ void enviar_handshake(int socket, op_code codigo) {
 
     free(a_enviar);
     eliminar_paquete(paquete);
+	printf("Handshake enviado\n");
+	printf("COdigo enviado %d \n", codigo);
 }
 
 void eliminar_paquete(t_paquete *paquete)
