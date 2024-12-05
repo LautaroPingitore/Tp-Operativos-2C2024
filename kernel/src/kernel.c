@@ -204,8 +204,6 @@ void* procesar_conexiones(void* void_args) {
     int socket = args->fd;
     char* server_name = args->server_name;
 
-    log_warning(LOGGER_KERNEL, "DASDADASDA");
-
     op_code cod;
     while(1) {
         ssize_t bytes_recibidos = recv(socket, &cod, sizeof(op_code), MSG_WAITALL);
@@ -213,11 +211,10 @@ void* procesar_conexiones(void* void_args) {
             log_error(LOGGER_KERNEL, "Error al recibir código de operación, bytes recibidos: %zd", bytes_recibidos);
             break;
         }
-        log_info(LOGGER_KERNEL, "Se recibió el código de operación: %d", cod);
         
         switch (cod) {
             case HANDSHAKE_memoria:
-                log_info(LOGGER_KERNEL, "## %s Conectado - FD del socket: <%d>", server_name, socket);
+                log_info(LOGGER_KERNEL, "## MEMORIA Conectado - FD del socket: <%d>", socket);
                 break;
 
             case MENSAJE:
@@ -230,7 +227,7 @@ void* procesar_conexiones(void* void_args) {
                 break;
             
             case HANDSHAKE_cpu:
-                log_info(LOGGER_KERNEL, "## %s Conectado - FD del socket: <%d>", server_name, socket);
+                log_info(LOGGER_KERNEL, "## CPU Conectado - FD del socket: <%d>", socket);
                 break;
         
             case DEVOLVER_CONTROL_KERNEL:
@@ -264,136 +261,3 @@ void* procesar_conexiones(void* void_args) {
     free(args);
     return NULL;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// // OJO CON ESTA PORQUE ES EXTREMADAMENTE RARA
-// void* procesar_conexion_memoria(void* void_args) {
-//     t_procesar_conexion_args *args = (t_procesar_conexion_args *)void_args;
-//     //t_log *logger = args->log;
-//     int socket = args->fd;
-//     char* server_name = args->server_name;
-
-//     op_code cod;
-//     while (1) {
-//         // Recibir código de operación
-//         ssize_t bytes_recibidos = recv(socket, &cod, sizeof(op_code), MSG_WAITALL);
-//         if (bytes_recibidos != sizeof(op_code)) {
-//             log_error(LOGGER_KERNEL, "Error al recibir código de operación, bytes recibidos: %zd", bytes_recibidos);
-//             break;
-//         }
-//         log_info(LOGGER_KERNEL, "Se recibió el código de operación: %d", cod);
-
-//         switch (cod) {
-//         case HANDSHAKE_memoria:
-//             log_info(LOGGER_KERNEL, "## %s Conectado - FD del socket: <%d>", server_name, socket);
-//             break;
-
-//         case MENSAJE:
-//             char* respuesta = deserializar_mensaje(socket);
-//             if (strcmp(respuesta, "OK") == 0) {
-//                 log_info(LOGGER_KERNEL, "Proceso creado en memoria.");
-//             } else {
-//                 log_warning(LOGGER_KERNEL, "Error al crear proceso en memoria.");
-//             }
-//             break;
-        
-//         default:
-//             log_error(LOGGER_KERNEL, "Operacion desconocida");
-//             break;
-//         }
-//     }
-
-//     log_warning(LOGGER_KERNEL, "Finalizando conexión con el cliente.");
-//     close(socket); // Cerrar el socket del cliente
-//     free(args->server_name);
-//     free(args);
-//     return NULL;
-// }
-
-// void* procesar_conexiones_cpu(void* void_args) {
-//     t_procesar_conexion_args *args = (t_procesar_conexion_args *)void_args;
-//     //t_log *LOGGER_KERNEL = args->log;
-//     int socket = args->fd;
-//     char *server_name = args->server_name;
-
-//     log_warning(LOGGER_KERNEL, "CHECKPOYESFAFEW");
-
-//     op_code cod;
-//     while(1) {
-//         // Recibir código de operación
-//         ssize_t bytes_recibidos = recv(socket, &cod, sizeof(op_code), MSG_WAITALL);
-//         if (bytes_recibidos != sizeof(op_code)) {
-//             log_error(LOGGER_KERNEL, "Error al recibir código de operación, bytes recibidos: %zd", bytes_recibidos);
-//             break;
-//         }
-//         log_info(LOGGER_KERNEL, "Se recibió el código de operación: %d", cod);
-
-//         switch (cod) {
-//         case HANDSHAKE_cpu:
-//             log_info(LOGGER_KERNEL, "## %s Conectado - FD del socket: <%d>", server_name, socket);
-//             break;
-        
-//         case DEVOLVER_CONTROL_KERNEL:
-//             // Procesar el TCB recibido desde la CPU (cuando el CPU termina de ejecutar una instrucción)
-//             t_tcb* tcb = recibir_hilo(socket);
-//             if(tcb->motivo_desalojo == INTERRUPCION_BLOQUEO) {
-//                 list_remove(cola_exec, 0);
-
-//                 pthread_mutex_lock(&mutex_cola_ready);
-//                 list_add(cola_ready, tcb);  // Agregar el TCB a la cola de ready
-//                 pthread_mutex_unlock(&mutex_cola_ready);
-
-//                 intentar_mover_a_execute();  // Intentar ejecutar el siguiente hilo
-//             }
-//             break;
-
-//         default:
-//             manejar_syscall(socket);  // Manejar syscalls para el kernel
-//             break;
-//         }
-
-//     }
-
-//     log_warning(LOGGER_KERNEL, "Finalizando conexión con el cliente.");
-//     close(socket); // Cerrar el socket del cliente
-//     free(args->server_name);
-//     free(args);
-
-//     return NULL;
-// }

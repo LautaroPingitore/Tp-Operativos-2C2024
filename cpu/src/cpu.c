@@ -146,12 +146,8 @@ int server_escuchar(char *server_name, int server_socket) {
 
         if (strcmp(server_name, "CPU_DISPATCH") == 0) {
             pthread_create(&hilo_cliente, NULL, procesar_conexion_dispatch, (void*) args);
-            
-            free(args);
         } else if (strcmp(server_name, "CPU_INTERRUPT") == 0) {
             pthread_create(&hilo_cliente, NULL, procesar_conexion_interrupt, (void*) args);
-            
-            free(args);
         }
 
         pthread_detach(hilo_cliente);
@@ -164,22 +160,33 @@ void* procesar_conexion_dispatch(void* void_args) {
     t_procesar_conexion_args *args = (t_procesar_conexion_args *)void_args;
     //t_log *logger = args->log;
     int socket = args->fd;
-    char* server_name = args->server_name;
+    //char* server_name = args->server_name;
+
 
     op_code cod;
     while(1) {
+        if(socket < 0) {
+            log_error(LOGGER_CPU, "Socket inválido: %d", socket);
+            break;
+        }
         // Recibir código de operación
         ssize_t bytes_recibidos = recv(socket, &cod, sizeof(op_code), MSG_WAITALL);
         log_warning(LOGGER_CPU, "Me llego el codigo nro %d", cod);
-        if (bytes_recibidos != sizeof(op_code)) {
-            log_error(LOGGER_CPU, "Error al recibir código de operación, bytes recibidos: %zd", bytes_recibidos);
-            break;
+        // if (bytes_recibidos != sizeof(op_code)) {
+        //     log_error(LOGGER_CPU, "Error al recibir código de operación, bytes recibidos: %zd", bytes_recibidos);
+        //     break;
+        // }
+        if (bytes_recibidos == -1) {
+            log_error(LOGGER_CPU, "Error en recv");
+        } else if (bytes_recibidos == 0) {
+            log_warning(LOGGER_CPU, "Socket cerrado por el cliente");
+        } else {
+            log_info(LOGGER_CPU, "Se recibió el código de operación: %d", cod);
         }
-        log_info(LOGGER_CPU, "Se recibió el código de operación: %d", cod);
 
         switch(cod) {
             case HANDSHAKE_dispatch:
-                log_info(LOGGER_CPU, "## %s Conectado - FD del socket: <%d>", server_name, socket);
+                log_info(LOGGER_CPU, "## KERNEL_DIPATCH Conectado - FD del socket: <%d>", socket);
                 break;
 
             case HILO:
@@ -264,11 +271,15 @@ void* procesar_conexion_interrupt(void* void_args) {
     t_procesar_conexion_args *args = (t_procesar_conexion_args *)void_args;
     //t_log *logger = args->log;
     int socket = args->fd;
-    char* server_name = args->server_name;
+    //char* server_name = args->server_name;
     
     
     op_code cod;
     while(1) {
+        if(socket < 0) {
+            log_error(LOGGER_CPU, "Socket inválido: %d", socket);
+            break;
+        }
         // Recibir código de operación
         ssize_t bytes_recibidos = recv(socket, &cod, sizeof(op_code), MSG_WAITALL);
         log_warning(LOGGER_CPU, "ME llego el codigo nro %d", cod);
@@ -282,7 +293,7 @@ void* procesar_conexion_interrupt(void* void_args) {
 
         switch (cod) {
             case HANDSHAKE_interrupt:
-                log_info(LOGGER_CPU, "## %s Conectado - FD del socket: <%d>", server_name, socket);
+                log_info(LOGGER_CPU, "## KERNEL_INTERRUPT Conectado - FD del socket: <%d>", socket);
                 break;
 
             case FINALIZACION_QUANTUM:
