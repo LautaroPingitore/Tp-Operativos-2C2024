@@ -37,7 +37,7 @@ void* procesar_conexion_memoria(void *void_args){
 
         switch (cod) {
             case HANDSHAKE_kernel: // Simplemente avisa que se conecta a kernel 
-                recibir_mensaje(cliente_socket, logger);
+                log_info(logger, "## Kernel Conectado - FD del socket: <%d>", cliente_socket);
                 break;
 
             case PROCESS_CREATE:
@@ -58,7 +58,7 @@ void* procesar_conexion_memoria(void *void_args){
                     pthread_mutex_unlock(&mutex_procesos);
 
                     enviar_mensaje("OK", cliente_socket);
-                    log_info(logger, "Proceso Creado - PID: %d - Tamanio: %d", proceso_nuevo->pid, proceso_nuevo->limite);
+                    log_info(logger, "## Proceso <Creado> -  PID: <%d> - Tamaño: <%d>", proceso_nuevo->pid, proceso_nuevo->limite);
                 }
                 break;
 
@@ -76,7 +76,7 @@ void* procesar_conexion_memoria(void *void_args){
                 eliminar_proceso_de_lista(proceso_a_eliminar->pid);
                 pthread_mutex_unlock(&mutex_procesos);
 
-                log_info(logger, "Proceso eliminado: PID=%d", proceso_a_eliminar->pid);
+                log_info(logger, "## Proceso <Destruido> -  PID: <%d> - Tamaño: <%d>", proceso_nuevo->pid, proceso_nuevo->limite);
                 enviar_mensaje("OK", cliente_socket);
                 free(proceso_a_eliminar->contexto);
                 free(proceso_a_eliminar);
@@ -91,7 +91,9 @@ void* procesar_conexion_memoria(void *void_args){
                 
                 agregar_instrucciones_a_lista(hilo_a_crear->tid, hilo_a_crear->archivo);
                 enviar_mensaje("OK", cliente_socket);
-                log_info(logger, "Hilo creado exitosamente");
+                log_info(logger, "## Hilo <Creado> - (PID:TID) - (<%d>:<%d>)", hilo_a_crear->pid_padre, hilo_a_crear->tid);
+                free(hilo_a_crear->archivo);
+                free(hilo_a_crear);
                 break;
 
             case THREAD_EXIT:
@@ -101,14 +103,11 @@ void* procesar_conexion_memoria(void *void_args){
                     break;
                 }
 
-                t_contexto_ejecucion* contexto = obtener_contexto(hilo_a_eliminar->pid_padre);
-                int resultado = eliminar_espacio_hilo(cliente_socket, hilo_a_eliminar, contexto);
+                log_info(logger, "## Hilo <Destruido> - (PID:TID) - (<%d>:<%d>)", hilo_a_eliminar->pid_padre, hilo_a_eliminar->tid);
 
-                if(resultado == 1) {
-                    enviar_mensaje("OK", cliente_socket);
-                } else {
-                    enviar_mensaje("ERROR", cliente_socket);
-                }
+                eliminar_espacio_hilo(hilo_a_eliminar);
+
+                enviar_mensaje("OK", cliente_socket);
                 break;
 
             case DUMP_MEMORY:
@@ -118,15 +117,17 @@ void* procesar_conexion_memoria(void *void_args){
                     enviar_mensaje("ERROR", cliente_socket);
                 } 
                 if (solicitar_archivo_filesystem(ident_dm->pid, ident_dm->tid) == 0) {
+                    log_info(logger, "## Memory Dump solicitado - (PID:TID) - (<%d>:<%d>)",
+                             ident_dm->pid, ident_dm->tid);
                     enviar_mensaje("OK", cliente_socket);
                 } else {
                     enviar_mensaje("ERROR", cliente_socket);
                 }
-
+                free(ident_dm);
                 break;
 
             case HANDSHAKE_cpu: //AVISA QUE SE CONECTO A CPU
-                recibir_mensaje(cliente_socket, logger);
+                log_info(logger, "## CPU Conectado - FD del socket: <%d>", cliente_socket);
                 break;
 
             case CONTEXTO:
@@ -135,6 +136,7 @@ void* procesar_conexion_memoria(void *void_args){
                     enviar_mensaje("ERROR", cliente_socket);
                 } 
                 procesar_solicitud_contexto(cliente_socket, ident_cx->pid, ident_cx->tid);
+                free(ident_cx);
                 break;
 
             case ACTUALIZAR_CONTEXTO:
@@ -148,20 +150,24 @@ void* procesar_conexion_memoria(void *void_args){
             case PEDIDO_WRITE_MEM:
                 t_write_mem* wri_mem = recibir_write_mem(cliente_socket);
                 escribir_memoria(wri_mem->dire_fisica_wm, wri_mem->valor_escribido);
+                uint32_t tam_valor_escribido = sizeof(wri_mem->valor_escribido);
+                log_info(logger, "## <Escritura> - (PID:TID) - (<%D>:<%d>) - Dir. Física: <%d> - Tamaño: <%d>",
+                         wri_mem->pid, wri_mem->tid, wri_mem->dire_fisica_wm, tam_valor_escribido);
+                free(wri_mem);
                 break;
 
             case PEDIDO_READ_MEM:
-                uint32_t dire_fisica_rm = recibir_read_mem(cliente_socket);
-        
-                uint32_t valor_leido = leer_memoria(dire_fisica_rm);
+                t_read_mem* read_mem = recibir_read_mem(cliente_socket);
+                uint32_t valor_leido = leer_memoria(read_mem->direccion_fisica);
                 if (valor_leido != SEGF_FAULT) {
-                    enviar_valor_uint_cpu(cliente_socket, valor_leido, PEDIDO_READ_MEM);
-                    log_info(LOGGER_MEMORIA, "Lectura exitosa - Dirección: %u, Valor: %u.", dire_fisica_rm, valor_leido);
+                    enviar_valor_leido_cpu(cliente_socket, read_mem->direccion_fisica, valor_leido);
+                    uint32_t tam = sizeof(valor_leido);
+                    log_info(LOGGER_MEMORIA, "## <Lectura> - (PID:TID) - (<%d>:<%d>) - Dir. Física: <%d> - Tamaño: <%d>"
+                             read_mem->pid, read_mem->tid, tam);
                 } else {
                     enviar_mensaje("SEGMENTATION_FAULT", cliente_socket);
                 }
-                enviar_valor_leido_cpu(cliente_socket, dire_fisica_rm, valor_leido);
-
+                free(read_mem);
                 break;
 
             case PEDIDO_INSTRUCCION:
@@ -169,11 +175,17 @@ void* procesar_conexion_memoria(void *void_args){
 
                 t_instruccion* inst = obtener_instruccion(ped_inst->tid, ped_inst->pc);
                 if(enviar_instruccion(cliente_socket, inst) == 0) {
-                    log_info(logger, "Instrucción enviada - PID: %u, TID: %u, PC: %u.", ped_inst->pid, ped_inst->tid, ped_inst->pc);
+                    if(inst->parametro3 == -1) {
+                        log_info(logger, "## Obtener instrucción - (PID:TID) - (<%d>:<%d>) - Instrucción: <%s> <%s> <%s>",
+                                ped_inst->pid, ped_inst->tid, inst->nombre, inst->parametro1, inst->parametro2);
+                    } else {
+                        log_info(logger, "## Obtener instrucción - (PID:TID) - (<%d>:<%d>) - Instrucción: <%s> <%s> <%s> <%d>",
+                                ped_inst->pid, ped_inst->tid, inst->nombre, inst->parametro1, inst->parametro2, inst->parametro3);
+                    }
                 } else {
                     enviar_mensaje("NO_INSTRUCCION", cliente_socket);
                 }
-    
+                free(ped_inst);
                 break;
 
             case SOLICITUD_BASE_MEMORIA:
@@ -352,17 +364,11 @@ void agregar_instrucciones_a_lista(uint32_t tid, char* archivo) {
 //--------------------|
 //FINALIZACION DE HILO|
 //--------------------|
-int eliminar_espacio_hilo(int cliente_socket, t_hilo_memoria* hilo, t_contexto_ejecucion* contexto) {
-    if(!contexto) {
-        free(contexto->registros);
-        free(contexto);
-        eliminar_instrucciones_hilo(hilo->tid);
-        log_info(LOGGER_MEMORIA, "Hilo finalizado - PID: %d, TID: %d", hilo->pid_padre, hilo->tid);
-        return 1;
-    } else {
-        log_error(LOGGER_MEMORIA, "Error al finalizar el hilo - PID: %d, TID: %d", hilo->pid_padre, hilo->tid);
-        return -1;
-    }
+void eliminar_espacio_hilo(t_hilo_memoria* hilo) {
+    eliminar_instrucciones_hilo(hilo->tid);
+    log_info(LOGGER_MEMORIA, "Hilo finalizado - PID: %d, TID: %d", hilo->pid_padre, hilo->tid);
+    free(hilo->archivo);
+    free(hilo);
 }
 
 t_contexto_ejecucion* obtener_contexto(uint32_t pid) {
@@ -629,7 +635,7 @@ void procesar_solicitud_contexto(int socket_cliente, uint32_t pid, uint32_t tid)
         if (proceso->pid == pid) {
             int resultado = enviar_contexto_cpu(proceso);
             if(resultado == 0) {
-                log_info(LOGGER_MEMORIA, "Contexto enviado al CPU - PID: %d, TID: %d", pid, tid);
+                log_info(LOGGER_MEMORIA, "## Contexto <Solicitado> - (PID:TID) - (<%d>:<%d>)", pid, tid);
                 return;
             } else {
                 break;
@@ -658,7 +664,7 @@ void procesar_actualizacion_contexto(int socket_cliente, uint32_t pid, uint32_t 
         
         if (proceso->pid == pid) {
             proceso->contexto = nuevo_contexto;
-            log_info(LOGGER_MEMORIA, "Contexto actualizado para PID: %d, TID: %d", pid, tid);
+            log_info(LOGGER_MEMORIA, "## Contexto <Actualizado> - (PID:TID) - (<%d>:<%d)", pid, tid);
             enviar_mensaje("OK", socket_cliente);
             return;
         }
@@ -714,6 +720,12 @@ t_write_mem* deserializar_write_mem(t_buffer* buffer) {
     void * stream = buffer->stream;
     int desplazamiento = 0;
     
+    memcpy(&(wri_mem->pid), stream + desplazamiento, sizeof(uint32_t));
+    desplazamiento += sizeof(uint32_t);
+
+    memcpy(&(wri_mem->tid), stream + desplazamiento, sizeof(uint32_t));
+    desplazamiento += sizeof(uint32_t);
+
     memcpy(&(wri_mem->dire_fisica_wm), stream + desplazamiento, sizeof(uint32_t));
     desplazamiento += sizeof(uint32_t);
     
@@ -732,8 +744,6 @@ void escribir_memoria(uint32_t direccion_fisica, uint32_t valor) {
     // Escribir los 4 bytes de `valor` a partir de `direccion_fisica`
     *(uint32_t*)(uintptr_t)direccion_fisica = valor;
     
-    // Log de éxito y respuesta
-    log_info(LOGGER_MEMORIA, "Escritura exitosa: Dirección física %d, Valor %d", direccion_fisica, valor);
     enviar_mensaje("OK", socket_memoria_cpu);  // Responder OK al cliente
 }
 
@@ -741,12 +751,25 @@ void escribir_memoria(uint32_t direccion_fisica, uint32_t valor) {
 // READ_MEM|
 // ========|
 
-uint32_t recibir_read_mem(int socket) {
+t_read_mem recibir_read_mem(int socket) {
     t_paquete* paquete = recibir_paquete(socket);
-    uint32_t direccion_fisica;
-    memcpy(&direccion_fisica, paquete->buffer->stream, sizeof(uint32_t));
+    t_read_mem read_mem = deserializar_read_mem(paquete->buffer);
     eliminar_paquete(paquete);
-    return direccion_fisica;
+    return read_mem;
+}
+
+t_read_mem* deserializar_read_mem(t_buffer* buffer) {
+    t_read_mem* read_mem = malloc(sizeof(t_read_mem));
+    void* stream = buffer->stream;
+    int desplazamiento = 0;
+
+    memcpy(&read_mem->pid, stream + desplazamiento, sizeof(uint32_t));
+    desplazamiento += sizeof(uint32_t);
+    memcpy(&read_mem->tid, stream + desplazamiento, sizeof(uint32_t));
+    desplazamiento += sizeof(uint32_t);
+    memcpy(&read_mem->direccion_fisica, stream + desplazamiento, sizeof(uint32_t));
+    
+    return read_mem;
 }
 
 

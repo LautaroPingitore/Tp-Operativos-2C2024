@@ -50,9 +50,18 @@ typedef struct {
 } t_actualizar_contexto;
 
 typedef struct {
+    uint32_t pid;
+    uint32_t tid;
     uint32_t dire_fisica_wm; 
     uint32_t valor_escribido;
 } t_write_mem;
+
+typedef struct {
+    uint32_t pid;
+    uint32_t tid;
+    uint32_t direccion_fisica;
+} t_read_mem;
+
 
 typedef struct {
     uint32_t pid;
@@ -61,7 +70,7 @@ typedef struct {
 } t_pedido_instruccion;
 
 // FUNCIONES MEJORADAS 2.0247234214321473216487537826432
-int eliminar_espacio_hilo(int, t_hilo_memoria*, t_contexto_ejecucion*);
+void eliminar_espacio_hilo(t_hilo_memoria*);
 int enviar_instruccion(int, t_instruccion*);
 void enviar_valor_leido_cpu(int, uint32_t, uint32_t);
 void procesar_solicitud_contexto(int, uint32_t, uint32_t);
@@ -83,8 +92,8 @@ t_actualizar_contexto* recibir_actualizacion(int);
 t_actualizar_contexto* deserializar_actualizacion(t_buffer*);
 t_write_mem* recibir_write_mem(int);
 t_write_mem* deserializar_write_mem(t_buffer*);
-t_write_mem* deserializar_write_mem(t_buffer*);
-uint32_t recibir_read_mem(int);
+t_read_mem* recibir_read_mem(int);
+t_read_mem* deserializar_read_mem(t_buffer*);
 t_pedido_instruccion* recibir_pedido_instruccion(int);
 t_pedido_instruccion* deserializar_pedido_instruccion(t_buffer*);
 int enviar_valor_uint_cpu(int, uint32_t, op_code);

@@ -142,7 +142,7 @@ void* gestionar_conexiones(void* void_args) {
 
         switch (cod) {
             case HANDSHAKE_memoria:
-                recibir_mensaje(socket_cliente, logger);
+                log_info(logger, "## MEMORIA Conectado - FD del socket <%d>", socket_cliente);
                 break;
 
             case MENSAJE:
@@ -157,8 +157,9 @@ void* gestionar_conexiones(void* void_args) {
                     enviar_mensaje("Error en la creación de archivo", socket_cliente);
                 } else {
                     enviar_mensaje("OK", socket_cliente);
+                    log_info(logger, "## Archivo Creado: <%s> - Tamaño: <%d>", archivo->nombre, archivo->tamanio_contenido);
+                    log_info(logger, "## Fin de solicitud - Archivo: <%s>", archivo->nombre);
                 }
-                log_info(logger, "## Fin de solicitud - Archivo: %s", archivo->nombre);
                 free(archivo->contenido);
                 free(archivo->nombre);
                 free(archivo);

@@ -164,6 +164,8 @@ void enviar_valor_a_memoria(int socket, uint32_t dire_fisica, uint32_t* valor) {
     t_paquete *paquete = crear_paquete_con_codigo_de_operacion(ESCRIBIR_VALOR_MEMORIA);
 
     // Agregar la dirección física y el valor del registro de datos al paquete
+    agregar_a_paquete(paquete, &hilo_actual->PID_PADRE, sizeof(uint32_t));
+    agregar_a_paquete(paquete, &hilo_actual->TID, sizeof(uint32_t));
     agregar_a_paquete(paquete, &dire_fisica, sizeof(uint32_t));
     agregar_a_paquete(paquete, &valor, sizeof(uint32_t));
 
@@ -181,6 +183,9 @@ void enviar_valor_a_memoria(int socket, uint32_t dire_fisica, uint32_t* valor) {
 
 void enviar_solicitud_valor_memoria(int socket, uint32_t direccion_fisica) {
     t_paquete *paquete = crear_paquete_con_codigo_de_operacion(PEDIR_VALOR_MEMORIA);
+
+    agregar_a_paquete(paquete, &hilo_actual->PID_PADRE, sizeof(uint32_t));
+    agregar_a_paquete(paquete, &hilo_actual->TID, sizeof(uint32_t));
     agregar_a_paquete(paquete, &direccion_fisica, sizeof(uint32_t));
 
     if (enviar_paquete(paquete, socket) < 0) {
