@@ -15,8 +15,14 @@ int socket_filesystem;
 
 pthread_t hilo_servidor_filesystem;
 
-int main() {
-    inicializar_config("filesystem");
+int main(int argc, char* argv[]) {
+    if(argc != 2) {
+        printf("Uso: %s [archivo_config] \n", argv[0]);
+        return -1;
+    }
+
+    char* config = argv[1];
+    inicializar_config(config);
     iniciar_archivos();
     cargar_bitmap();
     
@@ -31,7 +37,7 @@ int main() {
 void inicializar_config(char* arg){
 
     char config_path[256];
-    strcpy(config_path, "../");
+    strcpy(config_path, "../configs/");
     strcat(config_path, arg);
     strcat(config_path, ".config");
     
@@ -150,7 +156,6 @@ void* gestionar_conexiones(void* void_args) {
             log_error(logger, "El cliente cerró la conexión.");
             break; // Salir del bucle y cerrar el hilo
         }
-        log_warning(logger, "Se recibio el codigo %d", cod);
 
         switch (cod) {
             case HANDSHAKE_memoria:
