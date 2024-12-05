@@ -33,6 +33,8 @@ pthread_t hilo_server_memoria;
 int main() {
     inicializar_programa();
 
+    pthread_exit(NULL); // Evita que el hilo principal finalice y permite que los hilos creados sigan ejecutándose
+
     // Ejecutar el servidor en un bucle principal, esperando solicitudes y procesando respuestas
     int sockets[] = {socket_memoria, socket_memoria_cpu, socket_memoria_kernel, socket_memoria_filesystem, -1};
     terminar_programa(CONFIG_MEMORIA, LOGGER_MEMORIA, sockets);
@@ -95,52 +97,70 @@ t_list* obtener_particiones_fijas(char** particiones) {
 }
 
 void iniciar_conexiones() {
-    // SERVER MEMORIA
+    // Iniciar servidor Memoria
     socket_memoria = iniciar_servidor(PUERTO_ESCUCHA, LOGGER_MEMORIA, IP_MEMORIA, "MEMORIA");
+    if (socket_memoria == -1) {
+        log_error(LOGGER_MEMORIA, "No se pudo iniciar el servidor de Memoria.");
+        exit(EXIT_FAILURE);
+    }
     log_info(LOGGER_MEMORIA, "Servidor memoria iniciado y escuchando en el puerto %s", PUERTO_ESCUCHA);
 
-    // CONEXION CLIENTE FILESYSTEM
+    // Conexión cliente FileSystem
     socket_memoria_filesystem = crear_conexion(IP_FILESYSTEM, PUERTO_FILESYSTEM);
     if (socket_memoria_filesystem < 0) {
         log_error(LOGGER_MEMORIA, "No se pudo conectar con el módulo FileSystem");
         exit(EXIT_FAILURE);
     }
-    enviar_handshake("Hola FILESYSTEM, soy MEMORIA", socket_memoria_filesystem, HANDSHAKE_memoria);
-    log_info(LOGGER_MEMORIA, "Conexión con FileSystem establecida exitosamente");
+    enviar_handshake(socket_memoria_filesystem, HANDSHAKE_memoria);
+    log_info(LOGGER_MEMORIA, "Conexión con FileSystem establecida exitosamente, se envio codigo %d", HANDSHAKE_memoria);
 
-    // HILO SERVIDOR
-    pthread_create(&hilo_server_memoria, NULL, (void*)escuchar_memoria, NULL);
-    //pthread_detach(hilo_server_memoria);
-    if (pthread_join(hilo_server_memoria, NULL) != 0) {
-        log_error(LOGGER_MEMORIA, "Error al esperar la finalización del hilo escuchar_memoria.");
-    } else {
-        log_info(LOGGER_MEMORIA, "El hilo escuchar_memoria finalizó correctamente.");
-        }
+    // Iniciar hilo servidor
+    pthread_create(&hilo_server_memoria, NULL, escuchar_memoria, NULL);
+    pthread_detach(hilo_server_memoria);
 
 }
 
-void escuchar_memoria() 
+void* escuchar_memoria() 
 {
-    while(server_escuchar(LOGGER_MEMORIA, "MEMORIA", socket_memoria));
+    log_info(LOGGER_MEMORIA, "El hilo de escuchar_memoria ha iniciado.");
+    while (server_escuchar(LOGGER_MEMORIA, "MEMORIA", socket_memoria)) {
+        log_info(LOGGER_MEMORIA, "Conexión procesada.");
+    }
+    log_warning(LOGGER_MEMORIA, "El servidor de memoria terminó inesperadamente.");
+    return NULL;
 }
 
 int server_escuchar(t_log *logger, char *server_name, int server_socket) {
-    int cliente_socket = esperar_cliente(server_socket, logger);
+    while (1) {
+        int cliente_socket = esperar_cliente(server_socket, logger);
 
-    if (cliente_socket != -1) {
-        pthread_t hilo;
+        if (cliente_socket == -1) {
+            log_warning(logger, "[%s] Error al aceptar conexión. Reintentando...", server_name);
+            continue;
+        }
+
+        pthread_t hilo_cliente;
         t_procesar_conexion_args *args = malloc(sizeof(t_procesar_conexion_args));
+        if (!args) {
+            log_error(logger, "[%s] Error al asignar memoria para las conexiones.", server_name);
+            close(cliente_socket);
+            continue;
+        }
+
         args->log = logger;
         args->fd = cliente_socket;
         args->server_name = strdup(server_name);
-        if (pthread_create(&hilo, NULL, procesar_conexion_memoria, (void *)args) != 0) {
-            log_error(logger, "Error al crear hilo para cliente en %s.", server_name);
+
+        if (pthread_create(&hilo_cliente, NULL, procesar_conexion_memoria, (void*)args) != 0) {
+            log_error(logger, "[%s] Error al crear hilo para cliente.", server_name);
             free(args->server_name);
             free(args);
             close(cliente_socket);
-            return 0;
+            continue;
         }
-        return 1;
+
+        pthread_detach(hilo_cliente);
+        log_info(logger, "[%s] Hilo creado para procesar la conexión.", server_name);
     }
-    return 0;
+    return 0; // Este punto no se alcanza debido al ciclo infinito.
 }

@@ -27,6 +27,8 @@ void iniciar_conexiones();
 void* escuchar_kernel_memoria();
 void* escuchar_kernel_cpu_dispatch();
 void* escuchar_kernel_cpu_interrupt();
+int server_escuchar(t_log*, char*, int);
+void* procesar_conexiones(void*);
 void* procesar_conexion_memoria(void*);
 void* procesar_conexiones_cpu(void*);
 

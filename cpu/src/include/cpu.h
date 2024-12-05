@@ -26,10 +26,15 @@ extern sem_t sem_valor_memoria;
 extern sem_t sem_instruccion;
 extern sem_t sem_mutex_globales;
 
+extern pthread_t hilo_servidor_dispatch;
+extern pthread_t hilo_servidor_interrupt;
+
 void inicializar_config(char*);
 
 void iniciar_conexiones();
 void* escuchar_cpu();
+void* escuchar_cpu_dispatch();
+void* escuchar_cpu_interrupt();
 int server_escuchar(t_log*, char*, int);
 void* procesar_conexion_dispatch(void*);
 void* procesar_conexion_interrupt(void*);

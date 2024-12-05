@@ -21,6 +21,7 @@ int main() {
     cargar_bitmap();
     
     iniciar_conexiones();
+    pthread_exit(NULL); // Evita que el hilo principal finalice y permite que los hilos creados sigan ejecutándose
 
     int sockets[] = {socket_filesystem, -1};
     terminar_programa(CONFIG_FILESYSTEM, LOGGER_FILESYSTEM, sockets);
@@ -75,53 +76,62 @@ void iniciar_archivos() {
 }
 
 void iniciar_conexiones() {
-    // SERVER FS 
-    socket_filesystem = iniciar_servidor(PUERTO_ESCUCHA,LOGGER_FILESYSTEM,IP_FILESYSTEM,"FILESYSTEM");
+    socket_filesystem = iniciar_servidor(PUERTO_ESCUCHA, LOGGER_FILESYSTEM, IP_FILESYSTEM, "FILESYSTEM");
     if (socket_filesystem == -1) {
         log_error(LOGGER_FILESYSTEM, "Error al iniciar el servidor. El socket no se pudo crear.");
         exit(EXIT_FAILURE);
     }
     log_info(LOGGER_FILESYSTEM, "Servidor filesystem iniciado y escuchando en el puerto %s", PUERTO_ESCUCHA);
 
-    // HILOS SERVIDORES
-    pthread_create(&hilo_servidor_filesystem, NULL, (void*) escuchar_filesystem, NULL);
-    //pthread_detach(hilo_servidor_filesystem);
-
-     if (pthread_join(hilo_servidor_filesystem, NULL) != 0) {
-         log_error(LOGGER_FILESYSTEM, "Error al esperar la finalización del hilo escuchar_filesystem.");
-     } else {
-         log_info(LOGGER_FILESYSTEM, "El hilo escuchar_filesystem finalizó correctamente.");
-    }
+    pthread_create(&hilo_servidor_filesystem, NULL, escuchar_filesystem, NULL);
+    pthread_detach(hilo_servidor_filesystem);
 }
 
-void escuchar_filesystem() 
+void* escuchar_filesystem() 
 {
-    while (server_escuchar(LOGGER_FILESYSTEM, "FILESYSTEM", socket_filesystem));   
+    log_info(LOGGER_FILESYSTEM, "El hilo de escuchar_filesystem ha iniciado.");
+    while (server_escuchar(LOGGER_FILESYSTEM, "FILESYSTEM", socket_filesystem)) {
+        log_info(LOGGER_FILESYSTEM, "Conexión procesada.");
+    }
+    log_warning(LOGGER_FILESYSTEM, "El servidor de filesystem terminó inesperadamente.");
+    return NULL;
 }
 
 int server_escuchar(t_log* logger, char* servidor, int socket_server) {
-    log_info(logger, "Esperando cliente...");
-    int socket_cliente = esperar_cliente(socket_server, logger);
+    while (1) {
+        log_info(logger, "[%s] Esperando cliente...", servidor);
+        int socket_cliente = esperar_cliente(socket_server, logger);
 
-    if (socket_cliente != -1)
-	{
-		pthread_t hilo;
-		t_procesar_conexion_args *args = malloc(sizeof(t_procesar_conexion_args));
-        if (!args) {
-            log_error(LOGGER_FILESYSTEM, "Error al asignar memoria para las conexiones");
-            close(socket_cliente);
-            return 0;
+        if (socket_cliente == -1) {
+            log_warning(logger, "[%s] Error al aceptar conexión. Reintentando...", servidor);
+            continue;
         }
-		args->log = logger;
-		args->fd = socket_cliente;
-		args->server_name = servidor;
-		pthread_create(&hilo, NULL, (void *)gestionar_conexiones, (void *)args);
-		pthread_detach(hilo);
-		return 1;
-	} else {
-        log_error(LOGGER_FILESYSTEM, ":(");
+
+        pthread_t hilo_cliente;
+        t_procesar_conexion_args *args = malloc(sizeof(t_procesar_conexion_args));
+        if (!args) {
+            log_error(logger, "[%s] Error al asignar memoria para las conexiones.", servidor);
+            close(socket_cliente);
+            continue;
+        }
+
+        args->log = logger;
+        args->fd = socket_cliente;
+        args->server_name = strdup(servidor);
+
+        if (pthread_create(&hilo_cliente, NULL, gestionar_conexiones, (void *)args) != 0) {
+            log_error(logger, "[%s] Error al crear hilo para cliente.", servidor);
+            free(args->server_name);
+            free(args);
+            close(socket_cliente);
+            continue;
+        }
+
+        pthread_detach(hilo_cliente);
+        log_info(logger, "[%s] Hilo creado para procesar la conexión.", servidor);
     }
-	return 0;
+
+    return 0; // Este punto no se alcanza debido al ciclo infinito.
 }
 
 void* gestionar_conexiones(void* void_args) {
@@ -135,15 +145,16 @@ void* gestionar_conexiones(void* void_args) {
     op_code cod;
     while (1) {
         // Recibir código de operación
-        ssize_t bytes_recibidos = recv(socket_cliente, &cod, sizeof(op_code), 0);
-        if (bytes_recibidos <= 0) { // El cliente cerró la conexión o hubo un error
+        ssize_t bytes_recibidos = recv(socket_cliente, &cod, sizeof(op_code), MSG_WAITALL);
+        if (bytes_recibidos != sizeof(op_code)) { // El cliente cerró la conexión o hubo un error
             log_error(logger, "El cliente cerró la conexión.");
             break; // Salir del bucle y cerrar el hilo
         }
+        log_warning(logger, "Se recibio el codigo %d", cod);
 
         switch (cod) {
             case HANDSHAKE_memoria:
-                log_info(logger, "## %s Conectado - FD del socket: <%d>", server_name, socket);
+                log_info(logger, "## %s Conectado - FD del socket: <%d>", server_name, socket_cliente);
                 break;
 
             case MENSAJE:

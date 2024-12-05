@@ -25,7 +25,7 @@ void inicializar_programa();
 void inicializar_config(char*);
 void iniciar_conexiones();
 t_list* obtener_particiones_fijas(char**);
-void escuchar_memoria();
+void* escuchar_memoria();
 int server_escuchar(t_log*, char*, int);
 
 

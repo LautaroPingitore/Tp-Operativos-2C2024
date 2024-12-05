@@ -417,29 +417,27 @@ int enviar_paquete(t_paquete *paquete, int socket_cliente)
     return 0;
 }
 
-void enviar_handshake(char* mensaje, int socket, op_code codigo) {
-	t_paquete *paquete = malloc(sizeof(t_paquete));
+void enviar_handshake(int socket, op_code codigo) {
+    t_paquete *paquete = malloc(sizeof(t_paquete));
+	
+    paquete->codigo_operacion = codigo;
+    paquete->buffer = malloc(sizeof(t_buffer));
+    paquete->buffer->size = 0;
+    paquete->buffer->stream = NULL;
 
-	paquete->codigo_operacion = codigo;
-	paquete->buffer = malloc(sizeof(t_buffer));
-	paquete->buffer->size = strlen(mensaje) + 1;
-	paquete->buffer->stream = malloc(paquete->buffer->size);
-	memcpy(paquete->buffer->stream, mensaje, paquete->buffer->size);
+    void *a_enviar = malloc(sizeof(op_code) + sizeof(uint32_t));
+    int offset = 0;
 
-	void *a_enviar = malloc(paquete->buffer->size + sizeof(op_code) + sizeof(uint32_t));
-	int offset = 0;
+    memcpy(a_enviar + offset, &(paquete->codigo_operacion), sizeof(op_code));
+    offset += sizeof(op_code);
+    memcpy(a_enviar + offset, &(paquete->buffer->size), sizeof(uint32_t));
 
-	memcpy(a_enviar + offset, &(paquete->codigo_operacion), sizeof(op_code));
-	offset += sizeof(op_code);
-	memcpy(a_enviar + offset, &(paquete->buffer->size), sizeof(uint32_t));
-	offset += sizeof(uint32_t);
-	memcpy(a_enviar + offset, paquete->buffer->stream, paquete->buffer->size);
-	if (send(socket, a_enviar, paquete->buffer->size + sizeof(op_code) + sizeof(uint32_t), 0) == -1)
-	{
-		free(a_enviar);
-	}
-	free(a_enviar);
-	eliminar_paquete(paquete);
+    if (send(socket, a_enviar, offset, 0) == -1) {
+        perror("Error al enviar el handshake");
+    }
+
+    free(a_enviar);
+    eliminar_paquete(paquete);
 }
 
 void eliminar_paquete(t_paquete *paquete)

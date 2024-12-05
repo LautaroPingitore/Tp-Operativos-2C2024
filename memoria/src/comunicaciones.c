@@ -37,7 +37,7 @@ void* procesar_conexion_memoria(void *void_args){
 
         switch (cod) {
             case HANDSHAKE_kernel: // Simplemente avisa que se conecta a kernel 
-                log_info(logger, "## %s Conectado - FD del socket: <%d>", server_name, socket);
+                log_info(logger, "## %s Conectado - FD del socket: <%d>", server_name, cliente_socket);
                 break;
 
             case PROCESS_CREATE:
@@ -127,7 +127,7 @@ void* procesar_conexion_memoria(void *void_args){
                 break;
 
             case HANDSHAKE_cpu: //AVISA QUE SE CONECTO A CPU
-                log_info(logger, "## %s Conectado - FD del socket: <%d>", server_name, socket);
+                log_info(logger, "## %s Conectado - FD del socket: <%d>", server_name, cliente_socket);
                 break;
 
             case CONTEXTO:
@@ -151,7 +151,7 @@ void* procesar_conexion_memoria(void *void_args){
                 t_write_mem* wri_mem = recibir_write_mem(cliente_socket);
                 escribir_memoria(wri_mem->dire_fisica_wm, wri_mem->valor_escribido);
                 uint32_t tam_valor_escribido = sizeof(wri_mem->valor_escribido);
-                log_info(logger, "## <Escritura> - (PID:TID) - (<%D>:<%d>) - Dir. Física: <%d> - Tamaño: <%d>",
+                log_info(logger, "## <Escritura> - (PID:TID) - (<%d>:<%d>) - Dir. Física: <%d> - Tamaño: <%d>",
                          wri_mem->pid, wri_mem->tid, wri_mem->dire_fisica_wm, tam_valor_escribido);
                 free(wri_mem);
                 break;
@@ -162,8 +162,8 @@ void* procesar_conexion_memoria(void *void_args){
                 if (valor_leido != SEGF_FAULT) {
                     enviar_valor_leido_cpu(cliente_socket, read_mem->direccion_fisica, valor_leido);
                     uint32_t tam = sizeof(valor_leido);
-                    log_info(LOGGER_MEMORIA, "## <Lectura> - (PID:TID) - (<%d>:<%d>) - Dir. Física: <%d> - Tamaño: <%d>"
-                             read_mem->pid, read_mem->tid, tam);
+                    log_info(LOGGER_MEMORIA, "## <Lectura> - (PID:TID) - (<%d>:<%d>) - Dir. Física: <%d> - Tamaño: <%d>",
+                             read_mem->pid, read_mem->tid, read_mem->direccion_fisica, tam);
                 } else {
                     enviar_mensaje("SEGMENTATION_FAULT", cliente_socket);
                 }
@@ -751,9 +751,9 @@ void escribir_memoria(uint32_t direccion_fisica, uint32_t valor) {
 // READ_MEM|
 // ========|
 
-t_read_mem recibir_read_mem(int socket) {
+t_read_mem* recibir_read_mem(int socket) {
     t_paquete* paquete = recibir_paquete(socket);
-    t_read_mem read_mem = deserializar_read_mem(paquete->buffer);
+    t_read_mem* read_mem = deserializar_read_mem(paquete->buffer);
     eliminar_paquete(paquete);
     return read_mem;
 }

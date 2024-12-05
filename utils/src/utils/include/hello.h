@@ -48,14 +48,11 @@ void liberar_socket(int);
 
 // PAQUETES.H
 typedef enum{
-    HANDSHAKE_consola,
     HANDSHAKE_kernel,
     HANDSHAKE_memoria,
     HANDSHAKE_cpu,
     HANDSHAKE_interrupt,
     HANDSHAKE_dispatch,
-    HANDSHAKE_in_out,
-    HANDSHAKE_ok_continue,
     ERROROPCODE,
     PEDIR_VALOR_MEMORIA,
     ESCRIBIR_VALOR_MEMORIA,
@@ -70,39 +67,15 @@ typedef enum{
     PROCESS_EXIT,
     INTERRUPCION,
     CONTEXTO,
-    PEDIDO_RESIZE,
     INSTRUCCION,
     PEDIDO_INSTRUCCION,
     PEDIDO_WAIT,
     PEDIDO_SIGNAL,
-    ENVIAR_INTERFAZ,
-    CONEXION_INTERFAZ,
-    DESCONEXION_INTERFAZ,
-    FINALIZACION_INTERFAZ,
     PEDIDO_READ_MEM,
     PEDIDO_WRITE_MEM,
-    ENVIAR_PAGINA,
     ENVIAR_DIRECCION_FISICA,
-    ENVIAR_INTERFAZ_STDIN,
-    ENVIAR_INTERFAZ_STDOUT,
-    ENVIAR_INTERFAZ_FS,
-    RECIBIR_DATO_STDIN,
-    FINALIZACION_INTERFAZ_STDIN,
-    FINALIZACION_INTERFAZ_STDOUT,
-    PEDIDO_ESCRIBIR_DATO_STDIN,
-    PEDIDO_A_LEER_DATO_STDOUT,
-    RESPUESTA_STDIN,
-    RESPUESTA_DATO_STDOUT,
-    PEDIDO_COPY_STRING,
-    RESPUESTA_DATO_MOVIN,
     SOLICITUD_BASE_MEMORIA,
     SOLICITUD_LIMITE_MEMORIA,
-    MISMO_TAMANIO,
-    RESIZE_OK,
-    FS_CREATE_DELETE,
-    FINALIZACION_INTERFAZ_DIALFS,
-    FS_TRUNCATE,
-    FS_WRITE_READ,
     DUMP_MEMORY,
     IO,
     THREAD_CREATE,
@@ -135,7 +108,7 @@ int recibir_operacion(int);
 void recibir_mensaje(int, t_log*);
 void* serializar_paquete(t_paquete*, int);
 void enviar_mensaje(char*, int);
-void enviar_handshake(char*, int, op_code);
+void enviar_handshake(int, op_code);
 void crear_buffer(t_paquete*);
 void agregar_a_paquete(t_paquete*, void*, int);
 int enviar_paquete(t_paquete*, int);
