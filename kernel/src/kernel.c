@@ -64,7 +64,6 @@ int main(){//int argc, char* argv[]) {
     pthread_create(&hilo_com_interrupt, NULL, manejar_comunicaciones_interrupt, NULL);
 
     // CREAR PROCESOS INICIAL Y LO EJECUTA
-    log_warning(LOGGER_KERNEL, "ALGORITMO = %s", ALGORITMO_PLANIFICACION);
     crear_proceso(pseudo_path, tamanio_proceso, 0);
     intentar_mover_a_execute();
 
@@ -155,12 +154,8 @@ void manejar_comunicaciones(int socket, const char* nombre_modulo) {
     op_code cod;
     while (1) {
         ssize_t bytes_recibidos = recv(socket, &cod, sizeof(op_code), MSG_WAITALL);
-        if (bytes_recibidos <= 0) {
-            if (bytes_recibidos == 0) {
-                log_warning(LOGGER_KERNEL, "Socket cerrado por el módulo %s.", nombre_modulo);
-            } else {
-                log_error(LOGGER_KERNEL, "Error al recibir datos desde el módulo %s.", nombre_modulo);
-            }
+        if (bytes_recibidos != sizeof(op_code)) {
+            log_error(LOGGER_KERNEL, "CLIENTE DESCONECTADO");
             break;
         }
 
@@ -173,7 +168,6 @@ void manejar_comunicaciones(int socket, const char* nombre_modulo) {
                 break;
 
             case MENSAJE: {
-                log_warning(LOGGER_KERNEL, "Entro a Mensaje");
                 //char* respuesta = deserializar_mensaje(socket);
                 char* respuesta = recibir_mensaje(socket);
                 log_warning(LOGGER_KERNEL, "MENSAJE = %s", respuesta);
@@ -182,7 +176,6 @@ void manejar_comunicaciones(int socket, const char* nombre_modulo) {
                     se_pudo_asignar = true;
                     pthread_mutex_unlock(&mutex_process_create);
                 }
-                log_warning(LOGGER_KERNEL, "A PUNTO DE HACER EL POST");
                 sem_post(&sem_process_create);
                 free(respuesta);
                 break;

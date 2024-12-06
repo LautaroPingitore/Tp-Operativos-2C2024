@@ -102,19 +102,19 @@ t_hilo_memoria* deserializar_hilo_memoria(t_buffer* buffer) {
 
 
     void* stream = buffer->stream;
-    int desplazamiento = sizeof(op_code);
+    int desplazamiento = 0;
     uint32_t tamanio_archivo;
 
 
-    memcpy(&hilo->tid, stream + desplazamiento, sizeof(uint32_t));
+    memcpy(&(hilo->tid), stream + desplazamiento, sizeof(uint32_t));
     desplazamiento += sizeof(uint32_t);
 
 
-    memcpy(&hilo->pid_padre, stream + desplazamiento, sizeof(uint32_t));
+    memcpy(&(hilo->pid_padre), stream + desplazamiento, sizeof(uint32_t));
     desplazamiento += sizeof(uint32_t);
 
 
-    memcpy(&tamanio_archivo, stream + desplazamiento, sizeof(uint32_t));
+    memcpy(&(tamanio_archivo), stream + desplazamiento, sizeof(uint32_t));
     desplazamiento += sizeof(uint32_t);
 
 
@@ -125,8 +125,7 @@ t_hilo_memoria* deserializar_hilo_memoria(t_buffer* buffer) {
     }
 
 
-    memcpy(&hilo->archivo, stream + desplazamiento, tamanio_archivo);
-
+    memcpy(hilo->archivo, stream + desplazamiento, tamanio_archivo);
 
     return hilo;
 }
@@ -139,24 +138,19 @@ void agregar_instrucciones_a_lista(uint32_t tid, char* archivo) {
         return;
     }
 
-
     char line[100];
     t_list* lst_instrucciones = list_create();
     while (fgets(line, sizeof(line), file) != NULL) {
+
         t_instruccion* inst = malloc(sizeof(t_instruccion));
 
-
-        // WARNING TEMA DEL MALLOC
-        inst->nombre = malloc(15);
-        inst->parametro1 = malloc(15);
-        inst->parametro2 = malloc(15);
-
+        inst->nombre = calloc(1, 100);
+        inst->parametro1 = calloc(1, 100);
+        inst->parametro2 = calloc(1, 100);
+        inst->parametro3 = -1;
 
         int elementos = sscanf(line, "%s %s %s %d", inst->nombre, inst->parametro1, inst->parametro2, &(inst->parametro3));
-        inst->nombre = realloc(inst->nombre, strlen(inst->nombre) + 1);
-        inst->parametro1 = realloc(inst->parametro1, strlen(inst->parametro1) + 1);
-        inst->parametro2 = realloc(inst->parametro2, strlen(inst->parametro2) + 1);
-
+        log_warning(LOGGER_MEMORIA, "Elementos leídos por sscanf: %d", elementos);
 
         if (elementos == 3) {
             inst->parametro3 = -1;
@@ -168,18 +162,15 @@ void agregar_instrucciones_a_lista(uint32_t tid, char* archivo) {
             strcpy(inst->parametro2, "");
             inst->parametro3 = -1;
         }
-       
+
         list_add(lst_instrucciones, inst);
     }
 
-
     fclose(file);
-
 
     t_hilo_instrucciones* instrucciones_hilo = malloc(sizeof(t_hilo_instrucciones));
     instrucciones_hilo->tid = tid;
     instrucciones_hilo->instrucciones = lst_instrucciones;
-
 
     list_add(lista_instrucciones, instrucciones_hilo);
 }
@@ -251,7 +242,7 @@ t_pid_tid* deserializar_identificadores(t_buffer* buffer) {
     }
    
    void * stream = buffer->stream;
-   int desplazamiento = sizeof(op_code);
+   int desplazamiento = 0;
    
    memcpy(&(ident->pid), stream + desplazamiento, sizeof(uint32_t));
    desplazamiento += sizeof(uint32_t);
@@ -411,7 +402,7 @@ t_actualizar_contexto* deserializar_actualizacion(t_buffer* buffer) {
 
 
     void* stream = buffer->stream;
-    int desplazamiento = sizeof(op_code);
+    int desplazamiento = 0;
 
 
     memcpy(&(act_cont->pid), stream + desplazamiento, sizeof(uint32_t));
@@ -505,16 +496,12 @@ void enviar_valor_leido_cpu(int socket, uint32_t dire_fisica, uint32_t valor) {
 t_instruccion* obtener_instruccion(uint32_t tid, uint32_t pc) {
     for(int i = 0; i < list_size(lista_instrucciones); i++) {
         t_hilo_instrucciones* instruccion_actual = list_get(lista_instrucciones, i);
-        if(instruccion_actual->tid == tid && list_size(instruccion_actual->instrucciones) >= pc) {
-            t_instruccion* instruccion_deseada = list_get(instruccion_actual->instrucciones, pc + 1); // CHECKEAR EL + 1
-            return instruccion_deseada;
+        if(instruccion_actual->tid == tid) {
+            return (list_get(instruccion_actual->instrucciones, pc));
         }
     }
     return NULL;
 }
-
-
-
 
 void procesar_solicitud_contexto(int socket_cliente, uint32_t pid, uint32_t tid) {
     for (int i = 0; i < list_size(lista_procesos); i++) {
@@ -636,7 +623,7 @@ t_write_mem* deserializar_write_mem(t_buffer* buffer) {
 
 
     void * stream = buffer->stream;
-    int desplazamiento = sizeof(op_code);
+    int desplazamiento = 0;
    
     memcpy(&(wri_mem->pid), stream + desplazamiento, sizeof(uint32_t));
     desplazamiento += sizeof(uint32_t);
@@ -686,7 +673,7 @@ t_read_mem* recibir_read_mem(int socket) {
 t_read_mem* deserializar_read_mem(t_buffer* buffer) {
     t_read_mem* read_mem = malloc(sizeof(t_read_mem));
     void* stream = buffer->stream;
-    int desplazamiento = sizeof(op_code);
+    int desplazamiento = 0;
 
 
     memcpy(&read_mem->pid, stream + desplazamiento, sizeof(uint32_t));
@@ -741,7 +728,7 @@ t_pedido_instruccion* deserializar_pedido_instruccion(t_buffer* buffer) {
     }
    
     void * stream = buffer->stream;
-    int desplazamiento = sizeof(op_code);
+    int desplazamiento = 0;
    
     memcpy(&(ped_inst->pid), stream + desplazamiento, sizeof(uint32_t));
     desplazamiento += sizeof(uint32_t);

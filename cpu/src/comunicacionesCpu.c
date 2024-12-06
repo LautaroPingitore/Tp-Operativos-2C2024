@@ -36,7 +36,7 @@ t_proceso_cpu* recibir_proceso(int socket) {
 t_proceso_cpu* deserializar_proceso(t_buffer* buffer) {
     t_proceso_cpu* pcb = malloc(sizeof(t_pcb));
     void* stream = buffer->stream;
-    int desplazamiento = sizeof(op_code);
+    int desplazamiento = 0;
     
     memcpy(&pcb->PID, stream + desplazamiento, sizeof(uint32_t));
     desplazamiento += sizeof(uint32_t);

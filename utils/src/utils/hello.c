@@ -15,7 +15,7 @@ t_tcb* deserializar_paquete_tcb(t_buffer* buffer) {
 	}
 
 	void* stream = buffer->stream;
-	int desplazamiento = sizeof(op_code); 
+	int desplazamiento = 0; 
 
 	memcpy(&tcb->TID, stream + desplazamiento, sizeof(uint32_t));
     desplazamiento += sizeof(uint32_t);
@@ -42,7 +42,7 @@ t_instruccion* deserializar_instruccion(t_buffer* buffer) {
     }
 
 	void* stream = buffer->stream;
-	int desplazamiento = sizeof(op_code);
+	int desplazamiento = 0;
 	uint32_t tam_nom, tam_p1, tam_p2;
 
 	memcpy(&tam_nom, stream + desplazamiento, sizeof(uint32_t));

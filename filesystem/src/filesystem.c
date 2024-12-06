@@ -212,7 +212,7 @@ t_archivo_dump* deserializar_archivo_dump(t_buffer* buffer) {
     }
 
     void* stream = buffer->stream;
-    int desplazamiento = sizeof(op_code);
+    int desplazamiento = 0;
 
     uint32_t tamanio_nombre, tamanio_contenido;
 

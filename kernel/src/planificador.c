@@ -136,10 +136,6 @@ t_pcb* crear_pcb(uint32_t pid, int tamanio, t_contexto_ejecucion* contexto_ejecu
     agregar_path(pid, archivo);
     list_add(tabla_procesos, pcb);
 
-    // EL HILO PRINCIPAL SERIA MAS O MENOS LO MISMO QUE EL PROCESO EN SI
-    t_tcb* hilo_principal = crear_tcb(pid, asignar_tid(pcb), archivo, 0, NEW);
-    list_add(pcb->TIDS, hilo_principal);
-
     return pcb;
 }
 
@@ -173,6 +169,8 @@ void crear_proceso(char* path_proceso, int tamanio_proceso, int prioridad){
     pthread_mutex_lock(&mutex_cola_new);
     list_add(cola_new, pcb);
     pthread_mutex_unlock(&mutex_cola_new);
+
+    thread_create(pcb, path_proceso, prioridad);
 
     log_info(LOGGER_KERNEL, "## (<%d>:<0>) Se crea el proceso - Estado: NEW", pcb->PID);
 
@@ -536,13 +534,15 @@ void intentar_mover_a_execute() {
 
     log_info(LOGGER_KERNEL, "(<%d>:<%d>) Movido a Excecute", hilo_a_ejecutar->PID_PADRE, hilo_a_ejecutar->TID);
 
+    enviar_proceso_cpu(socket_kernel_cpu_dispatch, pcb_padre);
+
+    log_warning(LOGGER_KERNEL, "ENVIO PCB CPU");
+    
     int resultado = enviar_hilo_a_cpu(hilo_a_ejecutar);
 
     log_warning(LOGGER_KERNEL, "ENVIO HILO CPU");
 
-    enviar_proceso_cpu(socket_kernel_cpu_dispatch, pcb_padre);
 
-    log_warning(LOGGER_KERNEL, "ENVIO PCB CPU");
 
     if (resultado != 0) {
         log_error(LOGGER_KERNEL, "Error al enviar el hilo %d a la CPU", hilo_a_ejecutar->TID);

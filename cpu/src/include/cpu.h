@@ -25,6 +25,7 @@ extern sem_t sem_limite;
 extern sem_t sem_valor_memoria;
 extern sem_t sem_instruccion;
 extern sem_t sem_mutex_globales;
+extern sem_t sem_proceso_actual;
 
 extern pthread_t hilo_servidor_dispatch;
 extern pthread_t hilo_servidor_interrupt;

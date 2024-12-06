@@ -230,7 +230,6 @@ void* procesar_conexion_memoria(void *void_args){
                 pthread_mutex_unlock(&mutex_procesos);
 
                 log_info(LOGGER_MEMORIA, "## Proceso <Destruido> -  PID: <%d> - Tamaño: <%d>", proceso_nuevo->pid, proceso_nuevo->limite);
-                enviar_mensaje("OK", cliente_socket);
                 free(proceso_a_eliminar->contexto);
                 free(proceso_a_eliminar);
                 break;
@@ -241,12 +240,8 @@ void* procesar_conexion_memoria(void *void_args){
                     enviar_mensaje("ERROR", cliente_socket);
                     break;
                 }
-                
                 agregar_instrucciones_a_lista(hilo_a_crear->tid, hilo_a_crear->archivo);
-                enviar_mensaje("OK", cliente_socket);
                 log_info(LOGGER_MEMORIA, "## Hilo <Creado> - (PID:TID) - (<%d>:<%d>)", hilo_a_crear->pid_padre, hilo_a_crear->tid);
-                free(hilo_a_crear->archivo);
-                free(hilo_a_crear);
                 break;
 
             case THREAD_EXIT:
@@ -259,8 +254,6 @@ void* procesar_conexion_memoria(void *void_args){
                 log_info(LOGGER_MEMORIA, "## Hilo <Destruido> - (PID:TID) - (<%d>:<%d>)", hilo_a_eliminar->pid_padre, hilo_a_eliminar->tid);
 
                 eliminar_espacio_hilo(hilo_a_eliminar);
-
-                enviar_mensaje("OK", cliente_socket);
                 break;
 
             case DUMP_MEMORY:
@@ -326,7 +319,12 @@ void* procesar_conexion_memoria(void *void_args){
             case PEDIDO_INSTRUCCION:
                 t_pedido_instruccion* ped_inst = recibir_pedido_instruccion(cliente_socket);
 
+                log_warning(LOGGER_MEMORIA, "PID = %d, TID = %d, PC = %d", ped_inst->pid, ped_inst->tid, ped_inst->pc);
+
                 t_instruccion* inst = obtener_instruccion(ped_inst->tid, ped_inst->pc);
+
+                log_warning(LOGGER_MEMORIA, "INSTRUCCION %s", inst->nombre);
+
                 if(enviar_instruccion(cliente_socket, inst) == 0) {
                     if(inst->parametro3 == -1) {
                         log_info(LOGGER_MEMORIA, "## Obtener instrucción - (PID:TID) - (<%d>:<%d>) - Instrucción: <%s> <%s> <%s>",
