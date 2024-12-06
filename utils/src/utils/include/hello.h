@@ -111,7 +111,7 @@ void* serializar_paquete(t_paquete*, int);
 void enviar_mensaje(char*, int);
 void enviar_handshake(int, op_code);
 void crear_buffer(t_paquete*);
-void agregar_a_paquete(t_paquete*, void*, int);
+void agregar_a_paquete(t_paquete*, void*, uint32_t);
 int enviar_paquete(t_paquete*, int);
 void eliminar_paquete(t_paquete*);
 void liberar_conexion(int);
@@ -192,7 +192,6 @@ typedef struct {
 	t_contexto_ejecucion* CONTEXTO;
 	t_estado ESTADO;
 	t_list* MUTEXS; // t_recurso
-    //char* ARCHIVO;
 } t_pcb;
 
 t_tcb* recibir_hilo(int);

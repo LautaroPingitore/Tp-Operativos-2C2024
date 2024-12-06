@@ -103,6 +103,7 @@ char* deserializar_mensaje(t_buffer* buffer) {
 
 	uint32_t tamanio_mensaje;
 	memcpy(&tamanio_mensaje, stream + desplazamiento, sizeof(uint32_t));
+	desplazamiento += sizeof(uint32_t);
 	
     char* mensaje = malloc(tamanio_mensaje);
     if (mensaje == NULL) {
@@ -349,8 +350,21 @@ void enviar_mensaje(char *mensaje, int socket_cliente)
 {
 	t_paquete *paquete = crear_paquete_con_codigo_de_operacion(MENSAJE);
 	uint32_t tamanio = strlen(mensaje) + 1;
-	agregar_a_paquete(paquete, &tamanio, sizeof(uint32_t));
-	agregar_a_paquete(paquete, mensaje, tamanio);
+
+	// agregar_a_paquete(paquete, &tamanio, sizeof(uint32_t));
+	// agregar_a_paquete(paquete, mensaje, tamanio);
+
+	paquete->buffer->size = sizeof(uint32_t) + tamanio;
+	paquete->buffer->stream = malloc(paquete->buffer->size);
+
+	int desplazamiento = 0;
+
+	// Serializar el PID
+    memcpy(paquete->buffer->stream + desplazamiento, &(tamanio), sizeof(uint32_t));
+    desplazamiento += sizeof(uint32_t);
+
+	memcpy(paquete->buffer->stream + desplazamiento, mensaje, tamanio);
+
 	if(enviar_paquete(paquete, socket_cliente) != 0) {
 		perror("Error al enviar el paquete");
 	}
@@ -364,7 +378,7 @@ void crear_buffer(t_paquete *paquete)
 	paquete->buffer->stream = NULL;
 }
 
-void agregar_a_paquete(t_paquete *paquete, void *valor, int tamanio)
+void agregar_a_paquete(t_paquete *paquete, void *valor, uint32_t tamanio)
 {
 	paquete->buffer->stream = realloc(paquete->buffer->stream, paquete->buffer->size + tamanio + sizeof(int));
 
@@ -374,16 +388,16 @@ void agregar_a_paquete(t_paquete *paquete, void *valor, int tamanio)
 	paquete->buffer->size += tamanio + sizeof(int);
 }
 
-void enviar_paquete(t_paquete *paquete, int socket_cliente)
+int enviar_paquete(t_paquete *paquete, int socket_cliente)
 {
     // Calcular el tamaño total del mensaje a enviar
-    size_t total_size = sizeof(op_cod) + sizeof(int) + paquete->buffer->size;
+    size_t total_size = sizeof(op_code) + sizeof(int) + paquete->buffer->size;
 
     // Asignar memoria para el buffer que se va a enviar
     void *a_enviar = malloc(total_size);
     if (a_enviar == NULL) {
         perror("Error al asignar memoria para a_enviar");
-        return;
+        return -1;
     }
 
     int offset = 0;
@@ -404,10 +418,13 @@ void enviar_paquete(t_paquete *paquete, int socket_cliente)
     if (bytes_enviados == -1)
     {
         perror("Error al enviar datos");
+		free(a_enviar);
+		return -1;
     }
 
     // Liberar la memoria asignada para a_enviar
     free(a_enviar);
+	return 0;
 }
 
 void enviar_handshake(int socket, op_code codigo) {
