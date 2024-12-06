@@ -548,8 +548,6 @@ void intentar_mover_a_execute() {
         pthread_mutex_lock(&mutex_cola_ready);
         list_add(cola_ready, hilo_a_ejecutar);
         pthread_mutex_lock(&mutex_cola_ready);
-    } else {
-        log_info(LOGGER_KERNEL, "El hilo %d ha sido enviado a la CPU", hilo_a_ejecutar->TID);
     }
 }
 

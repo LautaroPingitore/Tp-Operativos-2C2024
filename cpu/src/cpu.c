@@ -183,14 +183,20 @@ void* procesar_conexion_cpu(void* void_args) {
                 break;
 
             case HILO:
+                log_warning(LOGGER_CPU, "Entro a HILO");
                 hilo_actual = recibir_hilo(socket);
+                log_warning(LOGGER_CPU, "RECIBIO EL HILO %d", hilo_actual->TID);
                 sem_wait(&sem_proceso_actual);
+                log_warning(LOGGER_CPU, "SALIO DEL SEM");
                 ejecutar_ciclo_instruccion();
                 break;
 
             case SOLICITUD_PROCESO:
+                log_warning(LOGGER_CPU, "ENTRO A SOLI_PROC");
                 pcb_actual = recibir_proceso(socket);
+                log_warning(LOGGER_CPU, "RECIBIO PROCESO %d", pcb_actual->PID);
                 sem_post(&sem_proceso_actual);
+                log_warning(LOGGER_CPU, "HIZO EL SEM");
                 break;
 
             case MENSAJE:

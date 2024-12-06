@@ -6,6 +6,8 @@ t_tcb* hilo_actual = NULL;
 
 void ejecutar_ciclo_instruccion() {
 
+    log_warning(LOGGER_CPU, "ENTRO CICLO INS");
+
     while (true) {
 
         if (!hilo_actual) {
@@ -18,20 +20,32 @@ void ejecutar_ciclo_instruccion() {
             break;
         }
 
+        log_warning(LOGGER_CPU, "POR ENTRAR AL FETCH");
+
         t_instruccion *instruccion = fetch(hilo_actual->TID, hilo_actual->PC);
+
+        log_warning(LOGGER_CPU, "INSTRUCCION %s", instruccion->nombre);
         
         if (!instruccion) {
             log_error(LOGGER_CPU, "Error al obtener la instrucción. Terminando ciclo.");
             break;
         }
 
+        log_warning(LOGGER_CPU, "POR HACER EL EXECUTE");
+
         // Aquí se llama a decode, pero por simplicidad se omite en este ejemplo
         execute(instruccion, socket_cpu_dispatch_kernel, hilo_actual);
+
+        log_warning(LOGGER_CPU, "TRMINO LA EJECUCION");
         
         // Verifica si se necesita realizar un check_interrupt
         check_interrupt();
 
+        log_warning(LOGGER_CPU, "TERMINO EL INTERRUPT");
+
         liberar_instruccion(instruccion);
+
+        log_warning(LOGGER_CPU, "LIBERO LA INSTRUCCION");
     }
 }
 
