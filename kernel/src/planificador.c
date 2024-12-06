@@ -155,27 +155,18 @@ t_tcb* crear_tcb(uint32_t pid_padre, uint32_t tid, char* archivo_pseudocodigo, i
 
 // FUNCION QUE CREA UN PROCESO Y LO METE A LA COLA DE NEW
 void crear_proceso(char* path_proceso, int tamanio_proceso, int prioridad){
-
-    log_warning(LOGGER_KERNEL, "CHECKPOINT EN CREAR PROCESO");
-
     archivo_pseudocodigo* archivo = leer_archivo_pseudocodigo(path_proceso);
-
-    log_warning(LOGGER_KERNEL, "CHECKPOINT EN LEER ARCHIVO");
 
     t_pcb* pcb = crear_pcb(asignar_pid(), tamanio_proceso, inicializar_contexto(), NEW, path_proceso);
 
-    log_warning(LOGGER_KERNEL, "CHECKPOINT EN CREAR PCB");
-
     obtener_recursos_del_proceso(archivo, pcb);
-
-    log_warning(LOGGER_KERNEL, "CHECKPOINT MEDIO EN OBTENER RECURSO ");
 
     // EN LA LISTA DE NEW, READY, ETC TENDRIAN QUE SER HILOS, NO PROCESOS
     pthread_mutex_lock(&mutex_cola_new);
     list_add(cola_new, pcb);
     pthread_mutex_unlock(&mutex_cola_new);
 
-    log_info(LOGGER_KERNEL, "## (<%d>:0) Se crea el proceso - Estado: NEW", pcb->PID);
+    log_info(LOGGER_KERNEL, "## (<%d>:<0>) Se crea el proceso - Estado: NEW", pcb->PID);
 
     inicializar_proceso(pcb, path_proceso);
 
