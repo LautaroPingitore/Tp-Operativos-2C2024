@@ -18,18 +18,12 @@ void ejecutar_ciclo_instruccion() {
             break;
         }
 
-        log_warning(LOGGER_CPU, "POR ENTRAR AL FETCH");
-
         t_instruccion *instruccion = fetch(hilo_actual->TID, hilo_actual->PC);
-
-        log_warning(LOGGER_CPU, "INSTRUCCION %s", instruccion->nombre);
         
         if (!instruccion) {
             log_error(LOGGER_CPU, "Error al obtener la instrucción. Terminando ciclo.");
             break;
         }
-
-        log_warning(LOGGER_CPU, "POR HACER EL EXECUTE");
 
         // Aquí se llama a decode, pero por simplicidad se omite en este ejemplo
         execute(instruccion, socket_cpu_dispatch_kernel, hilo_actual);
@@ -52,11 +46,7 @@ t_instruccion *fetch(uint32_t tid, uint32_t pc) {
     pedir_instruccion_memoria(tid, pc, socket_cpu_memoria);
     t_instruccion* inst = malloc(sizeof(t_instruccion));
 
-    log_warning(LOGGER_CPU, "A PUNTO DE HACER LE WAIT");
-
     sem_wait(&sem_instruccion);
-
-    log_warning(LOGGER_CPU, "A HACIDO EL WAIT");
 
     inst = instruccion_actual;
     
