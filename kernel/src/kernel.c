@@ -99,7 +99,9 @@ void iniciar_conexiones() {
         exit(EXIT_FAILURE);
     }
     enviar_handshake(socket_kernel_memoria, HANDSHAKE_kernel);
-    if(pthread_create(&hilo_kernel_memoria, NULL, escuchar_kernel_memoria, NULL) != 0){log_error(LOGGER_KERNEL, "ERROR CREANDO HILO 1");};
+    if(pthread_create(&hilo_kernel_memoria, NULL, escuchar_kernel_memoria, NULL) != 0){
+        log_error(LOGGER_KERNEL, "ERROR CREANDO HILO 1");
+    }
     pthread_detach(hilo_kernel_memoria);
 
     // Conexión cliente CPU Dispatch
@@ -109,7 +111,9 @@ void iniciar_conexiones() {
         exit(EXIT_FAILURE);
     }
     enviar_handshake(socket_kernel_cpu_dispatch, HANDSHAKE_dispatch);
-    if(pthread_create(&hilo_kernel_dispatch, NULL, escuchar_kernel_cpu_dispatch, NULL) != 0){log_error(LOGGER_KERNEL, "ERROR CREANDO HILO 2");};
+    if(pthread_create(&hilo_kernel_dispatch, NULL, escuchar_kernel_cpu_dispatch, NULL) != 0){
+        log_error(LOGGER_KERNEL, "ERROR CREANDO HILO 2");
+    }
     pthread_detach(hilo_kernel_dispatch);
 
     // Conexión cliente CPU Interrupt
@@ -119,7 +123,9 @@ void iniciar_conexiones() {
         exit(EXIT_FAILURE);
     }
     enviar_handshake(socket_kernel_cpu_interrupt, HANDSHAKE_interrupt);
-    if(pthread_create(&hilo_kernel_interrupt, NULL, escuchar_kernel_cpu_interrupt, NULL) != 0){log_error(LOGGER_KERNEL, "ERROR CREANDO HILO 3");};
+    if(pthread_create(&hilo_kernel_interrupt, NULL, escuchar_kernel_cpu_interrupt, NULL) != 0){
+        log_error(LOGGER_KERNEL, "ERROR CREANDO HILO 3");
+    }
     pthread_detach(hilo_kernel_interrupt);
 
     log_warning(LOGGER_KERNEL, "FINALIZO INICIAR CONEXIONES XD");
@@ -135,7 +141,7 @@ int server_escuchar(char *server_name, int server_socket) {
 
         if (cliente_socket == -1) {
             log_warning(LOGGER_KERNEL, "[%s] Error al aceptar conexión del cliente. Reintentando...", server_name);
-            continue;
+            break;
         }
 
         log_info(LOGGER_KERNEL, "[%s] Cliente conectado. Procesando conexión...", server_name);
@@ -145,7 +151,7 @@ int server_escuchar(char *server_name, int server_socket) {
         if (!args) {
             log_error(LOGGER_KERNEL, "[%s] Error al asignar memoria para las conexiones.", server_name);
             close(cliente_socket);
-            continue;
+            break;
         }
 
         args->log = LOGGER_KERNEL;
@@ -157,7 +163,7 @@ int server_escuchar(char *server_name, int server_socket) {
             
             free(args);
             close(cliente_socket);
-            continue;
+            break;
         }
 
         // Separar el hilo del flujo principal
@@ -176,7 +182,7 @@ void* escuchar_kernel_memoria() {
     while (server_escuchar("KERNEL-MEMORIA", socket_kernel_memoria)) {
         log_info(LOGGER_KERNEL, "Conexión procesada.");
     }
-    log_warning(LOGGER_KERNEL, "El servidor para Memoria terminó inesperadamente.");
+    log_warning(LOGGER_KERNEL, "El servidor para Kernel terminó inesperadamente.");
     return NULL;
 }
 
@@ -204,13 +210,22 @@ void* procesar_conexiones(void* void_args) {
     int socket = args->fd;
     char* server_name = args->server_name;
 
+    free(args);
+
     op_code cod;
-    while(1) {
-        ssize_t bytes_recibidos = recv(socket, &cod, sizeof(op_code), MSG_WAITALL);
-        if (bytes_recibidos != sizeof(op_code)) {
-            log_error(LOGGER_KERNEL, "Error al recibir código de operación, bytes recibidos: %zd", bytes_recibidos);
-            break;
-        }
+    while(socket != -1) {
+        // ssize_t bytes_recibidos = recv(socket, &cod, sizeof(op_code), MSG_WAITALL);
+        // if (bytes_recibidos != sizeof(op_code)) {
+        //     log_error(LOGGER_KERNEL, "Error al recibir código de operación, bytes recibidos: %zd", bytes_recibidos);
+        //     break;
+        // }
+
+        if (recv(socket, &cod, sizeof(op_code), 0) != sizeof(op_code))
+		{
+			log_debug(LOGGER_KERNEL, "Cliente desconectado.\n");
+			return NULL;
+		}
+
         
         switch (cod) {
             case HANDSHAKE_memoria:
@@ -251,13 +266,11 @@ void* procesar_conexiones(void* void_args) {
                     log_error(LOGGER_KERNEL, "Operacion desconocida");
                 }
                 break;
-
         }
     }
 
     log_warning(LOGGER_KERNEL, "Finalizando conexión con el cliente.");
     close(socket); // Cerrar el socket del cliente
     free(args->server_name);
-    free(args);
     return NULL;
 }
