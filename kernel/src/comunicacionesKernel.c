@@ -48,8 +48,6 @@ void enviar_proceso_cpu(int socket, t_pcb* pcb) {
     desplazamiento += sizeof(uint32_t);
     memcpy(paquete->buffer->stream + desplazamiento, pcb->CONTEXTO, sizeof(t_contexto_ejecucion));    
 
-
-    
     if(enviar_paquete(paquete, socket) == 0) {
         log_info(LOGGER_KERNEL, "Proceso enviado ok a cpu");
     } else {

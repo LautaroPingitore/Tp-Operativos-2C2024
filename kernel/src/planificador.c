@@ -1,7 +1,7 @@
 #include "include/gestor.h"
 
 /*
-=== PASO A PASO DE LA EJECUCION ===
+=== PASO A PASO DE LA EJECUCION === 
 1) Al iniciar kernel se crea un proceso inicial y un hilo principal para dicho proceso
 donde el archivo de pseudocodigo del hilo 0 es el mismo que del proceso
 2) Al crearce un proceso este pasa a la cola NEW y se le manda un pedido a memoria para
@@ -68,6 +68,7 @@ pthread_mutex_t mutex_tid;
 pthread_mutex_t mutex_estado;
 pthread_cond_t cond_estado = PTHREAD_COND_INITIALIZER;
 
+
 // VARIABLES DE CONTROL
 uint32_t pid = 0;
 uint32_t contador_tid = 0;
@@ -87,6 +88,9 @@ void inicializar_kernel() {
     tabla_paths = list_create();
     tabla_procesos = list_create();
 
+    pthread_mutex_init(&mutex_pid, NULL);
+    pthread_mutex_init(&mutex_tid,NULL);
+    pthread_mutex_init(&mutex_estado, NULL);
     pthread_mutex_init(&mutex_cola_new, NULL);
     pthread_mutex_init(&mutex_cola_ready, NULL);
     pthread_mutex_init(&mutex_cola_exit, NULL);
@@ -136,6 +140,17 @@ t_pcb* crear_pcb(uint32_t pid, int tamanio, t_contexto_ejecucion* contexto_ejecu
     agregar_path(pid, archivo);
     list_add(tabla_procesos, pcb);
 
+    t_tcb* hilo_principal = crear_tcb(pid, asignar_tid(pcb), archivo, 0, NEW);
+
+    pthread_mutex_lock(&mutex_cola_ready);
+    list_add(cola_ready, hilo_principal);
+    pthread_mutex_unlock(&mutex_cola_ready);
+
+    list_add(pcb->TIDS, hilo_principal);
+
+    envio_hilo_crear(socket_kernel_memoria, hilo_principal, THREAD_CREATE);
+
+
     return pcb;
 }
 
@@ -169,8 +184,6 @@ void crear_proceso(char* path_proceso, int tamanio_proceso, int prioridad){
     pthread_mutex_lock(&mutex_cola_new);
     list_add(cola_new, pcb);
     pthread_mutex_unlock(&mutex_cola_new);
-
-    thread_create(pcb, path_proceso, prioridad);
 
     log_info(LOGGER_KERNEL, "## (<%d>:<0>) Se crea el proceso - Estado: NEW", pcb->PID);
 
@@ -219,19 +232,10 @@ void inicializar_proceso(t_pcb* pcb, char* path_proceso) {
 void mover_a_ready(t_pcb* pcb) {
     // REMUEVE EL PROCESO DE LA COLA NEW
     pthread_mutex_lock(&mutex_cola_new);
-    // LO ELIMINA CUANDO SU PID COINCIDE CON EL DEL PROCESO QUE SE ESTA MOVIENDO
     eliminar_pcb_lista(cola_new, pcb->PID);
     pthread_mutex_unlock(&mutex_cola_new);
 
     pcb->ESTADO = READY;
-    // MANDA AL HILO 0 A LA COLA DE READY
-    t_tcb* hilo_cero = list_get(pcb->TIDS, 0);
-    hilo_cero->ESTADO = READY;
-    pthread_mutex_lock(&mutex_cola_ready);
-    list_add(cola_ready, hilo_cero);
-    pthread_mutex_unlock(&mutex_cola_ready);
-    
-    log_info(LOGGER_KERNEL, "Hilo %d movido a READY ", hilo_cero->TID);
 }
 
 void eliminar_pcb_lista(t_list* lista, uint32_t pid) {
@@ -489,7 +493,6 @@ void thread_exit(t_pcb* pcb, uint32_t tid) {
 
 // A CHEQUEAR
 void intentar_mover_a_execute() {
-    // Verificar si hay algun proceso en READY y si la CPU esta libre
 
     pthread_mutex_lock(&mutex_cola_ready);
 
@@ -506,26 +509,25 @@ void intentar_mover_a_execute() {
     }
 
     pthread_mutex_unlock(&mutex_cola_ready);
-
+    
     // Obtener el proximo hilo a ejecutar en base al planificador
     t_tcb* hilo_a_ejecutar = seleccionar_hilo_por_algoritmo();
 
     eliminar_tcb_lista(cola_ready, hilo_a_ejecutar->TID);
 
-    pthread_mutex_unlock(&mutex_cola_ready);
+    log_warning(LOGGER_KERNEL, "CHECKPOINT 0,5");
 
     t_pcb* pcb_padre = obtener_pcb_padre_de_hilo(hilo_a_ejecutar->PID_PADRE);
-    
-    log_warning(LOGGER_KERNEL, "SE OBTUVO EL PCB PADRE %d", pcb_padre->PID);
 
     hilo_a_ejecutar->ESTADO = EXECUTE;
     pcb_padre->ESTADO = EXECUTE;
+
+    log_warning(LOGGER_KERNEL, "CHECKPOINT 1");
+
     pthread_mutex_lock(&mutex_cola_exec);
     list_add(cola_exec, hilo_a_ejecutar);
     cpu_libre = false;
     pthread_mutex_unlock(&mutex_cola_exec);
-
-    log_warning(LOGGER_KERNEL, "COMENZO EJECUCION");
 
     if(!hilo_a_ejecutar) {
         log_error(LOGGER_KERNEL, "Error al obtener el proximo hilo a ejecutar");
@@ -535,14 +537,8 @@ void intentar_mover_a_execute() {
     log_info(LOGGER_KERNEL, "(<%d>:<%d>) Movido a Excecute", hilo_a_ejecutar->PID_PADRE, hilo_a_ejecutar->TID);
 
     enviar_proceso_cpu(socket_kernel_cpu_dispatch, pcb_padre);
-
-    log_warning(LOGGER_KERNEL, "ENVIO PCB CPU");
     
     int resultado = enviar_hilo_a_cpu(hilo_a_ejecutar);
-
-    log_warning(LOGGER_KERNEL, "ENVIO HILO CPU");
-
-
 
     if (resultado != 0) {
         log_error(LOGGER_KERNEL, "Error al enviar el hilo %d a la CPU", hilo_a_ejecutar->TID);

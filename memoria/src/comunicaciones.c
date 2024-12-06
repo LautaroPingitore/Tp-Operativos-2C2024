@@ -150,7 +150,6 @@ void agregar_instrucciones_a_lista(uint32_t tid, char* archivo) {
         inst->parametro3 = -1;
 
         int elementos = sscanf(line, "%s %s %s %d", inst->nombre, inst->parametro1, inst->parametro2, &(inst->parametro3));
-        log_warning(LOGGER_MEMORIA, "Elementos leídos por sscanf: %d", elementos);
 
         if (elementos == 3) {
             inst->parametro3 = -1;
