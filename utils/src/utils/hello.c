@@ -92,7 +92,7 @@ t_instruccion* deserializar_instruccion(t_buffer* buffer) {
 char* deserializar_mensaje(int socket_cliente) {
 	t_paquete* paquete = recibir_paquete(socket_cliente);
 	void* stream = paquete->buffer->stream;
-	int desplazamiento = sizeof(op_code);
+	int desplazamiento = 0;
 
     // Recibir el tamaño del mensaje
     uint32_t size;
@@ -104,8 +104,9 @@ char* deserializar_mensaje(int socket_cliente) {
         return NULL; // Error al asignar memoria
     }
 
-    memcpy(&mensaje, stream + desplazamiento, size);
+    memcpy(mensaje, stream + desplazamiento, size);
 
+	eliminar_paquete(paquete);
     return mensaje; // Retorna el mensaje deserializado
 }
 
@@ -335,27 +336,13 @@ void *serializar_paquete(t_paquete *paquete, int bytes)
 
 void enviar_mensaje(char *mensaje, int socket_cliente)
 {
-	t_paquete *paquete = malloc(sizeof(t_paquete));
-
-	paquete->codigo_operacion = MENSAJE;
-	paquete->buffer = malloc(sizeof(t_buffer));
-	paquete->buffer->size = strlen(mensaje) + 1;
-	paquete->buffer->stream = malloc(paquete->buffer->size);
-	memcpy(paquete->buffer->stream, mensaje, paquete->buffer->size);
-
-	void *a_enviar = malloc(paquete->buffer->size + sizeof(op_code) + sizeof(uint32_t));
-	int offset = 0;
-
-	memcpy(a_enviar + offset, &(paquete->codigo_operacion), sizeof(op_code));
-	offset += sizeof(op_code);
-	memcpy(a_enviar + offset, &(paquete->buffer->size), sizeof(uint32_t));
-	offset += sizeof(uint32_t);
-	memcpy(a_enviar + offset, paquete->buffer->stream, paquete->buffer->size);
-	if (send(socket_cliente, a_enviar, paquete->buffer->size + sizeof(op_code) + sizeof(uint32_t), 0) == -1)
-	{
-		free(a_enviar);
+	t_paquete *paquete = crear_paquete_con_codigo_de_operacion(MENSAJE);
+	uint32_t tamanio = strlen(mensaje) + 1;
+	agregar_a_paquete(paquete, &tamanio, sizeof(uint32_t));
+	agregar_a_paquete(paquete, mensaje, tamanio);
+	if(enviar_paquete(paquete, socket_cliente) != 0) {
+		perror("Error al enviar el paquete");
 	}
-	free(a_enviar);
 	eliminar_paquete(paquete);
 }
 
