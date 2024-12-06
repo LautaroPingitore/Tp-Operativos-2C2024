@@ -62,6 +62,7 @@ pthread_mutex_t mutex_cola_new;
 pthread_mutex_t mutex_cola_ready;
 pthread_mutex_t mutex_cola_exit;
 pthread_mutex_t mutex_cola_blocked;
+pthread_mutex_t mutex_cola_exec;
 pthread_mutex_t mutex_pid;
 pthread_mutex_t mutex_tid;
 pthread_mutex_t mutex_estado;
@@ -75,7 +76,9 @@ bool cpu_libre = true;
 void inicializar_kernel() {
     cola_new = list_create();
     cola_ready = list_create();
+    cola_exec = list_create();
     cola_exit = list_create();
+    cola_blocked = list_create();
 
     cola_nivel_1 = list_create();
     cola_nivel_2 = list_create();
@@ -87,7 +90,9 @@ void inicializar_kernel() {
     pthread_mutex_init(&mutex_cola_new, NULL);
     pthread_mutex_init(&mutex_cola_ready, NULL);
     pthread_mutex_init(&mutex_cola_exit, NULL);
+    pthread_mutex_init(&mutex_cola_blocked, NULL);
     pthread_mutex_init(&mutex_process_create, NULL);
+    pthread_mutex_init(&mutex_cola_exec,NULL);
 
     sem_init(&sem_process_create, 0, 0);
 }
@@ -487,7 +492,9 @@ void thread_exit(t_pcb* pcb, uint32_t tid) {
 // A CHEQUEAR
 void intentar_mover_a_execute() {
     // Verificar si hay algun proceso en READY y si la CPU esta libre
+
     pthread_mutex_lock(&mutex_cola_ready);
+
     if (list_is_empty(cola_ready)) {
         log_info(LOGGER_KERNEL, "No hay procesos en READY para mover a EXECUTE");
         pthread_mutex_unlock(&mutex_cola_ready);
@@ -500,16 +507,27 @@ void intentar_mover_a_execute() {
         return;
     }
 
+    pthread_mutex_unlock(&mutex_cola_ready);
+
     // Obtener el proximo hilo a ejecutar en base al planificador
     t_tcb* hilo_a_ejecutar = seleccionar_hilo_por_algoritmo();
+
     eliminar_tcb_lista(cola_ready, hilo_a_ejecutar->TID);
+
     pthread_mutex_unlock(&mutex_cola_ready);
 
     t_pcb* pcb_padre = obtener_pcb_padre_de_hilo(hilo_a_ejecutar->PID_PADRE);
+    
+    log_warning(LOGGER_KERNEL, "SE OBTUVO EL PCB PADRE %d", pcb_padre->PID);
+
     hilo_a_ejecutar->ESTADO = EXECUTE;
     pcb_padre->ESTADO = EXECUTE;
+    pthread_mutex_lock(&mutex_cola_exec);
     list_add(cola_exec, hilo_a_ejecutar);
     cpu_libre = false;
+    pthread_mutex_unlock(&mutex_cola_exec);
+
+    log_warning(LOGGER_KERNEL, "COMENZO EJECUCION");
 
     if(!hilo_a_ejecutar) {
         log_error(LOGGER_KERNEL, "Error al obtener el proximo hilo a ejecutar");
@@ -519,7 +537,12 @@ void intentar_mover_a_execute() {
     log_info(LOGGER_KERNEL, "(<%d>:<%d>) Movido a Excecute", hilo_a_ejecutar->PID_PADRE, hilo_a_ejecutar->TID);
 
     int resultado = enviar_hilo_a_cpu(hilo_a_ejecutar);
+
+    log_warning(LOGGER_KERNEL, "ENVIO HILO CPU");
+
     enviar_proceso_cpu(socket_kernel_cpu_dispatch, pcb_padre);
+
+    log_warning(LOGGER_KERNEL, "ENVIO PCB CPU");
 
     if (resultado != 0) {
         log_error(LOGGER_KERNEL, "Error al enviar el hilo %d a la CPU", hilo_a_ejecutar->TID);

@@ -177,19 +177,19 @@ void devolver_control_al_kernel() {
     paquete->buffer->stream = malloc(paquete->buffer->size);
     int desplazamiento = 0;
 
-    memcpy(paquete->buffer->size + desplazamiento, &(hilo_actual->TID), sizeof(uint32_t));
+    memcpy(paquete->buffer->stream + desplazamiento, &(hilo_actual->TID), sizeof(uint32_t));
     desplazamiento += sizeof(uint32_t);
 
-    memcpy(paquete->buffer->size + desplazamiento, &(hilo_actual->PRIORIDAD), sizeof(int));
+    memcpy(paquete->buffer->stream + desplazamiento, &(hilo_actual->PRIORIDAD), sizeof(int));
     desplazamiento += sizeof(int);
 
-    memcpy(paquete->buffer->size + desplazamiento, &(hilo_actual->PID_PADRE), sizeof(uint32_t));
+    memcpy(paquete->buffer->stream + desplazamiento, &(hilo_actual->PID_PADRE), sizeof(uint32_t));
     desplazamiento += sizeof(uint32_t);
 
-    memcpy(paquete->buffer->size + desplazamiento, &(hilo_actual->ESTADO), sizeof(t_estado));
+    memcpy(paquete->buffer->stream + desplazamiento, &(hilo_actual->ESTADO), sizeof(t_estado));
     desplazamiento += sizeof(t_estado);
 
-    memcpy(paquete->buffer->size + desplazamiento, &(hilo_actual->PC), sizeof(uint32_t));
+    memcpy(paquete->buffer->stream + desplazamiento, &(hilo_actual->PC), sizeof(uint32_t));
     
     enviar_paquete(paquete, socket_cpu_interrupt_kernel); 
 

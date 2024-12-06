@@ -64,6 +64,7 @@ int main(){//int argc, char* argv[]) {
     pthread_create(&hilo_com_interrupt, NULL, manejar_comunicaciones_interrupt, NULL);
 
     // CREAR PROCESOS INICIAL Y LO EJECUTA
+    log_warning(LOGGER_KERNEL, "ALGORITMO = %s", ALGORITMO_PLANIFICACION);
     crear_proceso(pseudo_path, tamanio_proceso, 0);
     intentar_mover_a_execute();
 

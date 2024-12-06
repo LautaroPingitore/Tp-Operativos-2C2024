@@ -94,7 +94,7 @@ void envio_hilo_crear(int socket_cliente, t_tcb* tcb, op_code codigo) {
 
     memcpy(paquete->buffer->stream + desplazamiento, &(tcb->TID), sizeof(uint32_t));
     desplazamiento += sizeof(uint32_t);
-    memcoy(paquete->buffer->stream + desplazamiento, &(tcb->PID_PADRE), sizeof(uint32_t));
+    memcpy(paquete->buffer->stream + desplazamiento, &(tcb->PID_PADRE), sizeof(uint32_t));
     desplazamiento += sizeof(uint32_t);
     memcpy(paquete->buffer->stream + desplazamiento, &tamanio_archivo, sizeof(uint32_t));
     desplazamiento += sizeof(uint32_t);
@@ -110,28 +110,28 @@ void envio_hilo_crear(int socket_cliente, t_tcb* tcb, op_code codigo) {
 
 }
 
-int enviar_hilo_a_cpu(t_tcb* hilo, int socket) {
+int enviar_hilo_a_cpu(t_tcb* hilo) {
     t_paquete* paquete = crear_paquete_con_codigo_de_operacion(HILO);
 
     paquete->buffer->size = sizeof(uint32_t) * 3 + sizeof(int) + sizeof(t_estado);
     paquete->buffer->stream = malloc(paquete->buffer->size);
     int desplazamiento = 0;
 
-    memcpy(paquete->buffer->size + desplazamiento, &(hilo->TID), sizeof(uint32_t));
+    memcpy(paquete->buffer->stream + desplazamiento, &(hilo->TID), sizeof(uint32_t));
     desplazamiento += sizeof(uint32_t);
 
-    memcpy(paquete->buffer->size + desplazamiento, &(hilo->PRIORIDAD), sizeof(int));
+    memcpy(paquete->buffer->stream + desplazamiento, &(hilo->PRIORIDAD), sizeof(int));
     desplazamiento += sizeof(int);
 
-    memcpy(paquete->buffer->size + desplazamiento, &(hilo->PID_PADRE), sizeof(uint32_t));
+    memcpy(paquete->buffer->stream + desplazamiento, &(hilo->PID_PADRE), sizeof(uint32_t));
     desplazamiento += sizeof(uint32_t);
 
-    memcpy(paquete->buffer->size + desplazamiento, &(hilo->ESTADO), sizeof(t_estado));
+    memcpy(paquete->buffer->stream + desplazamiento, &(hilo->ESTADO), sizeof(t_estado));
     desplazamiento += sizeof(t_estado);
 
-    memcpy(paquete->buffer->size + desplazamiento, &(hilo->PC), sizeof(uint32_t));
+    memcpy(paquete->buffer->stream + desplazamiento, &(hilo->PC), sizeof(uint32_t));
 
-    int resultado = enviar_paquete(paquete, socket);
+    int resultado = enviar_paquete(paquete, socket_kernel_cpu_dispatch);
     if(resultado == -1) {
         eliminar_paquete(paquete);
         return resultado;
@@ -149,11 +149,12 @@ void enviar_memory_dump(t_pcb* pcb, uint32_t tid) {
 
     paquete->buffer->size = sizeof(uint32_t) * 2;
     paquete->buffer->stream = malloc(paquete->buffer->size);
+    int desplazamiento = 0;
 
-    memcpy(paquete->buffer->size + desplazamiento, &(pcb->PID), sizeof(uint32_t));
+    memcpy(paquete->buffer->stream + desplazamiento, &(pcb->PID), sizeof(uint32_t));
     desplazamiento += sizeof(uint32_t);
 
-    memcpy(paquete->buffer->size + desplazamiento, &(tid), sizeof(uint32_t));
+    memcpy(paquete->buffer->stream + desplazamiento, &(tid), sizeof(uint32_t));
 
     if (enviar_paquete(paquete, socket_kernel_memoria) == -1) {
         log_error(LOGGER_KERNEL, "Error al enviar la solicitud de DUMP_MEMORY al módulo de memoria");
@@ -170,14 +171,15 @@ void enviar_memory_dump(t_pcb* pcb, uint32_t tid) {
 void enviar_interrupcion_cpu(op_code interrupcion, int quantum) {
     t_paquete* paquete = crear_paquete_con_codigo_de_operacion(interrupcion);
     bool hay_interrupcion = true;
+    int desplazamiento = 0;
 
     paquete->buffer->size = sizeof(int) + sizeof(bool);
     paquete->buffer->stream = malloc(paquete->buffer->size);
 
-    memcpy(paquete->buffer->size + desplazamiento, &(quantum), sizeof(int));
+    memcpy(paquete->buffer->stream + desplazamiento, &(quantum), sizeof(int));
     desplazamiento += sizeof(int);
 
-    memcpy(paquete->buffer->size + desplazamiento, &(hay_interrupcion), sizeof(bool));
+    memcpy(paquete->buffer->stream + desplazamiento, &(hay_interrupcion), sizeof(bool));
 
     if(enviar_paquete(paquete, socket_kernel_cpu_interrupt) == -1) {
         log_error(LOGGER_KERNEL, "Error al enviar la interrupcion");
