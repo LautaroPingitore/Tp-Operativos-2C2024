@@ -29,6 +29,8 @@ extern sem_t sem_proceso_actual;
 
 extern pthread_t hilo_servidor_dispatch;
 extern pthread_t hilo_servidor_interrupt;
+extern pthread_t hilo_com_memoria;
+
 
 void inicializar_config(char*);
 
@@ -37,9 +39,8 @@ void* escuchar_cpu();
 void* escuchar_cpu_dispatch();
 void* escuchar_cpu_interrupt();
 int server_escuchar(char*, int);
+void* procesar_conexion_memoria(void*);
 void* procesar_conexion_cpu(void*);
-void* procesar_conexion_dispatch(void*);
-void* procesar_conexion_interrupt(void*);
 
 void iniciar_semaforos();
 void destruir_semaforos();

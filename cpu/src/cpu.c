@@ -18,6 +18,7 @@ int socket_cpu_memoria;
 
 pthread_t hilo_servidor_dispatch;
 pthread_t hilo_servidor_interrupt;
+pthread_t hilo_com_memoria;
 
 uint32_t base_pedida = 0;
 uint32_t limite_pedido = 0;
@@ -88,6 +89,10 @@ void iniciar_conexiones() {
         log_error(LOGGER_CPU, "No se pudo conectar con el módulo Memoria.");
         exit(EXIT_FAILURE);
     }
+    enviar_handshake(socket_cpu_memoria, HANDSHAKE_cpu);
+
+    pthread_create(&hilo_com_memoria, NULL, procesar_conexion_memoria, NULL);
+    pthread_detach(hilo_com_memoria);
 
     // Iniciar hilos de escucha
     pthread_create(&hilo_servidor_dispatch, NULL, escuchar_cpu_dispatch, NULL);
@@ -97,15 +102,6 @@ void iniciar_conexiones() {
     pthread_detach(hilo_servidor_interrupt);
 
 }
-
-// void* escuchar_cpu() {
-//     log_info(LOGGER_CPU, "El hilo de escuchar_cpu ha iniciado.");
-//     while (server_escuchar("CPU_INTERRUPT", socket_cpu_interrupt)) {
-//         log_info(LOGGER_CPU, "Conexión procesada.");
-//     }
-//     log_warning(LOGGER_CPU, "El servidor de CPU_INTERRUPT terminó inesperadamente.");
-//     return NULL;
-// }
 
 void* escuchar_cpu_dispatch() {
     log_info(LOGGER_CPU, "El hilo de escucha para CPU_DISPATCH ha iniciado.");
@@ -146,7 +142,7 @@ int server_escuchar(char *server_name, int server_socket) {
         args->server_name = strdup(server_name);
 
         // if (strcmp(server_name, "CPU_DISPATCH") == 0) {
-        //     pthread_create(&hilo_cliente, NULL, procesar_conexion_dispatch, (void*) args);
+        //     pthread_create(&hilo_cliente, NULL, procesar_conexion_dispatch, (void*) args); 
         // } else if (strcmp(server_name, "CPU_INTERRUPT") == 0) {
         //     pthread_create(&hilo_cliente, NULL, procesar_conexion_interrupt, (void*) args);
         // }
@@ -157,6 +153,86 @@ int server_escuchar(char *server_name, int server_socket) {
     return 0; // Este punto no se alcanza debido al ciclo infinito.
 }
 
+void* procesar_conexion_memoria(void*) {
+    op_code cod;
+    while(1) {
+        ssize_t bytes_recibidos = recv(socket_cpu_memoria, &cod, sizeof(op_code), MSG_WAITALL);
+        if (bytes_recibidos != sizeof(op_code)) {
+            log_error(LOGGER_CPU, "CLIENTE DESCONECTADO");
+            break;
+        }
+
+        switch(cod) {
+            case HANDSHAKE_memoria:
+                log_info(LOGGER_CPU, "## MEMORIA Conectado - FD del socket: <%d>", socket_cpu_memoria);
+                break;
+
+            case MENSAJE:
+                char* respuesta = recibir_mensaje(socket_cpu_memoria);
+                if (respuesta == NULL) {
+                    log_warning(LOGGER_CPU, "Error al recibir el mensaje.");
+                } else {
+                    if (strcmp(respuesta, "OK") == 0) {
+                        log_info(LOGGER_CPU, "Se pudo escribir en memoria");
+                    } else {
+                        log_warning(LOGGER_CPU, "Error al escribir en memoria.");
+                    }
+                    free(respuesta); // Liberar la memoria del mensaje recibido
+                }
+                break;
+
+            case INSTRUCCION:
+                log_warning(LOGGER_CPU, "ENTRO INSTRUCCION");
+                t_instruccion* inst = recibir_instruccion(socket_cpu_memoria);
+                log_warning(LOGGER_CPU, "RECIBIO INST %s", inst->nombre);
+                instruccion_actual = inst;
+                sem_post(&sem_instruccion);
+                log_warning(LOGGER_CPU, "HIZO EL POST");
+                break;
+
+            case SOLICITUD_BASE_MEMORIA: 
+                uint32_t pid_bm = recibir_pid(socket_cpu_memoria);
+                uint32_t base = consultar_base_particion(pid_bm);
+
+                sem_wait(&sem_mutex_globales);
+                base_pedida = base;
+                sem_post(&sem_mutex_globales);
+
+                log_info(LOGGER_CPU, "Base recibida: %d para PID: %d", base, pid_bm);
+                sem_post(&sem_base); // Desbloquea al hilo que espera
+                break;
+
+            case SOLICITUD_LIMITE_MEMORIA: 
+                uint32_t pid_lm = recibir_pid(socket_cpu_memoria);
+                uint32_t limite = consultar_limite_particion(pid_lm);
+
+                sem_wait(&sem_mutex_globales);
+                limite_pedido = limite;
+                sem_post(&sem_mutex_globales);
+
+                log_info(LOGGER_CPU, "Límite recibido: %d para PID: %d", limite, pid_lm);
+                sem_post(&sem_limite); // Desbloquea al hilo que espera
+                break;
+            
+            case PEDIDO_READ_MEM:
+                uint32_t valor = recibir_valor_de_memoria(socket_cpu_memoria); // Función para recibir el valor
+                sem_wait(&sem_mutex_globales);
+                valor_memoria = valor;
+                sem_post(&sem_mutex_globales);
+
+                log_info(LOGGER_CPU, "Valor recibido: %d", valor_memoria);
+                sem_post(&sem_valor_memoria);
+                break;
+
+            default:
+                log_error(LOGGER_CPU, "Codigo de operacion desconocido");
+        }
+    }
+    log_info(LOGGER_CPU, "Finalizando conexión con el módulo MEMORIA.");
+    close(socket_cpu_memoria);
+    return NULL;
+}
+
 void* procesar_conexion_cpu(void* void_args) {
     t_procesar_conexion_args *args = (t_procesar_conexion_args *)void_args;
     //t_log *logger = args->log;
@@ -165,7 +241,7 @@ void* procesar_conexion_cpu(void* void_args) {
     free(args);
 
     op_code cod;
-    while(1) {
+    while(socket != -1) {
         ssize_t bytes_recibidos = recv(socket, &cod, sizeof(op_code), MSG_WAITALL);
         if (bytes_recibidos <= 0) {
             if (bytes_recibidos == 0) {
@@ -183,76 +259,14 @@ void* procesar_conexion_cpu(void* void_args) {
                 break;
 
             case HILO:
-                log_warning(LOGGER_CPU, "Entro a HILO");
                 hilo_actual = recibir_hilo(socket);
-                log_warning(LOGGER_CPU, "RECIBIO EL HILO %d", hilo_actual->TID);
                 sem_wait(&sem_proceso_actual);
-                log_warning(LOGGER_CPU, "SALIO DEL SEM");
                 ejecutar_ciclo_instruccion();
                 break;
 
             case SOLICITUD_PROCESO:
-                log_warning(LOGGER_CPU, "ENTRO A SOLI_PROC");
                 pcb_actual = recibir_proceso(socket);
-                log_warning(LOGGER_CPU, "RECIBIO PROCESO %d", pcb_actual->PID);
                 sem_post(&sem_proceso_actual);
-                log_warning(LOGGER_CPU, "HIZO EL SEM");
-                break;
-
-            case MENSAJE:
-                char* respuesta = recibir_mensaje(socket);
-                if (respuesta == NULL) {
-                    log_warning(LOGGER_CPU, "Error al recibir el mensaje.");
-                } else {
-                    if (strcmp(respuesta, "OK") == 0) {
-                        log_info(LOGGER_CPU, "Se pudo escribir en memoria");
-                    } else {
-                        log_warning(LOGGER_CPU, "Error al escribir en memoria.");
-                    }
-                    free(respuesta); // Liberar la memoria del mensaje recibido
-                }
-                break;
-
-            case INSTRUCCION:
-                sem_wait(&sem_mutex_globales);
-                t_instruccion* inst = recibir_instruccion(socket);
-                instruccion_actual = inst;
-                sem_post(&sem_instruccion);
-                sem_post(&sem_mutex_globales);
-                break;
-
-            case SOLICITUD_BASE_MEMORIA: 
-                uint32_t pid_bm = recibir_pid(socket);
-                uint32_t base = consultar_base_particion(pid_bm);
-
-                sem_wait(&sem_mutex_globales);
-                base_pedida = base;
-                sem_post(&sem_mutex_globales);
-
-                log_info(LOGGER_CPU, "Base recibida: %d para PID: %d", base, pid_bm);
-                sem_post(&sem_base); // Desbloquea al hilo que espera
-                break;
-
-            case SOLICITUD_LIMITE_MEMORIA: 
-                uint32_t pid_lm = recibir_pid(socket);
-                uint32_t limite = consultar_limite_particion(pid_lm);
-
-                sem_wait(&sem_mutex_globales);
-                limite_pedido = limite;
-                sem_post(&sem_mutex_globales);
-
-                log_info(LOGGER_CPU, "Límite recibido: %d para PID: %d", limite, pid_lm);
-                sem_post(&sem_limite); // Desbloquea al hilo que espera
-                break;
-            
-            case PEDIDO_READ_MEM:
-                uint32_t valor = recibir_valor_de_memoria(socket); // Función para recibir el valor
-                sem_wait(&sem_mutex_globales);
-                valor_memoria = valor;
-                sem_post(&sem_mutex_globales);
-
-                log_info(LOGGER_CPU, "Valor recibido: %d", valor_memoria);
-                sem_post(&sem_valor_memoria);
                 break;
 
             case HANDSHAKE_interrupt:

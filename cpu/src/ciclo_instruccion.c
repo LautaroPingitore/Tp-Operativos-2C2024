@@ -6,8 +6,6 @@ t_tcb* hilo_actual = NULL;
 
 void ejecutar_ciclo_instruccion() {
 
-    log_warning(LOGGER_CPU, "ENTRO CICLO INS");
-
     while (true) {
 
         if (!hilo_actual) {
@@ -54,9 +52,13 @@ t_instruccion *fetch(uint32_t tid, uint32_t pc) {
     pedir_instruccion_memoria(tid, pc, socket_cpu_memoria);
     t_instruccion* inst = malloc(sizeof(t_instruccion));
 
+    log_warning(LOGGER_CPU, "A PUNTO DE HACER LE WAIT");
+
     sem_wait(&sem_instruccion);
+
+    log_warning(LOGGER_CPU, "A HACIDO EL WAIT");
+
     inst = instruccion_actual;
-    sem_post(&sem_instruccion);
     
     if (!inst) {
         log_error(LOGGER_CPU, "Fallo al deserializar la instrucción.");

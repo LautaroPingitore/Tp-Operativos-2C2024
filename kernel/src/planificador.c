@@ -515,14 +515,10 @@ void intentar_mover_a_execute() {
 
     eliminar_tcb_lista(cola_ready, hilo_a_ejecutar->TID);
 
-    log_warning(LOGGER_KERNEL, "CHECKPOINT 0,5");
-
     t_pcb* pcb_padre = obtener_pcb_padre_de_hilo(hilo_a_ejecutar->PID_PADRE);
 
     hilo_a_ejecutar->ESTADO = EXECUTE;
     pcb_padre->ESTADO = EXECUTE;
-
-    log_warning(LOGGER_KERNEL, "CHECKPOINT 1");
 
     pthread_mutex_lock(&mutex_cola_exec);
     list_add(cola_exec, hilo_a_ejecutar);
@@ -562,7 +558,6 @@ t_tcb* seleccionar_hilo_por_algoritmo() {
     }
     return NULL;
 }
-
 
 // ESTA FUNCION RETORNA EL HILO QUE TOCA POR FIFO Y LO SACA DE READY
 t_tcb* obtener_hilo_fifo() {

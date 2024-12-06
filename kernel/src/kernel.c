@@ -159,7 +159,6 @@ void manejar_comunicaciones(int socket, const char* nombre_modulo) {
             break;
         }
 
-        log_info(LOGGER_KERNEL, "Código de operación recibido de %s: %d", nombre_modulo, cod);
         switch (cod) {
             case HANDSHAKE_memoria:
             case HANDSHAKE_dispatch:
@@ -168,7 +167,6 @@ void manejar_comunicaciones(int socket, const char* nombre_modulo) {
                 break;
 
             case MENSAJE: {
-                //char* respuesta = deserializar_mensaje(socket);
                 char* respuesta = recibir_mensaje(socket);
                 if (respuesta && strcmp(respuesta, "OK") == 0) {
                     pthread_mutex_lock(&mutex_process_create);

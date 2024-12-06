@@ -274,6 +274,8 @@ void* procesar_conexion_memoria(void *void_args){
 
             case HANDSHAKE_cpu: //AVISA QUE SE CONECTO A CPU
                 log_info(LOGGER_MEMORIA, "## CPU Conectado - FD del socket: <%d>", cliente_socket);
+                log_warning(LOGGER_MEMORIA, "SOCKET = %d", cliente_socket);
+                enviar_handshake(cliente_socket, HANDSHAKE_memoria);
                 break;
 
             case CONTEXTO:

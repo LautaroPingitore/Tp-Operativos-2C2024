@@ -426,42 +426,36 @@ t_actualizar_contexto* deserializar_actualizacion(t_buffer* buffer) {
     return act_cont;
 }
 
-
 int enviar_instruccion(int socket, t_instruccion* inst) {
     t_paquete* paquete = crear_paquete_con_codigo_de_operacion(INSTRUCCION);
     uint32_t tam_nom = strlen(inst->nombre) + 1;
+    uint32_t tam_p1 = strlen(inst->parametro1) + 1;
+    uint32_t tam_p2 = strlen(inst->parametro2) + 1;
 
-    paquete->buffer->size = sizeof(uint32_t) + tam_nom;
+    paquete->buffer->size = sizeof(uint32_t) * 3 + tam_nom + tam_p1 + tam_p2 + sizeof(int);
     paquete->buffer->stream = malloc(paquete->buffer->size);
 
-
     int desplazamiento = 0;
-
 
     memcpy(paquete->buffer->stream + desplazamiento, &tam_nom,sizeof(uint32_t));
     desplazamiento += sizeof(uint32_t);
     memcpy(paquete->buffer->stream + desplazamiento, inst->nombre, tam_nom);
     desplazamiento += tam_nom;
    
-    uint32_t tam_p1 = strlen(inst->parametro1) + 1;
     memcpy(paquete->buffer->stream + desplazamiento, &tam_p1,sizeof(uint32_t));
     desplazamiento += sizeof(uint32_t);
     memcpy(paquete->buffer->stream + desplazamiento, inst->parametro1, tam_p1);
     desplazamiento += tam_p1;
 
-
-    uint32_t tam_p2 = strlen(inst->parametro2) + 1;
     memcpy(paquete->buffer->stream + desplazamiento, &tam_p2,sizeof(uint32_t));
     desplazamiento += sizeof(uint32_t);
     memcpy(paquete->buffer->stream + desplazamiento, inst->parametro2, tam_p2);
     desplazamiento += tam_p2;
 
-
     memcpy(paquete->buffer->stream + desplazamiento, &(inst->parametro3), sizeof(int));
    
     int resultado = enviar_paquete(paquete, socket);
     eliminar_paquete(paquete);
-
 
     return resultado;
 }
@@ -747,17 +741,19 @@ t_pedido_instruccion* deserializar_pedido_instruccion(t_buffer* buffer) {
 // =============================|
 int enviar_valor_uint_cpu(int socket, uint32_t valor, op_code codigo) {
     t_paquete* paquete = crear_paquete_con_codigo_de_operacion(codigo);
-
      
     paquete->buffer->size = sizeof(uint32_t);
-    paquete->buffer->stream = malloc(paquete->buffer->size);
+    paquete->buffer->stream = malloc(paquete->buffer->size);    
 
-
-    int desplazamiento = 0;
-
-    memcpy(paquete->buffer->stream + desplazamiento, &valor, sizeof(uint32_t));
+    memcpy(paquete->buffer->stream , &valor, sizeof(uint32_t));
        
+    
+
     int resultado = enviar_paquete(paquete, socket);
+    if(resultado==-1){
+        log_error(LOGGER_MEMORIA, "Error al enviar el valor a la CPU");
+    }
+    
     eliminar_paquete(paquete);
     return resultado;
 }
