@@ -15,7 +15,7 @@ t_tcb* deserializar_paquete_tcb(t_buffer* buffer) {
 	}
 
 	void* stream = buffer->stream;
-	int desplazamiento = sizeof(op_code);
+	int desplazamiento = sizeof(op_code); 
 
 	memcpy(&tcb->TID, stream + desplazamiento, sizeof(uint32_t));
     desplazamiento += sizeof(uint32_t);
@@ -90,23 +90,21 @@ t_instruccion* deserializar_instruccion(t_buffer* buffer) {
 }
 
 char* deserializar_mensaje(int socket_cliente) {
+	t_paquete* paquete = recibir_paquete(socket_cliente);
+	void* stream = paquete->buffer->stream;
+	int desplazamiento = sizeof(op_code);
+
     // Recibir el tamaño del mensaje
     uint32_t size;
-    if (recv(socket_cliente, &size, sizeof(uint32_t), 0) <= 0) {
-        return NULL; // Error al recibir el tamaño
-    }
-
-    // Reservar memoria para el mensaje
+    memcpy(&size, stream + desplazamiento, sizeof(uint32_t));
+	desplazamiento += sizeof(uint32_t);
+	
     char* mensaje = malloc(size);
     if (!mensaje) {
         return NULL; // Error al asignar memoria
     }
 
-    // Recibir el mensaje
-    if (recv(socket_cliente, mensaje, size, 0) <= 0) {
-        free(mensaje);
-        return NULL; // Error al recibir el mensaje
-    }
+    memcpy(&mensaje, stream + desplazamiento, size);
 
     return mensaje; // Retorna el mensaje deserializado
 }
@@ -177,10 +175,10 @@ int esperar_cliente(int socket_servidor, t_log *logger)
 
 	if (socket_cliente == (-1))
 	{
-		perror("Error al aceptar el cliente");
+		//perror("Error al aceptar el cliente");
 	}
 	
-	log_info(logger, "Se conecto un cliente!");
+	//log_info(logger, "Se conecto un cliente!");
 
 	return socket_cliente;
 }

@@ -133,23 +133,23 @@ void iniciar_conexiones() {
 
 int server_escuchar(char *server_name, int server_socket) {
 
-    log_warning(LOGGER_KERNEL, "CHECKPOINT AL PRINCIPIO DE SERVER ESCUCHAR");
+    // log_warning(LOGGER_KERNEL, "CHECKPOINT AL PRINCIPIO DE SERVER ESCUCHAR");
     while (1) {
-        log_info(LOGGER_KERNEL, "[%s] Esperando conexión de cliente...", server_name);
+        //og_info(LOGGER_KERNEL, "[%s] Esperando conexión de cliente...", server_name);
 
         int cliente_socket = esperar_cliente(server_socket, LOGGER_KERNEL);
 
         if (cliente_socket == -1) {
-            log_warning(LOGGER_KERNEL, "[%s] Error al aceptar conexión del cliente. Reintentando...", server_name);
+            //log_warning(LOGGER_KERNEL, "[%s] Error al aceptar conexión del cliente. Reintentando...", server_name);
             break;
         }
 
-        log_info(LOGGER_KERNEL, "[%s] Cliente conectado. Procesando conexión...", server_name);
+        //log_info(LOGGER_KERNEL, "[%s] Cliente conectado. Procesando conexión...", server_name);
 
         pthread_t hilo_cliente;
         t_procesar_conexion_args *args = malloc(sizeof(t_procesar_conexion_args));
         if (!args) {
-            log_error(LOGGER_KERNEL, "[%s] Error al asignar memoria para las conexiones.", server_name);
+            //log_error(LOGGER_KERNEL, "[%s] Error al asignar memoria para las conexiones.", server_name);
             close(cliente_socket);
             break;
         }
@@ -159,7 +159,7 @@ int server_escuchar(char *server_name, int server_socket) {
         args->server_name = strdup(server_name);
 
         if (pthread_create(&hilo_cliente, NULL, procesar_conexiones, (void *)args) != 0) {
-            log_error(LOGGER_KERNEL, "[%s] Error al crear hilo para cliente.", server_name);
+            //log_error(LOGGER_KERNEL, "[%s] Error al crear hilo para cliente.", server_name);
             
             free(args);
             close(cliente_socket);
@@ -169,18 +169,18 @@ int server_escuchar(char *server_name, int server_socket) {
         // Separar el hilo del flujo principal
         pthread_detach(hilo_cliente);
 
-        log_info(LOGGER_KERNEL, "[%s] Hilo creado para procesar la conexión.", server_name);
+        //log_info(LOGGER_KERNEL, "[%s] Hilo creado para procesar la conexión.", server_name);
     }
 
     // Este punto no se alcanzará debido al ciclo infinito.
-    log_warning(LOGGER_KERNEL, "[%s] Server terminado inesperadamente.", server_name);
+    //log_warning(LOGGER_KERNEL, "[%s] Server terminado inesperadamente.", server_name);
     return -1; // Para mantener compatibilidad, aunque no debería retornar.
 }
 
 void* escuchar_kernel_memoria() {
     log_info(LOGGER_KERNEL, "Hilo de escucha para Memoria iniciado.");
     while (server_escuchar("KERNEL-MEMORIA", socket_kernel_memoria) != -1) {
-        log_info(LOGGER_KERNEL, "Conexión procesada.");
+        //log_info(LOGGER_KERNEL, "Conexión procesada.");
     }
     log_warning(LOGGER_KERNEL, "El servidor para Kernel terminó inesperadamente.");
     return NULL;
@@ -189,7 +189,7 @@ void* escuchar_kernel_memoria() {
 void* escuchar_kernel_cpu_dispatch() {
     log_info(LOGGER_KERNEL, "Hilo de escucha para CPU Dispatch iniciado.");
     while (server_escuchar("KERNEL-CPU_DISPATCH", socket_kernel_cpu_dispatch != -1)) {
-        log_info(LOGGER_KERNEL, "Conexión procesada.");
+        //log_info(LOGGER_KERNEL, "Conexión procesada.");
     }
     log_warning(LOGGER_KERNEL, "El servidor para CPU Dispatch terminó inesperadamente.");
     return NULL;
@@ -198,7 +198,7 @@ void* escuchar_kernel_cpu_dispatch() {
 void* escuchar_kernel_cpu_interrupt() {
     log_info(LOGGER_KERNEL, "Hilo de escucha para CPU Interrupt iniciado.");
     while (server_escuchar("KERNEL-CPU_INTERRUPT", socket_kernel_cpu_interrupt != -1)) {
-        log_info(LOGGER_KERNEL, "Conexión procesada.");
+        //log_info(LOGGER_KERNEL, "Conexión procesada.");
     }
     log_warning(LOGGER_KERNEL, "El servidor para CPU Interrupt terminó inesperadamente.");
     return NULL;
@@ -213,20 +213,18 @@ void* procesar_conexiones(void* void_args) {
     free(args);
 
     op_code cod;
-    while(socket != -1) {
-        // ssize_t bytes_recibidos = recv(socket, &cod, sizeof(op_code), MSG_WAITALL);
-        // if (bytes_recibidos != sizeof(op_code)) {
-        //     log_error(LOGGER_KERNEL, "Error al recibir código de operación, bytes recibidos: %zd", bytes_recibidos);
-        //     break;
-        // }
+    while(1) {    
+        ssize_t bytes_recibidos = recv(socket, &cod, sizeof(op_code), MSG_WAITALL);
+        if (bytes_recibidos <= 0) {
+            if (bytes_recibidos == 0) {
+                log_warning(LOGGER_KERNEL, "Socket cerrado por el cliente.");
+            } else {
+                log_error(LOGGER_KERNEL, "Error al recibir datos.");
+            }
+            break;
+        }
 
-        if (recv(socket, &cod, sizeof(op_code), MSG_WAITALL) != sizeof(op_code))
-		{
-			log_debug(LOGGER_KERNEL, "Cliente desconectado.\n");
-			return NULL;
-		}
-
-        
+        log_info(LOGGER_KERNEL, "Código de operación recibido: %d", cod);        
         switch (cod) {
             case HANDSHAKE_memoria:
                 log_info(LOGGER_KERNEL, "## MEMORIA Conectado - FD del socket: <%d>", socket);

@@ -196,8 +196,6 @@ void* procesar_conexion_memoria(void *void_args){
             case PROCESS_CREATE:
                 t_proceso_memoria* proceso_nuevo = recibir_proceso(cliente_socket);
 
-                log_error(LOGGER_MEMORIA, "%d", proceso_nuevo->limite);
-
                 if(proceso_nuevo == NULL) {
                     enviar_mensaje("ERROR",cliente_socket);
                     break;

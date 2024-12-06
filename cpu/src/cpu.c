@@ -144,16 +144,127 @@ int server_escuchar(char *server_name, int server_socket) {
         args->fd = cliente_socket;
         args->server_name = strdup(server_name);
 
-        if (strcmp(server_name, "CPU_DISPATCH") == 0) {
-            pthread_create(&hilo_cliente, NULL, procesar_conexion_dispatch, (void*) args);
-        } else if (strcmp(server_name, "CPU_INTERRUPT") == 0) {
-            pthread_create(&hilo_cliente, NULL, procesar_conexion_interrupt, (void*) args);
-        }
-
+        // if (strcmp(server_name, "CPU_DISPATCH") == 0) {
+        //     pthread_create(&hilo_cliente, NULL, procesar_conexion_dispatch, (void*) args);
+        // } else if (strcmp(server_name, "CPU_INTERRUPT") == 0) {
+        //     pthread_create(&hilo_cliente, NULL, procesar_conexion_interrupt, (void*) args);
+        // }
+        pthread_create(&hilo_cliente, NULL, procesar_conexion_cpu, (void*) args);
         pthread_detach(hilo_cliente);
     }
 
     return 0; // Este punto no se alcanza debido al ciclo infinito.
+}
+
+void* procesar_conexion_cpu(void* void_args) {
+    t_procesar_conexion_args *args = (t_procesar_conexion_args *)void_args;
+    //t_log *logger = args->log;
+    int socket = args->fd;
+    //char* server_name = args->server_name;
+    free(args);
+
+    op_code cod;
+    while(1) {
+        ssize_t bytes_recibidos = recv(socket, &cod, sizeof(op_code), MSG_WAITALL);
+        if (bytes_recibidos <= 0) {
+            if (bytes_recibidos == 0) {
+                log_warning(LOGGER_CPU, "Socket cerrado por el cliente.");
+            } else {
+                log_error(LOGGER_CPU, "Error al recibir datos.");
+            }
+            break; // Salimos del ciclo si el socket está cerrado o hay error
+        }
+        
+
+        switch(cod) {
+            case HANDSHAKE_dispatch:
+                log_info(LOGGER_CPU, "## KERNEL_DIPATCH Conectado - FD del socket: <%d>", socket);
+                break;
+
+            case HILO:
+                hilo_actual = recibir_hilo(socket);
+                ejecutar_ciclo_instruccion();
+                break;
+
+            case PROCESO:
+                pcb_actual = recibir_proceso(socket);
+                break;
+
+            case MENSAJE:
+                char* respuesta = deserializar_mensaje(socket);
+                if (respuesta == NULL) {
+                    log_warning(LOGGER_CPU, "Error al recibir el mensaje.");
+                } else {
+                    if (strcmp(respuesta, "OK") == 0) {
+                        log_info(LOGGER_CPU, "Se pudo escribir en memoria");
+                    } else {
+                        log_warning(LOGGER_CPU, "Error al escribir en memoria.");
+                    }
+                    free(respuesta); // Liberar la memoria del mensaje recibido
+                }
+                break;
+
+            case INSTRUCCION:
+                sem_wait(&sem_mutex_globales);
+                t_instruccion* inst = recibir_instruccion(socket);
+                instruccion_actual = inst;
+                sem_post(&sem_instruccion);
+                sem_post(&sem_mutex_globales);
+                break;
+
+            case SOLICITUD_BASE_MEMORIA: 
+                uint32_t pid_bm = recibir_pid(socket);
+                uint32_t base = consultar_base_particion(pid_bm);
+
+                sem_wait(&sem_mutex_globales);
+                base_pedida = base;
+                sem_post(&sem_mutex_globales);
+
+                log_info(LOGGER_CPU, "Base recibida: %d para PID: %d", base, pid_bm);
+                sem_post(&sem_base); // Desbloquea al hilo que espera
+                break;
+
+            case SOLICITUD_LIMITE_MEMORIA: 
+                uint32_t pid_lm = recibir_pid(socket);
+                uint32_t limite = consultar_limite_particion(pid_lm);
+
+                sem_wait(&sem_mutex_globales);
+                limite_pedido = limite;
+                sem_post(&sem_mutex_globales);
+
+                log_info(LOGGER_CPU, "Límite recibido: %d para PID: %d", limite, pid_lm);
+                sem_post(&sem_limite); // Desbloquea al hilo que espera
+                break;
+            
+            case PEDIDO_READ_MEM:
+                uint32_t valor = recibir_valor_de_memoria(socket); // Función para recibir el valor
+                sem_wait(&sem_mutex_globales);
+                valor_memoria = valor;
+                sem_post(&sem_mutex_globales);
+
+                log_info(LOGGER_CPU, "Valor recibido: %d", valor_memoria);
+                sem_post(&sem_valor_memoria);
+                break;
+
+            case HANDSHAKE_interrupt:
+                log_info(LOGGER_CPU, "## KERNEL_INTERRUPT Conectado - FD del socket: <%d>", socket);
+                break;
+
+            case FINALIZACION_QUANTUM:
+                hay_interrupcion = true;
+                break;
+
+            default:
+                log_error(LOGGER_CPU, "Codigo de operacion desconocida: %d", cod);
+                break;
+        }
+    }
+
+    log_warning(LOGGER_CPU, "Finalizando conexión con el cliente.");
+    close(socket); // Cerrar el socket del cliente
+    free(args->server_name);
+   
+    return NULL;
 }
 
 void* procesar_conexion_dispatch(void* void_args) {
@@ -165,24 +276,23 @@ void* procesar_conexion_dispatch(void* void_args) {
 
     op_code cod;
     while(1) {
-        if(socket < 0) {
-            log_error(LOGGER_CPU, "Socket inválido: %d", socket);
-            break;
-        }
         // Recibir código de operación
+        //ssize_t bytes_recibidos = recv(socket, &cod, sizeof(op_code), MSG_WAITALL);
+        //log_warning(LOGGER_CPU, "Me llego el codigo nro %d", cod);
+        //if (bytes_recibidos != sizeof(op_code)) {
+        //    log_error(LOGGER_CPU, "Error al recibir código de operación, bytes recibidos: %zd", bytes_recibidos);
+        //    break;
+        //}
         ssize_t bytes_recibidos = recv(socket, &cod, sizeof(op_code), MSG_WAITALL);
-        log_warning(LOGGER_CPU, "Me llego el codigo nro %d", cod);
-        // if (bytes_recibidos != sizeof(op_code)) {
-        //     log_error(LOGGER_CPU, "Error al recibir código de operación, bytes recibidos: %zd", bytes_recibidos);
-        //     break;
-        // }
-        if (bytes_recibidos == -1) {
-            log_error(LOGGER_CPU, "Error en recv");
-        } else if (bytes_recibidos == 0) {
-            log_warning(LOGGER_CPU, "Socket cerrado por el cliente");
-        } else {
-            log_info(LOGGER_CPU, "Se recibió el código de operación: %d", cod);
+        if (bytes_recibidos <= 0) {
+            if (bytes_recibidos == 0) {
+                log_warning(LOGGER_CPU, "Socket cerrado por el cliente.");
+            } else {
+                log_error(LOGGER_CPU, "Error al recibir datos.");
+            }
+            break; // Salimos del ciclo si el socket está cerrado o hay error
         }
+        
 
         switch(cod) {
             case HANDSHAKE_dispatch:
