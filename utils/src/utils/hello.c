@@ -89,24 +89,28 @@ t_instruccion* deserializar_instruccion(t_buffer* buffer) {
     return instruccion;
 }
 
-char* deserializar_mensaje(int socket_cliente) {
-	t_paquete* paquete = recibir_paquete(socket_cliente);
-	void* stream = paquete->buffer->stream;
+char* recibir_mensaje(int socket) {
+	t_paquete* paquete = recibir_paquete(socket);
+	char* mensaje = deserializar_mensaje(paquete->buffer);
+	eliminar_paquete(paquete);
+	return mensaje;
+}
+
+char* deserializar_mensaje(t_buffer* buffer) {
+
+	void* stream = buffer->stream;
 	int desplazamiento = 0;
 
-    // Recibir el tamaño del mensaje
-    uint32_t size;
-    memcpy(&size, stream + desplazamiento, sizeof(uint32_t));
-	desplazamiento += sizeof(uint32_t);
+	uint32_t tamanio_mensaje;
+	memcpy(&tamanio_mensaje, stream + desplazamiento, sizeof(uint32_t));
 	
-    char* mensaje = malloc(size);
-    if (!mensaje) {
+    char* mensaje = malloc(tamanio_mensaje);
+    if (mensaje == NULL) {
         return NULL; // Error al asignar memoria
     }
 
-    memcpy(mensaje, stream + desplazamiento, size);
+    memcpy(mensaje, stream + desplazamiento, tamanio_mensaje);
 
-	eliminar_paquete(paquete);
     return mensaje; // Retorna el mensaje deserializado
 }
 
@@ -262,7 +266,8 @@ void liberar_socket(int socket)
 // PAQUETES.C
 
 // FUNCIONES DE RECIBIR
-t_paquete *recibir_paquete(int socket_cliente) {
+t_paquete *recibir_paquete(int socket_cliente)
+{
 	t_paquete *paquete = malloc(sizeof(t_paquete));
 	paquete->buffer = malloc(sizeof(t_buffer));
 	paquete->buffer->stream = NULL;
@@ -310,26 +315,32 @@ int recibir_operacion(int socket_cliente)
 	}
 }
 
-void recibir_mensaje(int socket_cliente, t_log *logger)
-{
-	int size;
-	char *buffer = recibir_buffer(&size, socket_cliente);
-	log_info(logger, "Me llego el mensaje: %s", buffer);
-	free(buffer);
-}
+// char* recibir_mensaje(int socket_cliente) {
+// 	int size;
+// 	char *buffer = recibir_buffer(&size, socket_cliente);
+// 	return buffer;
+// }
+
+
+// void recibir_mensaje(int socket_cliente, t_log *logger)
+// {
+// 	int size;
+// 	char *buffer = recibir_buffer(&size, socket_cliente);
+// 	log_info(logger, "Me llego el mensaje: %s", buffer);
+// 	free(buffer);
+// }
 
 // CREACION Y SERIALIZACION
 void *serializar_paquete(t_paquete *paquete, int bytes)
 {
 	void *magic = malloc(bytes);
-	int desplazamiento = sizeof(op_code);
+	int desplazamiento = 0;
 
-	memcpy(magic + desplazamiento, &(paquete->codigo_operacion), sizeof(int));
-	desplazamiento += sizeof(int);
+	memcpy(magic + desplazamiento, &(paquete->codigo_operacion), sizeof(op_code));
+	desplazamiento += sizeof(op_code);
 	memcpy(magic + desplazamiento, &(paquete->buffer->size), sizeof(int));
 	desplazamiento += sizeof(int);
 	memcpy(magic + desplazamiento, paquete->buffer->stream, paquete->buffer->size);
-	desplazamiento += paquete->buffer->size;
 
 	return magic;
 }
@@ -363,16 +374,16 @@ void agregar_a_paquete(t_paquete *paquete, void *valor, int tamanio)
 	paquete->buffer->size += tamanio + sizeof(int);
 }
 
-int enviar_paquete(t_paquete *paquete, int socket_cliente)
+void enviar_paquete(t_paquete *paquete, int socket_cliente)
 {
     // Calcular el tamaño total del mensaje a enviar
-    size_t total_size = sizeof(op_code) + sizeof(int) + paquete->buffer->size;
+    size_t total_size = sizeof(op_cod) + sizeof(int) + paquete->buffer->size;
 
     // Asignar memoria para el buffer que se va a enviar
     void *a_enviar = malloc(total_size);
     if (a_enviar == NULL) {
         perror("Error al asignar memoria para a_enviar");
-        return -1;
+        return;
     }
 
     int offset = 0;
@@ -393,13 +404,10 @@ int enviar_paquete(t_paquete *paquete, int socket_cliente)
     if (bytes_enviados == -1)
     {
         perror("Error al enviar datos");
-        return -1;
     }
 
     // Liberar la memoria asignada para a_enviar
     free(a_enviar);
-
-    return 0;
 }
 
 void enviar_handshake(int socket, op_code codigo) {

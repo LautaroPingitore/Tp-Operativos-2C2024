@@ -173,7 +173,8 @@ void manejar_comunicaciones(int socket, const char* nombre_modulo) {
 
             case MENSAJE: {
                 log_warning(LOGGER_KERNEL, "Entro a Mensaje");
-                char* respuesta = deserializar_mensaje(socket);
+                //char* respuesta = deserializar_mensaje(socket);
+                char* respuesta = recibir_mensaje(socket);
                 log_warning(LOGGER_KERNEL, "%s", respuesta);
                 if (respuesta && strcmp(respuesta, "OK") == 0) {
                     pthread_mutex_lock(&mutex_process_create);

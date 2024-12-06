@@ -105,7 +105,8 @@ typedef struct {
 t_paquete* recibir_paquete(int);
 void* recibir_buffer(int*, int);
 int recibir_operacion(int);
-void recibir_mensaje(int, t_log*);
+char* recibir_mensaje(int);
+//void recibir_mensaje(int, t_log*);
 void* serializar_paquete(t_paquete*, int);
 void enviar_mensaje(char*, int);
 void enviar_handshake(int, op_code);
@@ -197,7 +198,7 @@ typedef struct {
 t_tcb* recibir_hilo(int);
 t_tcb* deserializar_paquete_tcb(t_buffer*);
 t_instruccion* deserializar_instruccion(t_buffer*);
-char* deserializar_mensaje(int);
+char* deserializar_mensaje(t_buffer*);
 uint32_t recibir_pid(int);
 
 #endif

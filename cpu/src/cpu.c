@@ -191,7 +191,7 @@ void* procesar_conexion_cpu(void* void_args) {
                 break;
 
             case MENSAJE:
-                char* respuesta = deserializar_mensaje(socket);
+                char* respuesta = recibir_mensaje(socket);
                 if (respuesta == NULL) {
                     log_warning(LOGGER_CPU, "Error al recibir el mensaje.");
                 } else {
@@ -309,7 +309,7 @@ void* procesar_conexion_dispatch(void* void_args) {
                 break;
 
             case MENSAJE:
-                char* respuesta = deserializar_mensaje(socket);
+                char* respuesta = recibir_mensaje(socket);
                 if (respuesta == NULL) {
                     log_warning(LOGGER_CPU, "Error al recibir el mensaje.");
                 } else {

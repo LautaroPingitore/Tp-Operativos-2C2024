@@ -164,7 +164,8 @@ void* gestionar_conexiones(void* void_args) {
                 break;
 
             case MENSAJE:
-                recibir_mensaje(socket_cliente, logger);
+                char* mensaje = recibir_mensaje(socket_cliente);
+                log_info(LOGGER_FILESYSTEM, "Me llego el mensaje %s", mensaje);
                 break;
 
             case DUMP_MEMORY:

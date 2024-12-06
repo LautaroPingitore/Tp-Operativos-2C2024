@@ -240,8 +240,9 @@ void devolver_control_al_kernel() {
     t_paquete *paquete = crear_paquete_con_codigo_de_operacion(DEVOLVER_CONTROL_KERNEL);
     hilo_actual->motivo_desalojo = INTERRUPCION_BLOQUEO;
     agregar_a_paquete(paquete, &hilo_actual, sizeof(t_tcb));
-    serializar_paquete(paquete, paquete->buffer->size);
+    
     // Enviar el paquete indicando que el control se devuelve al Kernel
+    
     enviar_paquete(paquete, socket_cpu_interrupt_kernel); 
 
     eliminar_paquete(paquete);

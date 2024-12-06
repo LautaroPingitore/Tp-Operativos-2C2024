@@ -103,7 +103,6 @@ void pedir_instruccion_memoria(uint32_t tid, uint32_t pc, int socket) {
     t_paquete *paquete = crear_paquete_con_codigo_de_operacion(PEDIDO_INSTRUCCION);
     agregar_a_paquete(paquete, &tid, sizeof(uint32_t));
     agregar_a_paquete(paquete, &pc, sizeof(uint32_t));
-    serializar_paquete(paquete, paquete->buffer->size);
 
     enviar_paquete(paquete, socket);
     eliminar_paquete(paquete);
@@ -116,7 +115,6 @@ void enviar_contexto_memoria(uint32_t pid, uint32_t tid, t_registros* registros,
     agregar_a_paquete(paquete, &tid, sizeof(uint32_t));
     agregar_a_paquete(paquete, &registros, sizeof(t_registros));
     agregar_a_paquete(paquete, &program_counter, sizeof(uint32_t));
-    serializar_paquete(paquete, paquete->buffer->size);
 
     enviar_paquete(paquete, socket_memoria);
     eliminar_paquete(paquete);
@@ -147,7 +145,6 @@ void enviar_interrupcion_segfault(uint32_t pid, int socket) {
     // Agregar el PID al paquete
     agregar_a_paquete(paquete, &pid, sizeof(uint32_t));
     
-    serializar_paquete(paquete, paquete->buffer->size);
 
     // Enviar el paquete al socket de la memoria o kernel
     if (enviar_paquete(paquete, socket) != 0) {
@@ -169,7 +166,6 @@ void enviar_valor_a_memoria(int socket, uint32_t dire_fisica, uint32_t* valor) {
     agregar_a_paquete(paquete, &dire_fisica, sizeof(uint32_t));
     agregar_a_paquete(paquete, &valor, sizeof(uint32_t));
 
-    serializar_paquete(paquete, paquete->buffer->size);
 
     if (enviar_paquete(paquete, socket) < 0) {
         log_error(LOGGER_CPU, "Error al enviar valor a memoria: Dirección Física %d - Valor %d", dire_fisica, *valor);
@@ -210,7 +206,6 @@ uint32_t recibir_valor_de_memoria(int socket) {
 void enviar_solicitud_memoria(int socket, uint32_t pid, op_code codigo, const char* descripcion) {
     t_paquete* paquete = crear_paquete_con_codigo_de_operacion(codigo);
     agregar_a_paquete(paquete, &pid, sizeof(uint32_t));
-    serializar_paquete(paquete, paquete->buffer->size);
 
     if (enviar_paquete(paquete, socket) < 0) {
         log_error(LOGGER_CPU, "Error al enviar solicitud de %s para PID: %d", descripcion, pid);
