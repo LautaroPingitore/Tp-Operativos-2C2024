@@ -36,7 +36,7 @@ t_proceso_memoria* deserializar_proceso(t_buffer* buffer) {
         return NULL;
     }
     void* stream = buffer->stream;
-    int desplazamiento = sizeof(op_code);
+    int desplazamiento = 0;
 
     memcpy(&(proceso->pid), stream + desplazamiento, sizeof(uint32_t));
     desplazamiento += sizeof(uint32_t);
