@@ -106,15 +106,6 @@
 // 	paquete->buffer->stream = NULL;
 // }
 
-// void agregar_a_paquete(t_paquete *paquete, void *valor, int tamanio)
-// {
-// 	paquete->buffer->stream = realloc(paquete->buffer->stream, paquete->buffer->size + tamanio + sizeof(int));
-
-// 	memcpy(paquete->buffer->stream + paquete->buffer->size, &tamanio, sizeof(int));
-// 	memcpy(paquete->buffer->stream + paquete->buffer->size + sizeof(int), valor, tamanio);
-
-// 	paquete->buffer->size += tamanio + sizeof(int);
-// }
 
 // int enviar_paquete(t_paquete *paquete, int socket_cliente)
 // {

@@ -351,9 +351,6 @@ void enviar_mensaje(char *mensaje, int socket_cliente)
 	t_paquete *paquete = crear_paquete_con_codigo_de_operacion(MENSAJE);
 	uint32_t tamanio = strlen(mensaje) + 1;
 
-	// agregar_a_paquete(paquete, &tamanio, sizeof(uint32_t));
-	// agregar_a_paquete(paquete, mensaje, tamanio);
-
 	paquete->buffer->size = sizeof(uint32_t) + tamanio;
 	paquete->buffer->stream = malloc(paquete->buffer->size);
 

@@ -110,7 +110,7 @@ void envio_hilo_crear(int socket_cliente, t_tcb* tcb, op_code codigo) {
 
 }
 
-int enviar_hilo_a_cpu(t_tcb* hilo) {
+int enviar_hilo_a_cpu(t_tcb* hilo, int socket) {
     t_paquete* paquete = crear_paquete_con_codigo_de_operacion(HILO);
 
     paquete->buffer->size = sizeof(uint32_t) * 3 + sizeof(int) + sizeof(t_estado);
@@ -131,7 +131,7 @@ int enviar_hilo_a_cpu(t_tcb* hilo) {
 
     memcpy(paquete->buffer->size + desplazamiento, &(hilo->PC), sizeof(uint32_t));
 
-    int resultado = enviar_paquete(paquete, socket_kernel_cpu_dispatch);
+    int resultado = enviar_paquete(paquete, socket);
     if(resultado == -1) {
         eliminar_paquete(paquete);
         return resultado;

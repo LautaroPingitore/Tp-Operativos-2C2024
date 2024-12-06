@@ -48,6 +48,4 @@ void liberar_instruccion(t_instruccion*);
 
 void actualizar_contexto_memoria();
 
-void devolver_control_al_kernel();
-
 #endif //CICLO_INSTRUCCION_H_

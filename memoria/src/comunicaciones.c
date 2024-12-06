@@ -1,23 +1,29 @@
 #include "include/gestor.h"
 
+
 t_list* lista_procesos; // TIPO t_proceso_memoria
 t_list* lista_instrucciones; // TIPO t_hilo_instrucciones
 
+
 pthread_mutex_t mutex_procesos;
 pthread_mutex_t mutex_instrucciones;
+
 
 void inicializar_datos(){
     pthread_mutex_lock(&mutex_procesos);
     lista_procesos = list_create();
     pthread_mutex_unlock(&mutex_procesos);
 
+
     pthread_mutex_lock(&mutex_instrucciones);
     lista_instrucciones = list_create();
     pthread_mutex_unlock(&mutex_instrucciones);
 
+
     pthread_mutex_init(&mutex_procesos, NULL);
     pthread_mutex_init(&mutex_instrucciones, NULL);
 }
+
 
 //---------------------------------------|
 // CONEXION KERNEL DE CREACION DE PROCESO|
@@ -29,6 +35,7 @@ t_proceso_memoria* recibir_proceso(int socket) {
     return proceso;
 }
 
+
 t_proceso_memoria* deserializar_proceso(t_buffer* buffer) {
     t_proceso_memoria* proceso = malloc(sizeof(t_proceso_memoria));
     if(proceso == NULL) {
@@ -38,11 +45,14 @@ t_proceso_memoria* deserializar_proceso(t_buffer* buffer) {
     void* stream = buffer->stream;
     int desplazamiento = 0;
 
+
     memcpy(&(proceso->pid), stream + desplazamiento, sizeof(uint32_t));
     desplazamiento += sizeof(uint32_t);
 
+
     memcpy(&(proceso->limite), stream + desplazamiento, sizeof(uint32_t));
     desplazamiento += sizeof(uint32_t);
+
 
     proceso->contexto = malloc(sizeof(t_contexto_ejecucion));
     if (!proceso->contexto) {
@@ -51,10 +61,13 @@ t_proceso_memoria* deserializar_proceso(t_buffer* buffer) {
         return NULL;
     }
 
+
     memcpy(proceso->contexto, buffer->stream + desplazamiento, sizeof(t_contexto_ejecucion));
+
 
     return proceso;
 }
+
 
 void eliminar_proceso_de_lista(uint32_t pid) {
     pthread_mutex_lock(&mutex_procesos);
@@ -68,6 +81,7 @@ void eliminar_proceso_de_lista(uint32_t pid) {
     pthread_mutex_unlock(&mutex_procesos);
 }
 
+
 //-----------------|
 // CREACION DE HILO|
 //-----------------|
@@ -78,6 +92,7 @@ t_hilo_memoria* recibir_hilo_memoria(int socket){
     return hilo;
 }
 
+
 t_hilo_memoria* deserializar_hilo_memoria(t_buffer* buffer) {
     t_hilo_memoria* hilo = malloc(sizeof(t_hilo_memoria));
     if(!hilo) {
@@ -85,18 +100,23 @@ t_hilo_memoria* deserializar_hilo_memoria(t_buffer* buffer) {
         return NULL;
     }
 
+
     void* stream = buffer->stream;
     int desplazamiento = sizeof(op_code);
     uint32_t tamanio_archivo;
 
+
     memcpy(&hilo->tid, stream + desplazamiento, sizeof(uint32_t));
     desplazamiento += sizeof(uint32_t);
+
 
     memcpy(&hilo->pid_padre, stream + desplazamiento, sizeof(uint32_t));
     desplazamiento += sizeof(uint32_t);
 
+
     memcpy(&tamanio_archivo, stream + desplazamiento, sizeof(uint32_t));
     desplazamiento += sizeof(uint32_t);
+
 
     hilo->archivo = malloc(tamanio_archivo);
     if(hilo->archivo == NULL) {
@@ -104,10 +124,13 @@ t_hilo_memoria* deserializar_hilo_memoria(t_buffer* buffer) {
         return NULL;
     }
 
+
     memcpy(&hilo->archivo, stream + desplazamiento, tamanio_archivo);
+
 
     return hilo;
 }
+
 
 void agregar_instrucciones_a_lista(uint32_t tid, char* archivo) {
     FILE *file = fopen(archivo, "r");
@@ -116,20 +139,24 @@ void agregar_instrucciones_a_lista(uint32_t tid, char* archivo) {
         return;
     }
 
+
     char line[100];
     t_list* lst_instrucciones = list_create();
     while (fgets(line, sizeof(line), file) != NULL) {
         t_instruccion* inst = malloc(sizeof(t_instruccion));
+
 
         // WARNING TEMA DEL MALLOC
         inst->nombre = malloc(15);
         inst->parametro1 = malloc(15);
         inst->parametro2 = malloc(15);
 
+
         int elementos = sscanf(line, "%s %s %s %d", inst->nombre, inst->parametro1, inst->parametro2, &(inst->parametro3));
         inst->nombre = realloc(inst->nombre, strlen(inst->nombre) + 1);
         inst->parametro1 = realloc(inst->parametro1, strlen(inst->parametro1) + 1);
         inst->parametro2 = realloc(inst->parametro2, strlen(inst->parametro2) + 1);
+
 
         if (elementos == 3) {
             inst->parametro3 = -1;
@@ -141,18 +168,22 @@ void agregar_instrucciones_a_lista(uint32_t tid, char* archivo) {
             strcpy(inst->parametro2, "");
             inst->parametro3 = -1;
         }
-        
+       
         list_add(lst_instrucciones, inst);
     }
 
+
     fclose(file);
+
 
     t_hilo_instrucciones* instrucciones_hilo = malloc(sizeof(t_hilo_instrucciones));
     instrucciones_hilo->tid = tid;
     instrucciones_hilo->instrucciones = lst_instrucciones;
 
+
     list_add(lista_instrucciones, instrucciones_hilo);
 }
+
 
 //--------------------|
 //FINALIZACION DE HILO|
@@ -164,6 +195,7 @@ void eliminar_espacio_hilo(t_hilo_memoria* hilo) {
     free(hilo);
 }
 
+
 t_contexto_ejecucion* obtener_contexto(uint32_t pid) {
     for(int i = 0; i < list_size(lista_procesos); i++) {
         t_proceso_memoria* pcb_actual = list_get(lista_procesos, i);
@@ -173,6 +205,7 @@ t_contexto_ejecucion* obtener_contexto(uint32_t pid) {
     }
     return NULL;
 }
+
 
 void eliminar_instrucciones_hilo(uint32_t tid) {
     // lista_instrucciones es de tipo t_hilo_instrucciones*
@@ -187,6 +220,7 @@ void eliminar_instrucciones_hilo(uint32_t tid) {
     }
 }
 
+
 void liberar_instrucciones(t_list* instrucciones) {
     for(int i=0; i < list_size(instrucciones); i++) {
         t_instruccion* inst = list_get(instrucciones, i);
@@ -196,6 +230,7 @@ void liberar_instrucciones(t_list* instrucciones) {
         free(inst);
     }
 }
+
 
 //-----------|
 //MEMORY DUMP|
@@ -207,6 +242,7 @@ t_pid_tid* recibir_identificadores(int socket) {
     return ident;
 }
 
+
 t_pid_tid* deserializar_identificadores(t_buffer* buffer) {
     t_pid_tid* ident = malloc(sizeof(t_pid_tid));
     if(ident == NULL) {
@@ -214,30 +250,35 @@ t_pid_tid* deserializar_identificadores(t_buffer* buffer) {
         return NULL;
     }
    
-   void * stream = buffer->stream; 
+   void * stream = buffer->stream;
    int desplazamiento = sizeof(op_code);
    
    memcpy(&(ident->pid), stream + desplazamiento, sizeof(uint32_t));
    desplazamiento += sizeof(uint32_t);
+
 
    memcpy(&(ident->tid), stream + desplazamiento, sizeof(uint32_t));
    
    return ident;
 }
 
+
 int solicitar_archivo_filesystem(uint32_t pid, uint32_t tid) {
     char nombre_archivo[256];
     time_t t = time(NULL);
     struct tm* tiempo = localtime(&t);
     sprintf(nombre_archivo, "<%d>-<%d>-<%d>", pid, tid, tiempo->tm_sec);
-    
+   
     char* contenido_proceso = obtener_contenido_proceso(pid, tid);
     int tamanio = strlen(contenido_proceso);
 
+
     int resultado = mandar_solicitud_dump_memory(nombre_archivo, contenido_proceso, tamanio);
+
 
     // Liberar memoria si es necesario
     free(contenido_proceso);
+
 
     if (resultado == 0) {
         log_info(LOGGER_MEMORIA, "Solicitud enviada correctamente para el archivo: %s", nombre_archivo);
@@ -248,6 +289,7 @@ int solicitar_archivo_filesystem(uint32_t pid, uint32_t tid) {
     }
 }
 
+
 char* obtener_contenido_proceso(uint32_t pid, uint32_t tid) {
     // Obtener el proceso por PID
     t_proceso_memoria* pcb = obtener_proceso_memoria(pid);
@@ -256,11 +298,13 @@ char* obtener_contenido_proceso(uint32_t pid, uint32_t tid) {
         return NULL;
     }
 
+
     // Calcular el tamanio necesario para los registros
     size_t tamanio_total = 0;
     const char* nombres_registros[] = {"AX:", "BX:", "CX:", "DX:", "EX:", "FX:", "GX:", "HX:"};
     tamanio_total += 32; // Espacio para <PID> <TID> (incluye "\n").
     tamanio_total += 8 * 12; // Espacio para 8 registros (aproximado, con valores grandes).
+
 
     // Reservar memoria para el contenido
     char* contenido = malloc(tamanio_total + 1);
@@ -270,8 +314,10 @@ char* obtener_contenido_proceso(uint32_t pid, uint32_t tid) {
     }
     contenido[0] = '\0'; // Inicializar el string.
 
+
     // Agregar encabezado <PID> <TID>
     snprintf(contenido, tamanio_total, "<%d> <%d>\n", pid, tid);
+
 
     // Agregar los registros al contenido
     t_list* lista_registros = convertir_registros_a_char(pcb->contexto->registros);
@@ -286,11 +332,14 @@ char* obtener_contenido_proceso(uint32_t pid, uint32_t tid) {
         strcat(contenido, linea);
     }
 
+
     // Liberar lista de registros
     list_destroy_and_destroy_elements(lista_registros, free);
 
+
     return contenido;
 }
+
 
 t_proceso_memoria* obtener_proceso_memoria(uint32_t pid) {
     for(int i=0; i < list_size(lista_procesos); i++) {
@@ -302,14 +351,17 @@ t_proceso_memoria* obtener_proceso_memoria(uint32_t pid) {
     return NULL;
 }
 
+
 t_list* convertir_registros_a_char(t_registros* registros) {
     t_list* lista = list_create();
     if (!lista) return NULL;
+
 
     uint32_t lista_registros[] = {
         registros->AX, registros->BX, registros->CX, registros->DX,
         registros->EX, registros->FX, registros->GX, registros->HX
     };
+
 
     for (int i = 0; i < 8; i++) {
         char* registro_str = malloc(strlen(registro_str) + 1); // Espacio para un entero de 32 bits (10 dígitos máx.) + nulo
@@ -321,8 +373,10 @@ t_list* convertir_registros_a_char(t_registros* registros) {
         list_add(lista, registro_str);
     }
 
+
     return lista;
 }
+
 
 t_list* obtener_lista_instrucciones_por_tid(uint32_t tid) {
     for (int i = 0; i < list_size(lista_instrucciones); i++) {
@@ -332,8 +386,10 @@ t_list* obtener_lista_instrucciones_por_tid(uint32_t tid) {
         }
     }
 
+
     return NULL;
 }
+
 
 // ------------------|
 // INSTRUCCIONES CPU |
@@ -345,6 +401,7 @@ t_actualizar_contexto* recibir_actualizacion(int socket) {
     return act_cont;
 }
 
+
 t_actualizar_contexto* deserializar_actualizacion(t_buffer* buffer) {
     t_actualizar_contexto* act_cont = malloc(sizeof(t_actualizar_contexto));
     if(!act_cont) {
@@ -352,14 +409,18 @@ t_actualizar_contexto* deserializar_actualizacion(t_buffer* buffer) {
         return NULL;
     }
 
+
     void* stream = buffer->stream;
     int desplazamiento = sizeof(op_code);
+
 
     memcpy(&(act_cont->pid), stream + desplazamiento, sizeof(uint32_t));
     desplazamiento += sizeof(uint32_t);
 
+
     memcpy(&(act_cont->tid), stream + desplazamiento, sizeof(uint32_t));
     desplazamiento += sizeof(uint32_t);
+
 
     act_cont->contexto = malloc(sizeof(t_contexto_ejecucion));
     if(!act_cont->contexto) {
@@ -368,59 +429,68 @@ t_actualizar_contexto* deserializar_actualizacion(t_buffer* buffer) {
         return NULL;
     }
 
+
     memcpy(&(act_cont->contexto), stream + desplazamiento, sizeof(t_contexto_ejecucion));
+
 
     return act_cont;
 }
+
 
 int enviar_instruccion(int socket, t_instruccion* inst) {
     t_paquete* paquete = crear_paquete_con_codigo_de_operacion(INSTRUCCION);
     uint32_t tam_nom = strlen(inst->nombre) + 1;
 
-    paquete->buffer->size = sizeof(unint32_t) + tam_nom;
+    paquete->buffer->size = sizeof(uint32_t) + tam_nom;
     paquete->buffer->stream = malloc(paquete->buffer->size);
+
 
     int desplazamiento = 0;
 
-    memcpy(paquete->buffer->stream + desplazamiento, tam_nom,sizeof(uint32_t));
+
+    memcpy(paquete->buffer->stream + desplazamiento, &tam_nom,sizeof(uint32_t));
     desplazamiento += sizeof(uint32_t);
     memcpy(paquete->buffer->stream + desplazamiento, inst->nombre, tam_nom);
     desplazamiento += tam_nom;
-    
-    uint32_t tam_p1 = strlen(inst->parametro1);
-    memcpy(paquete->buffer->stream + desplazamiento, tam_p1,sizeof(uint32_t));
+   
+    uint32_t tam_p1 = strlen(inst->parametro1) + 1;
+    memcpy(paquete->buffer->stream + desplazamiento, &tam_p1,sizeof(uint32_t));
     desplazamiento += sizeof(uint32_t);
     memcpy(paquete->buffer->stream + desplazamiento, inst->parametro1, tam_p1);
     desplazamiento += tam_p1;
 
-    uint32_t tam_p2 = strlen(inst->parametro2);
-    memcpy(paquete->buffer->stream + desplazamiento, tam_p2,sizeof(uint32_t));
+
+    uint32_t tam_p2 = strlen(inst->parametro2) + 1;
+    memcpy(paquete->buffer->stream + desplazamiento, &tam_p2,sizeof(uint32_t));
     desplazamiento += sizeof(uint32_t);
     memcpy(paquete->buffer->stream + desplazamiento, inst->parametro2, tam_p2);
     desplazamiento += tam_p2;
+
 
     memcpy(paquete->buffer->stream + desplazamiento, &(inst->parametro3), sizeof(int));
    
     int resultado = enviar_paquete(paquete, socket);
     eliminar_paquete(paquete);
 
+
     return resultado;
 }
 
+
 void enviar_valor_leido_cpu(int socket, uint32_t dire_fisica, uint32_t valor) {
     t_paquete* paquete = crear_paquete_con_codigo_de_operacion(PEDIDO_READ_MEM);
-    // agregar_a_paquete(paquete, &dire_fisica, sizeof(uint32_t));
-    // agregar_a_paquete(paquete, &valor, sizeof(uint32_t));
 
-    paquete->buffer->size = sizeof(unint32_t) * 2;
+    paquete->buffer->size = sizeof(uint32_t) * 2;
     paquete->buffer->stream = malloc(paquete->buffer->size);
+
 
     int desplazamiento = 0;
 
+
     memcpy(paquete->buffer->stream + desplazamiento, &(dire_fisica), sizeof(uint32_t));
     desplazamiento += sizeof(uint32_t);
-    memcpy(paquete->buffer->stream + desplazamiento, &(hilo_actual->TID), sizeof(uint32_t));
-    desplazamiento += sizeof(uint32_t);
+    memcpy(paquete->buffer->stream + desplazamiento, &(valor), sizeof(uint32_t));
+   
    
     if(enviar_paquete(paquete, socket) == 0) {
         log_info(LOGGER_MEMORIA, "Valor enviado a Cpu");
@@ -429,6 +499,7 @@ void enviar_valor_leido_cpu(int socket, uint32_t dire_fisica, uint32_t valor) {
     }
     eliminar_paquete(paquete);
 }
+
 
 // Lista de instrucciones es de tipo t_proceso_instruccion
 t_instruccion* obtener_instruccion(uint32_t tid, uint32_t pc) {
@@ -443,10 +514,12 @@ t_instruccion* obtener_instruccion(uint32_t tid, uint32_t pc) {
 }
 
 
+
+
 void procesar_solicitud_contexto(int socket_cliente, uint32_t pid, uint32_t tid) {
     for (int i = 0; i < list_size(lista_procesos); i++) {
         t_proceso_memoria* proceso = list_get(lista_procesos, i);
-        
+       
         if (proceso->pid == pid) {
             int resultado = enviar_contexto_cpu(proceso);
             if(resultado == 0) {
@@ -458,30 +531,36 @@ void procesar_solicitud_contexto(int socket_cliente, uint32_t pid, uint32_t tid)
         }
     }
 
+
     log_error(LOGGER_MEMORIA, "No se encontró contexto para el PID: %d, TID: %d", pid, tid);
     enviar_mensaje("ERROR", socket_memoria_cpu);
-} 
+}
+
 
 int enviar_contexto_cpu(t_proceso_memoria* proceso) {
     t_paquete* paquete = crear_paquete_con_codigo_de_operacion(CONTEXTO);
-    agregar_a_paquete(paquete, &proceso->pid, sizeof(uint32_t));
-    agregar_a_paquete(paquete, &proceso->contexto->registros, sizeof(t_registros));
-    agregar_a_paquete(paquete, &proceso->contexto->motivo_finalizacion, sizeof(finalizacion_proceso));
-
+   
     paquete->buffer->size = sizeof(uint32_t) + sizeof(t_registros) + sizeof(finalizacion_proceso);
     paquete->buffer->stream = malloc(paquete->buffer->size);
 
-    
+    int desplazamiento = 0;
+
+    memcpy(paquete->buffer->stream + desplazamiento, &(proceso->pid), sizeof(uint32_t));
+    desplazamiento += sizeof(uint32_t);
+    memcpy(paquete->buffer->stream + desplazamiento, &(proceso->contexto->registros), sizeof(uint32_t)); // el segundo parametro lleva & o no???
+    desplazamiento += sizeof(uint32_t);
+    memcpy(paquete->buffer->stream + desplazamiento, &(proceso->contexto->motivo_finalizacion), sizeof(uint32_t));
        
     int resultado = enviar_paquete(paquete, socket_memoria_cpu);
     eliminar_paquete(paquete);
     return resultado;
 }
 
+
 void procesar_actualizacion_contexto(int socket_cliente, uint32_t pid, uint32_t tid, t_contexto_ejecucion* nuevo_contexto) {
     for (int i = 0; i < list_size(lista_procesos); i++) {
         t_proceso_memoria* proceso = list_get(lista_procesos, i);
-        
+       
         if (proceso->pid == pid) {
             proceso->contexto = nuevo_contexto;
             log_info(LOGGER_MEMORIA, "## Contexto <Actualizado> - (PID:TID) - (<%d>:<%d)", pid, tid);
@@ -490,35 +569,52 @@ void procesar_actualizacion_contexto(int socket_cliente, uint32_t pid, uint32_t 
         }
     }
 
+
     log_error(LOGGER_MEMORIA, "No se encontró contexto para actualizar en PID: %d, TID: %d", pid, tid);
     enviar_mensaje("ERROR", socket_cliente);
 }
 
+
 int mandar_solicitud_dump_memory(char* nombre_archivo, char* contenido_proceso, uint32_t tamanio) {
     t_paquete* paquete = crear_paquete_con_codigo_de_operacion(DUMP_MEMORY);
     uint32_t tamanio_nombre = strlen(nombre_archivo) + 1;
-    agregar_a_paquete(paquete, &tamanio_nombre, sizeof(uint32_t));
-    agregar_a_paquete(paquete, &nombre_archivo, tamanio_nombre); //
-    agregar_a_paquete(paquete, &tamanio, sizeof(uint32_t));
-    agregar_a_paquete(paquete, &contenido_proceso, tamanio);// 
+    
+    paquete->buffer->size = sizeof(uint32_t) * 3 + tamanio_nombre;
+    paquete->buffer->stream = malloc(paquete->buffer->size);
+
+
+    int desplazamiento = 0;
+
+
+    memcpy(paquete->buffer->stream + desplazamiento, &tamanio_nombre, sizeof(uint32_t));
+    desplazamiento += sizeof(uint32_t);
+    memcpy(paquete->buffer->stream + desplazamiento, nombre_archivo, tamanio_nombre);
+    desplazamiento += tamanio_nombre;
+    memcpy(paquete->buffer->stream + desplazamiento, &(tamanio), sizeof(uint32_t));
+    desplazamiento += sizeof(uint32_t);
+    memcpy(paquete->buffer->stream + desplazamiento, contenido_proceso, tamanio);
    
     int resultado = enviar_paquete(paquete, socket_memoria_filesystem);
     eliminar_paquete(paquete);
-    
+   
     return resultado;
 }
+
 
 void agregar_instrucciones(uint32_t tid, t_instruccion** instrucciones, size_t cantidad) {
     t_hilo_instrucciones* hilo_instrucciones = malloc(sizeof(t_hilo_instrucciones));
     hilo_instrucciones->tid = tid;
-    hilo_instrucciones->instrucciones = list_create(); 
+    hilo_instrucciones->instrucciones = list_create();
+
 
     for (size_t i = 0; i < cantidad; i++) {
         list_add(hilo_instrucciones->instrucciones, instrucciones[i]);
     }
 
+
     list_add(lista_instrucciones, hilo_instrucciones);
 }
+
 
 // =========|
 // WRITE MEM|
@@ -530,6 +626,7 @@ t_write_mem* recibir_write_mem(int socket) {
     return wri_mem;
 }
 
+
 t_write_mem* deserializar_write_mem(t_buffer* buffer) {
     t_write_mem* wri_mem = malloc(sizeof(t_write_mem));
     if(wri_mem == NULL) {
@@ -537,22 +634,26 @@ t_write_mem* deserializar_write_mem(t_buffer* buffer) {
         return NULL;
     }
 
+
     void * stream = buffer->stream;
     int desplazamiento = sizeof(op_code);
-    
+   
     memcpy(&(wri_mem->pid), stream + desplazamiento, sizeof(uint32_t));
     desplazamiento += sizeof(uint32_t);
+
 
     memcpy(&(wri_mem->tid), stream + desplazamiento, sizeof(uint32_t));
     desplazamiento += sizeof(uint32_t);
 
+
     memcpy(&(wri_mem->dire_fisica_wm), stream + desplazamiento, sizeof(uint32_t));
     desplazamiento += sizeof(uint32_t);
-    
+   
     memcpy(&(wri_mem->valor_escribido), stream + desplazamiento, sizeof(uint32_t));
-    
+   
     return wri_mem;
 }
+
 
 void escribir_memoria(uint32_t direccion_fisica, uint32_t valor) {
     // Verificar que la dirección física esté dentro de los límites de la memoria de usuario
@@ -561,15 +662,18 @@ void escribir_memoria(uint32_t direccion_fisica, uint32_t valor) {
         return;
     }
 
+
     // Escribir los 4 bytes de `valor` a partir de `direccion_fisica`
     *(uint32_t*)(uintptr_t)direccion_fisica = valor;
-    
+   
     enviar_mensaje("OK", socket_memoria_cpu);  // Responder OK al cliente
 }
+
 
 // ========|
 // READ_MEM|
 // ========|
+
 
 t_read_mem* recibir_read_mem(int socket) {
     t_paquete* paquete = recibir_paquete(socket);
@@ -578,19 +682,23 @@ t_read_mem* recibir_read_mem(int socket) {
     return read_mem;
 }
 
+
 t_read_mem* deserializar_read_mem(t_buffer* buffer) {
     t_read_mem* read_mem = malloc(sizeof(t_read_mem));
     void* stream = buffer->stream;
     int desplazamiento = sizeof(op_code);
+
 
     memcpy(&read_mem->pid, stream + desplazamiento, sizeof(uint32_t));
     desplazamiento += sizeof(uint32_t);
     memcpy(&read_mem->tid, stream + desplazamiento, sizeof(uint32_t));
     desplazamiento += sizeof(uint32_t);
     memcpy(&read_mem->direccion_fisica, stream + desplazamiento, sizeof(uint32_t));
-    
+   
     return read_mem;
 }
+
+
 
 
 uint32_t leer_memoria(uint32_t direccion_fisica) {
@@ -600,14 +708,18 @@ uint32_t leer_memoria(uint32_t direccion_fisica) {
         return 0;  // Retornar 0 o algún valor de error para indicar fallo de segmentación
     }
 
+
     // Leer los primeros 4 bytes a partir de la dirección física
     uint32_t valor = *(uint32_t*)(uintptr_t)direccion_fisica;
+
 
     // Log de éxito
     log_info(LOGGER_MEMORIA, "Lectura exitosa: Dirección física %d, Valor %d", direccion_fisica, valor);
 
+
     return valor;
 }
+
 
 // ==================|
 // PEDIDO_INSTRUCCION|
@@ -619,36 +731,48 @@ t_pedido_instruccion* recibir_pedido_instruccion(int socket) {
     return ped_inst;
 }
 
+
 t_pedido_instruccion* deserializar_pedido_instruccion(t_buffer* buffer) {
     t_pedido_instruccion *ped_inst = malloc(sizeof(t_pedido_instruccion));
-    
+   
     if(ped_inst == NULL) {
         printf("Error al asignar memoria");
         return NULL;
     }
-    
+   
     void * stream = buffer->stream;
     int desplazamiento = sizeof(op_code);
-    
+   
     memcpy(&(ped_inst->pid), stream + desplazamiento, sizeof(uint32_t));
     desplazamiento += sizeof(uint32_t);
-    
+   
     memcpy(&(ped_inst->tid), stream + desplazamiento, sizeof(uint32_t));
     desplazamiento += sizeof(uint32_t);
-    
+   
     memcpy(&(ped_inst->pc), stream + desplazamiento, sizeof(uint32_t));
     desplazamiento += sizeof(uint32_t);
-    
-    return ped_inst; 
+   
+    return ped_inst;
 }
+
 
 // =============================|
 // BASE_MEMORIA y LIMITE_MEMORIA|
 // =============================|
 int enviar_valor_uint_cpu(int socket, uint32_t valor, op_code codigo) {
     t_paquete* paquete = crear_paquete_con_codigo_de_operacion(codigo);
-    agregar_a_paquete(paquete, &valor, sizeof(uint32_t));
+
+     
+    paquete->buffer->size = sizeof(uint32_t);
+    paquete->buffer->stream = malloc(paquete->buffer->size);
+
+
+    int desplazamiento = 0;
+
+    memcpy(paquete->buffer->stream + desplazamiento, &valor, sizeof(uint32_t));
+       
     int resultado = enviar_paquete(paquete, socket);
     eliminar_paquete(paquete);
     return resultado;
 }
+

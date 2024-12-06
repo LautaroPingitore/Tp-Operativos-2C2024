@@ -232,20 +232,3 @@ void actualizar_contexto_memoria() {
     enviar_contexto_memoria(hilo_actual->PID_PADRE, hilo_actual->TID, pcb_actual->CONTEXTO->registros, hilo_actual->PC, socket_cpu_memoria);
 
 }
-
-void devolver_control_al_kernel() {
-    log_info(LOGGER_CPU, "Devolviendo control al Kernel...");
-
-    // Crear un paquete para notificar al Kernel
-    t_paquete *paquete = crear_paquete_con_codigo_de_operacion(DEVOLVER_CONTROL_KERNEL);
-    hilo_actual->motivo_desalojo = INTERRUPCION_BLOQUEO;
-    agregar_a_paquete(paquete, &hilo_actual, sizeof(t_tcb));
-    
-    // Enviar el paquete indicando que el control se devuelve al Kernel
-    
-    enviar_paquete(paquete, socket_cpu_interrupt_kernel); 
-
-    eliminar_paquete(paquete);
-
-    log_info(LOGGER_CPU, "Control devuelto al Kernel.");
-}

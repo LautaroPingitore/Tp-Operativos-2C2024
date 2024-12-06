@@ -11,6 +11,7 @@ void pedir_instruccion_memoria(uint32_t, uint32_t, int);
 void enviar_contexto_memoria(uint32_t, uint32_t, t_registros*, uint32_t, int);
 void enviar_syscall_kernel(t_instruccion*, op_code);
 t_instruccion* recibir_instruccion(int);
+void devolver_control_al_kernel();
 
 // INSTRUCCIONES
 void enviar_interrupcion_segfault(uint32_t, int);

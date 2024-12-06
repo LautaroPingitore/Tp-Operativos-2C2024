@@ -102,7 +102,7 @@ bool deserializar_interrupcion(void* stream, int size, int quantum, bool interru
 void pedir_instruccion_memoria(uint32_t tid, uint32_t pc, int socket) {
     t_paquete *paquete = crear_paquete_con_codigo_de_operacion(PEDIDO_INSTRUCCION);
     
-    paquete->buffer->size = sizeof(unint32_t) * 2;
+    paquete->buffer->size = sizeof(uint32_t) * 2;
     paquete->buffer->stream = malloc(paquete->buffer->size);
 
     int desplazamiento = 0;
@@ -140,11 +140,11 @@ void enviar_syscall_kernel(t_instruccion* instruccion, op_code syscall) {
     t_paquete* paquete = crear_paquete_con_codigo_de_operacion(syscall);
  
    uint32_t tamanio_nombre = strlen(instruccion->nombre) + 1;
-   uint32_t tamanio_par1 = stelen(instruccion->parametro1) + 1
-   uint32_t tamanio_par2= strnlen(instruccion->parametro2) + 1
+   uint32_t tamanio_par1 = strlen(instruccion->parametro1) + 1;
+   uint32_t tamanio_par2 = strlen(instruccion->parametro2) + 1;
 
-   paquete->buffer->size = tamanio_nombre + tamanio_par1 + tamanio_par2 + sizeof(int) + sizeof(uint32_t) * 3
-  
+   paquete->buffer->size = tamanio_nombre + tamanio_par1 + tamanio_par2 + sizeof(int) + sizeof(uint32_t) * 3;
+
     paquete->buffer->stream=malloc(paquete->buffer->size);
     int desplazamiento=0;
 
@@ -154,7 +154,7 @@ void enviar_syscall_kernel(t_instruccion* instruccion, op_code syscall) {
     desplazamiento += tamanio_par1;
     memcpy(paquete->buffer->stream + desplazamiento, instruccion->parametro2, tamanio_par2);
     desplazamiento += tamanio_par2;
-    memcpy(paquete->buffer->stream + desplazamiento, instruccion->parametro3,sizeof(int));
+    memcpy(paquete->buffer->stream + desplazamiento, &(instruccion->parametro3), sizeof(int));
     
 
     if(enviar_paquete(paquete, socket_cpu_interrupt_kernel) == 0) {
@@ -166,6 +166,38 @@ void enviar_syscall_kernel(t_instruccion* instruccion, op_code syscall) {
     eliminar_paquete(paquete);
 }
 
+void devolver_control_al_kernel() {
+    log_info(LOGGER_CPU, "Devolviendo control al Kernel...");
+
+    // Crear un paquete para notificar al Kernel
+    t_paquete *paquete = crear_paquete_con_codigo_de_operacion(DEVOLVER_CONTROL_KERNEL);
+    hilo_actual->motivo_desalojo = INTERRUPCION_BLOQUEO;
+
+    paquete->buffer->size = sizeof(uint32_t) * 3 + sizeof(int) + sizeof(t_estado);
+    paquete->buffer->stream = malloc(paquete->buffer->size);
+    int desplazamiento = 0;
+
+    memcpy(paquete->buffer->size + desplazamiento, &(hilo_actual->TID), sizeof(uint32_t));
+    desplazamiento += sizeof(uint32_t);
+
+    memcpy(paquete->buffer->size + desplazamiento, &(hilo_actual->PRIORIDAD), sizeof(int));
+    desplazamiento += sizeof(int);
+
+    memcpy(paquete->buffer->size + desplazamiento, &(hilo_actual->PID_PADRE), sizeof(uint32_t));
+    desplazamiento += sizeof(uint32_t);
+
+    memcpy(paquete->buffer->size + desplazamiento, &(hilo_actual->ESTADO), sizeof(t_estado));
+    desplazamiento += sizeof(t_estado);
+
+    memcpy(paquete->buffer->size + desplazamiento, &(hilo_actual->PC), sizeof(uint32_t));
+    
+    enviar_paquete(paquete, socket_cpu_interrupt_kernel); 
+
+    eliminar_paquete(paquete);
+
+    log_info(LOGGER_CPU, "Control devuelto al Kernel.");
+}
+
 // FUNCIONES INSTRUCCIONES
 
 void enviar_interrupcion_segfault(uint32_t pid, int socket) {
@@ -174,7 +206,7 @@ void enviar_interrupcion_segfault(uint32_t pid, int socket) {
     
     // Agregar el PID al paquete
 
-    paquete->buffer->size = sizeof(unint32_t);
+    paquete->buffer->size = sizeof(uint32_t);
     paquete->buffer->stream = malloc(paquete->buffer->size);
 
     int desplazamiento = 0;
@@ -196,7 +228,7 @@ void enviar_interrupcion_segfault(uint32_t pid, int socket) {
 void enviar_valor_a_memoria(int socket, uint32_t dire_fisica, uint32_t* valor) {
     t_paquete *paquete = crear_paquete_con_codigo_de_operacion(ESCRIBIR_VALOR_MEMORIA);
     
-    paquete->buffer->size = sizeof(unint32_t) * 4;
+    paquete->buffer->size = sizeof(uint32_t) * 4;
     paquete->buffer->stream = malloc(paquete->buffer->size);
 
     int desplazamiento = 0;
@@ -223,7 +255,7 @@ void enviar_valor_a_memoria(int socket, uint32_t dire_fisica, uint32_t* valor) {
 void enviar_solicitud_valor_memoria(int socket, uint32_t direccion_fisica) {
     t_paquete *paquete = crear_paquete_con_codigo_de_operacion(PEDIR_VALOR_MEMORIA);
 
-    paquete->buffer->size = sizeof(unint32_t) * 3;
+    paquete->buffer->size = sizeof(uint32_t) * 3;
     paquete->buffer->stream = malloc(paquete->buffer->size);
 
     int desplazamiento = 0;
@@ -256,7 +288,7 @@ uint32_t recibir_valor_de_memoria(int socket) {
 void enviar_solicitud_memoria(int socket, uint32_t pid, op_code codigo, const char* descripcion) {
     t_paquete* paquete = crear_paquete_con_codigo_de_operacion(codigo);
 
-    paquete->buffer->size = sizeof(unint32_t);
+    paquete->buffer->size = sizeof(uint32_t);
     paquete->buffer->stream = malloc(paquete->buffer->size);
 
     int desplazamiento = 0;

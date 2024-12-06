@@ -540,7 +540,7 @@ t_tcb* seleccionar_hilo_por_algoritmo() {
         return obtener_hilo_fifo();
     } else if (strcmp(ALGORITMO_PLANIFICACION, "PRIORIDADES") == 0) {
         return obtener_hilo_x_prioridad();
-    } else if (strcmp(ALGORITMO_PLANIFICACION, "COLAS_MULTINIVEL") == 0) {
+    } else if (strcmp(ALGORITMO_PLANIFICACION, "CMN") == 0) {
         return seleccionar_hilo_multinivel();
     }
     return NULL;

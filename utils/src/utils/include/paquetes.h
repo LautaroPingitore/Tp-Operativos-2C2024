@@ -90,7 +90,6 @@
 // void* serializar_paquete(t_paquete*, int);
 // void enviar_mensaje(char*, int);
 // void crear_buffer(t_paquete*);
-// void agregar_a_paquete(t_paquete*, void*, int);
 // int enviar_paquete(t_paquete*, int);
 // void eliminar_paquete(t_paquete*);
 // void liberar_conexion(int);
