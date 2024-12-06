@@ -101,8 +101,15 @@ bool deserializar_interrupcion(void* stream, int size, int quantum, bool interru
 
 void pedir_instruccion_memoria(uint32_t tid, uint32_t pc, int socket) {
     t_paquete *paquete = crear_paquete_con_codigo_de_operacion(PEDIDO_INSTRUCCION);
-    agregar_a_paquete(paquete, &tid, sizeof(uint32_t));
-    agregar_a_paquete(paquete, &pc, sizeof(uint32_t));
+    
+    paquete->buffer->size = sizeof(unint32_t) * 2;
+    paquete->buffer->stream = malloc(paquete->buffer->size);
+
+    int desplazamiento = 0;
+
+    memcpy(paquete->buffer->stream + desplazamiento, &(tid), sizeof(uint32_t));
+    desplazamiento += sizeof(uint32_t);
+    memcpy(paquete->buffer->stream + desplazamiento, &(pc), sizeof(uint32_t));
 
     enviar_paquete(paquete, socket);
     eliminar_paquete(paquete);
@@ -111,10 +118,19 @@ void pedir_instruccion_memoria(uint32_t tid, uint32_t pc, int socket) {
 void enviar_contexto_memoria(uint32_t pid, uint32_t tid, t_registros* registros, uint32_t program_counter, int socket_memoria) {
     t_paquete *paquete = crear_paquete_con_codigo_de_operacion(ACTUALIZAR_CONTEXTO);
 
-    agregar_a_paquete(paquete, &pid, sizeof(uint32_t));
-    agregar_a_paquete(paquete, &tid, sizeof(uint32_t));
-    agregar_a_paquete(paquete, &registros, sizeof(t_registros));
-    agregar_a_paquete(paquete, &program_counter, sizeof(uint32_t));
+    paquete->buffer->size = sizeof(uint32_t) * 3 + sizeof(t_registros);
+    paquete->buffer->stream = malloc(paquete->buffer->size);
+
+    int desplazamiento = 0;
+
+    memcpy(paquete->buffer->stream + desplazamiento, &(pid), sizeof(uint32_t));
+    desplazamiento += sizeof(uint32_t);
+    memcpy(paquete->buffer->stream + desplazamiento, &(tid), sizeof(uint32_t));
+    desplazamiento += sizeof(uint32_t);
+    memcpy(paquete->buffer->stream + desplazamiento, &(registros), sizeof(t_registros));
+    desplazamiento += sizeof(t_registros);
+    memcpy(paquete->buffer->stream + desplazamiento, &(program_counter), sizeof(uint32_t));
+    
 
     enviar_paquete(paquete, socket_memoria);
     eliminar_paquete(paquete);
@@ -122,10 +138,24 @@ void enviar_contexto_memoria(uint32_t pid, uint32_t tid, t_registros* registros,
 
 void enviar_syscall_kernel(t_instruccion* instruccion, op_code syscall) {
     t_paquete* paquete = crear_paquete_con_codigo_de_operacion(syscall);
-    agregar_a_paquete(paquete, &instruccion->nombre, sizeof(instruccion->nombre));
-    agregar_a_paquete(paquete, &instruccion->parametro1, sizeof(instruccion->parametro1));
-    agregar_a_paquete(paquete, &instruccion->parametro2, sizeof(instruccion->parametro2));
-    agregar_a_paquete(paquete, &instruccion->parametro3, sizeof(instruccion->parametro3));
+ 
+   uint32_t tamanio_nombre = strlen(instruccion->nombre) + 1;
+   uint32_t tamanio_par1 = stelen(instruccion->parametro1) + 1
+   uint32_t tamanio_par2= strnlen(instruccion->parametro2) + 1
+
+   paquete->buffer->size = tamanio_nombre + tamanio_par1 + tamanio_par2 + sizeof(int) + sizeof(uint32_t) * 3
+  
+    paquete->buffer->stream=malloc(paquete->buffer->size);
+    int desplazamiento=0;
+
+    memcpy(paquete->buffer->stream + desplazamiento, instruccion->nombre, tamanio_nombre);
+    desplazamiento += tamanio_nombre;
+    memcpy(paquete->buffer->stream + desplazamiento, instruccion->parametro1, tamanio_par1);
+    desplazamiento += tamanio_par1;
+    memcpy(paquete->buffer->stream + desplazamiento, instruccion->parametro2, tamanio_par2);
+    desplazamiento += tamanio_par2;
+    memcpy(paquete->buffer->stream + desplazamiento, instruccion->parametro3,sizeof(int));
+    
 
     if(enviar_paquete(paquete, socket_cpu_interrupt_kernel) == 0) {
         log_info(LOGGER_CPU, "Syscall notificada a KERNEL");
@@ -143,7 +173,13 @@ void enviar_interrupcion_segfault(uint32_t pid, int socket) {
     t_paquete* paquete = crear_paquete_con_codigo_de_operacion(SEGF_FAULT);
     
     // Agregar el PID al paquete
-    agregar_a_paquete(paquete, &pid, sizeof(uint32_t));
+
+    paquete->buffer->size = sizeof(unint32_t);
+    paquete->buffer->stream = malloc(paquete->buffer->size);
+
+    int desplazamiento = 0;
+
+    memcpy(paquete->buffer->stream + desplazamiento, &(pid), sizeof(uint32_t));
     
 
     // Enviar el paquete al socket de la memoria o kernel
@@ -159,12 +195,19 @@ void enviar_interrupcion_segfault(uint32_t pid, int socket) {
 
 void enviar_valor_a_memoria(int socket, uint32_t dire_fisica, uint32_t* valor) {
     t_paquete *paquete = crear_paquete_con_codigo_de_operacion(ESCRIBIR_VALOR_MEMORIA);
+    
+    paquete->buffer->size = sizeof(unint32_t) * 4;
+    paquete->buffer->stream = malloc(paquete->buffer->size);
 
-    // Agregar la dirección física y el valor del registro de datos al paquete
-    agregar_a_paquete(paquete, &hilo_actual->PID_PADRE, sizeof(uint32_t));
-    agregar_a_paquete(paquete, &hilo_actual->TID, sizeof(uint32_t));
-    agregar_a_paquete(paquete, &dire_fisica, sizeof(uint32_t));
-    agregar_a_paquete(paquete, &valor, sizeof(uint32_t));
+    int desplazamiento = 0;
+
+    memcpy(paquete->buffer->stream + desplazamiento, &(hilo_actual->PID_PADRE), sizeof(uint32_t));
+    desplazamiento += sizeof(uint32_t);
+    memcpy(paquete->buffer->stream + desplazamiento, &(hilo_actual->TID), sizeof(uint32_t));
+    desplazamiento += sizeof(uint32_t);
+    memcpy(paquete->buffer->stream + desplazamiento, &(dire_fisica), sizeof(uint32_t));
+    desplazamiento += sizeof(uint32_t);
+    memcpy(paquete->buffer->stream + desplazamiento, &(valor), sizeof(uint32_t));
 
 
     if (enviar_paquete(paquete, socket) < 0) {
@@ -180,9 +223,16 @@ void enviar_valor_a_memoria(int socket, uint32_t dire_fisica, uint32_t* valor) {
 void enviar_solicitud_valor_memoria(int socket, uint32_t direccion_fisica) {
     t_paquete *paquete = crear_paquete_con_codigo_de_operacion(PEDIR_VALOR_MEMORIA);
 
-    agregar_a_paquete(paquete, &hilo_actual->PID_PADRE, sizeof(uint32_t));
-    agregar_a_paquete(paquete, &hilo_actual->TID, sizeof(uint32_t));
-    agregar_a_paquete(paquete, &direccion_fisica, sizeof(uint32_t));
+    paquete->buffer->size = sizeof(unint32_t) * 3;
+    paquete->buffer->stream = malloc(paquete->buffer->size);
+
+    int desplazamiento = 0;
+
+    memcpy(paquete->buffer->stream + desplazamiento, &(hilo_actual->PID_PADRE), sizeof(uint32_t));
+    desplazamiento += sizeof(uint32_t);
+    memcpy(paquete->buffer->stream + desplazamiento, &(hilo_actual->TID), sizeof(uint32_t));
+    desplazamiento += sizeof(uint32_t);
+    memcpy(paquete->buffer->stream + desplazamiento, &(direccion_fisica), sizeof(uint32_t));
 
     if (enviar_paquete(paquete, socket) < 0) {
         log_error(LOGGER_CPU, "Error al enviar solicitud de valor desde memoria.");
@@ -205,7 +255,13 @@ uint32_t recibir_valor_de_memoria(int socket) {
 
 void enviar_solicitud_memoria(int socket, uint32_t pid, op_code codigo, const char* descripcion) {
     t_paquete* paquete = crear_paquete_con_codigo_de_operacion(codigo);
-    agregar_a_paquete(paquete, &pid, sizeof(uint32_t));
+
+    paquete->buffer->size = sizeof(unint32_t);
+    paquete->buffer->stream = malloc(paquete->buffer->size);
+
+    int desplazamiento = 0;
+
+    memcpy(paquete->buffer->stream + desplazamiento, &(pid), sizeof(uint32_t));
 
     if (enviar_paquete(paquete, socket) < 0) {
         log_error(LOGGER_CPU, "Error al enviar solicitud de %s para PID: %d", descripcion, pid);
