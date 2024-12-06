@@ -48,9 +48,7 @@ void enviar_proceso_cpu(int socket, t_pcb* pcb) {
     desplazamiento += sizeof(uint32_t);
     memcpy(paquete->buffer->stream + desplazamiento, pcb->CONTEXTO, sizeof(t_contexto_ejecucion));    
 
-    if(enviar_paquete(paquete, socket) == 0) {
-        log_info(LOGGER_KERNEL, "Proceso enviado ok a cpu");
-    } else {
+    if(enviar_paquete(paquete, socket) != 0) {
         log_error(LOGGER_KERNEL, "No se a podido enviar el proceso requerido hacia el modulo de cpu :(");
     }
     eliminar_paquete(paquete);
@@ -135,7 +133,6 @@ int enviar_hilo_a_cpu(t_tcb* hilo) {
         return resultado;
     }
 
-    log_info(LOGGER_KERNEL, "El TID %d se envio a CPU", hilo->TID);
     eliminar_paquete(paquete);
 
     return resultado;
