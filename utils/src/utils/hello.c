@@ -175,10 +175,10 @@ int esperar_cliente(int socket_servidor, t_log *logger)
 
 	if (socket_cliente == (-1))
 	{
-		//perror("Error al aceptar el cliente");
+		perror("Error al aceptar el cliente");
 	}
 	
-	//log_info(logger, "Se conecto un cliente!");
+	log_info(logger, "Se conecto un cliente!");
 
 	return socket_cliente;
 }

@@ -32,21 +32,23 @@ int main(int argc, char* argv[]) {
 
     // OBTENCION DEL ARCHIVO DEL PSEUDOCODIGO Y EL TAMANIO DEL PROCESO
     char* config = argv[1];
-    
     char pseudo_path[256];
     strcpy(pseudo_path, "/home/utnso/scripts-pruebas/");
     strcat(pseudo_path, argv[2]);
 
     int tamanio_proceso = atoi(argv[3]);
     //lista_recursos recursos_globales;
-    int sockets[] = {socket_kernel_memoria, socket_kernel_cpu_dispatch, socket_kernel_cpu_interrupt, -1};
 
     // INICIAR CONFIGURACION DE KERNEL
     inicializar_config(config);
     log_info(LOGGER_KERNEL, "Iniciando KERNEL \n");
 
     // INICIAR CONEXIONES
-    iniciar_conexiones();
+    // Iniciar conexiones
+    if (!iniciar_conexiones()) {
+        log_error(LOGGER_KERNEL, "No se pudieron establecer las conexiones necesarias.");
+        return -1;
+    }
 
     // INICIAR LOS SEMAFOROS Y COLAS
     inicializar_kernel();
@@ -55,12 +57,12 @@ int main(int argc, char* argv[]) {
     crear_proceso(pseudo_path, tamanio_proceso, 0);
     intentar_mover_a_execute();
 
-    // NO SE SI HACE FALTA ESTE WHILE, YA QUE CUANDO HACES EL
-    // INTENTAR MOVER EXECUTE, YA EJECUTAS ABSOLUTAMENTE TODO
-    // while(list_size(tabla_procesos) > 0) {
+    // Manejar comunicaciones (cada una en su propio flujo)
+    manejar_comunicaciones_memoria();
+    manejar_comunicaciones_cpu_dispatch();
+    manejar_comunicaciones_cpu_interrupt();
 
-    // }
-    pthread_exit(NULL); // Evita que el hilo principal finalice y permite que los hilos creados sigan ejecutándose
+    int sockets[] = {socket_kernel_memoria, socket_kernel_cpu_dispatch, socket_kernel_cpu_interrupt, -1};
     terminar_programa(CONFIG_KERNEL, LOGGER_KERNEL, sockets);
 
     return 0;
@@ -91,6 +93,194 @@ void inicializar_config(char* arg){
     LOG_LEVEL = config_get_string_value(CONFIG_KERNEL, "LOG_LEVEL");
 }
 
+bool iniciar_conexiones() {
+    // Conectar a Memoria
+    socket_kernel_memoria = crear_conexion(IP_MEMORIA, PUERTO_MEMORIA);
+    if (socket_kernel_memoria < 0) {
+        log_error(LOGGER_KERNEL, "No se pudo conectar con el módulo Memoria");
+        return false;
+    }
+    enviar_handshake(socket_kernel_memoria, HANDSHAKE_kernel);
+
+    // Conectar a CPU Dispatch
+    socket_kernel_cpu_dispatch = crear_conexion(IP_CPU, PUERTO_CPU_DISPATCH);
+    if (socket_kernel_cpu_dispatch < 0) {
+        log_error(LOGGER_KERNEL, "No se pudo conectar con el módulo CPU Dispatch");
+        return false;
+    }
+    enviar_handshake(socket_kernel_cpu_dispatch, HANDSHAKE_dispatch);
+
+    // Conectar a CPU Interrupt
+    socket_kernel_cpu_interrupt = crear_conexion(IP_CPU, PUERTO_CPU_INTERRUPT);
+    if (socket_kernel_cpu_interrupt < 0) {
+        log_error(LOGGER_KERNEL, "No se pudo conectar con el módulo CPU Interrupt");
+        return false;
+    }
+    enviar_handshake(socket_kernel_cpu_interrupt, HANDSHAKE_interrupt);
+
+    log_info(LOGGER_KERNEL, "Todas las conexiones establecidas correctamente.");
+    return true;
+}
+
+// Función genérica para manejar comunicaciones
+void manejar_comunicaciones(int socket, const char* nombre_modulo) {
+    op_code cod;
+    while (1) {
+        ssize_t bytes_recibidos = recv(socket, &cod, sizeof(op_code), MSG_WAITALL);
+        if (bytes_recibidos <= 0) {
+            if (bytes_recibidos == 0) {
+                log_warning(LOGGER_KERNEL, "Socket cerrado por el módulo %s.", nombre_modulo);
+            } else {
+                log_error(LOGGER_KERNEL, "Error al recibir datos desde el módulo %s.", nombre_modulo);
+            }
+            break;
+        }
+
+        log_info(LOGGER_KERNEL, "Código de operación recibido de %s: %d", nombre_modulo, cod);
+        switch (cod) {
+            case HANDSHAKE_memoria:
+            case HANDSHAKE_dispatch:
+            case HANDSHAKE_interrupt:
+                log_info(LOGGER_KERNEL, "Handshake recibido de %s.", nombre_modulo);
+                break;
+
+            case MENSAJE: {
+                char* respuesta = deserializar_mensaje(socket);
+                if (strcmp(respuesta, "OK") == 0) {
+                    log_info(LOGGER_KERNEL, "Mensaje OK recibido de %s.", nombre_modulo);
+                } else {
+                    log_warning(LOGGER_KERNEL, "Mensaje de error recibido de %s.", nombre_modulo);
+                }
+                free(respuesta);
+                break;
+            }
+
+            case DEVOLVER_CONTROL_KERNEL: {
+                if (strcmp(nombre_modulo, "CPU_INTERRUPT") == 0) {
+                    t_tcb* tcb = recibir_hilo(socket);
+                    if (tcb->motivo_desalojo == INTERRUPCION_BLOQUEO) {
+                        list_remove(cola_exec, 0);
+
+                        pthread_mutex_lock(&mutex_cola_ready);
+                        list_add(cola_ready, tcb);
+                        pthread_mutex_unlock(&mutex_cola_ready);
+
+                        intentar_mover_a_execute();
+                    }
+                }
+                break;
+            }
+
+            default:
+                if(strcmp(nombre_modulo, "CPU_DISPATCH") == 0) {
+                    manejar_syscall(socket_kernel_cpu_dispatch);
+                } else {
+                    log_warning(LOGGER_KERNEL, "Operación desconocida recibida desde %s.", nombre_modulo);
+                }
+                break;
+        }
+    }
+    log_info(LOGGER_KERNEL, "Finalizando conexión con el módulo %s.", nombre_modulo);
+    close(socket);
+}
+
+// Llamadas específicas para cada módulo
+void manejar_comunicaciones_memoria() {
+    manejar_comunicaciones(socket_kernel_memoria, "MEMORIA");
+}
+
+void manejar_comunicaciones_cpu_dispatch() {
+    manejar_comunicaciones(socket_kernel_cpu_dispatch, "CPU_DISPATCH");
+}
+
+void manejar_comunicaciones_cpu_interrupt() {
+    manejar_comunicaciones(socket_kernel_cpu_interrupt, "CPU_INTERRUPT");
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/*
 void iniciar_conexiones() {
     // Conexión cliente Memoria
     socket_kernel_memoria = crear_conexion(IP_MEMORIA, PUERTO_MEMORIA);
@@ -173,7 +363,8 @@ int server_escuchar(char *server_name, int server_socket) {
     }
 
     // Este punto no se alcanzará debido al ciclo infinito.
-    //log_warning(LOGGER_KERNEL, "[%s] Server terminado inesperadamente.", server_name);
+    //
+    EL, "[%s] Server terminado inesperadamente.", server_name);
     return -1; // Para mantener compatibilidad, aunque no debería retornar.
 }
 
@@ -195,7 +386,8 @@ void* escuchar_kernel_cpu_dispatch() {
     return NULL;
 }
 
-void* escuchar_kernel_cpu_interrupt() {
+void* 
+() {
     log_info(LOGGER_KERNEL, "Hilo de escucha para CPU Interrupt iniciado.");
     while (server_escuchar("KERNEL-CPU_INTERRUPT", socket_kernel_cpu_interrupt != -1)) {
         //log_info(LOGGER_KERNEL, "Conexión procesada.");
@@ -272,3 +464,4 @@ void* procesar_conexiones(void* void_args) {
     free(args->server_name);
     return NULL;
 }
+*/

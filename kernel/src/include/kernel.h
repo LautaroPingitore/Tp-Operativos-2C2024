@@ -23,14 +23,11 @@ extern int socket_kernel_cpu_interrupt;
 extern lista_recursos recursos_globales;
 
 void inicializar_config(char*);
-void iniciar_conexiones();
-void* escuchar_kernel_memoria();
-void* escuchar_kernel_cpu_dispatch();
-void* escuchar_kernel_cpu_interrupt();
-int server_escuchar(char*, int);
-void* procesar_conexiones(void*);
-void* procesar_conexion_memoria(void*);
-void* procesar_conexiones_cpu(void*);
+bool iniciar_conexiones();
+void manejar_comunicaciones(int, const char*);
+void manejar_comunicaciones_memoria();
+void manejar_comunicaciones_cpu_interrupt();
+void manejar_comunicaciones_cpu_dispatch();
 
 #endif /* KERNEL_H_ */
 
