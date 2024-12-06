@@ -20,14 +20,22 @@ extern char* ALGORITMO_PLANIFICACION;
 extern int socket_kernel_memoria;
 extern int socket_kernel_cpu_dispatch;
 extern int socket_kernel_cpu_interrupt;
+
+extern pthread_t hilo_com_memoria;
+extern pthread_t hilo_com_dispatch;
+extern pthread_t hilo_com_interrupt;
+
 extern lista_recursos recursos_globales;
+extern bool se_pudo_asignar;
+
+extern sem_t sem_process_create;
+extern pthread_mutex_t mutex_process_create;
 
 void inicializar_config(char*);
 bool iniciar_conexiones();
 void manejar_comunicaciones(int, const char*);
-void manejar_comunicaciones_memoria();
-void manejar_comunicaciones_cpu_interrupt();
-void manejar_comunicaciones_cpu_dispatch();
+void* manejar_comunicaciones_memoria(void*);
+void* manejar_comunicaciones_dispatch(void*);
+void* manejar_comunicaciones_interrupt(void*);
 
 #endif /* KERNEL_H_ */
-

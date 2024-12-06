@@ -30,13 +30,13 @@ pthread_t hilo_server_memoria;
 */
 
 
-int main(int argc, char* argv[]) {
-    if(argc != 2) {
-        printf("Uso: %s [archivo_config] \n", argv[0]);
-        return -1;
-    }
+int main(){//int argc, char* argv[]) {
+    // if(argc != 2) {
+    //     printf("Uso: %s [archivo_config] \n", argv[0]);
+    //     return -1;
+    // }
 
-    char* config = argv[1];
+    char* config = "planificacion";//argv[1];
 
     inicializar_config(config);
     inicializar_programa();

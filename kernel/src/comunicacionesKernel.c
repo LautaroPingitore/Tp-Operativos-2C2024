@@ -42,7 +42,7 @@ int respuesta_memoria_creacion(int socket_cliente) {
 
     // Verificamos si la operación es MENSAJE (la respuesta que esperamos de memoria)
     if (paquete->codigo_operacion == MENSAJE) {
-        char* respuesta = (char*)paquete->buffer->stream;
+        char* respuesta = deserializar_mensaje(socket_cliente);
 
         // Comparamos la respuesta con "OK"
         if (strcmp(respuesta, "OK") == 0) {

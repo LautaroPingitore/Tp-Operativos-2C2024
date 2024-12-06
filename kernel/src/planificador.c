@@ -87,6 +87,9 @@ void inicializar_kernel() {
     pthread_mutex_init(&mutex_cola_new, NULL);
     pthread_mutex_init(&mutex_cola_ready, NULL);
     pthread_mutex_init(&mutex_cola_exit, NULL);
+    pthread_mutex_init(&mutex_process_create, NULL);
+
+    sem_init(&sem_process_create, 0, 0);
 }
 
 uint32_t asignar_pid() {
@@ -169,9 +172,6 @@ void crear_proceso(char* path_proceso, int tamanio_proceso, int prioridad){
     log_info(LOGGER_KERNEL, "## (<%d>:<0>) Se crea el proceso - Estado: NEW", pcb->PID);
 
     inicializar_proceso(pcb, path_proceso);
-
-    log_warning(LOGGER_KERNEL, "CHECKPOINT AL FINAL DE CREAR PROCESO");
-
 }
 
 t_contexto_ejecucion* inicializar_contexto() {
@@ -193,14 +193,23 @@ t_contexto_ejecucion* inicializar_contexto() {
 
 // ENVIA EL PROCECSO A MEMORIA E INTENTA INICIALIZARLO
 void inicializar_proceso(t_pcb* pcb, char* path_proceso) {
-    enviar_proceso_memoria(socket_kernel_memoria, pcb, PROCESS_CREATE);
-    int se_pudo_asignar = respuesta_memoria_creacion(socket_kernel_memoria); 
+    enviar_proceso_memoria(socket_kernel_memoria, pcb, PROCESS_CREATE); 
 
-    if (se_pudo_asignar == 1) {
+    sem_wait(&sem_process_create);
+    
+    log_warning(LOGGER_KERNEL, "Paso del Sem");
+
+    pthread_mutex_lock(&mutex_process_create);
+
+    log_warning(LOGGER_KERNEL, "Entro al mutex process create");
+    if (se_pudo_asignar) {
         log_info(LOGGER_KERNEL, "Proceso %d inicializado y movido a READY", pcb->PID);
+        se_pudo_asignar = false;
+        pthread_mutex_unlock(&mutex_process_create);
         mover_a_ready(pcb);
     } else {
         log_warning(LOGGER_KERNEL, "No hay espacio en memoria, se mantiene en new");
+        pthread_mutex_unlock(&mutex_process_create);
     }
 }
 

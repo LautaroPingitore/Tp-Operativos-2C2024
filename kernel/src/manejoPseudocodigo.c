@@ -40,8 +40,6 @@ archivo_pseudocodigo* leer_archivo_pseudocodigo(char* path_proceso) {
             inst->parametro3 = -1;
         }
 
-        log_warning(LOGGER_KERNEL, "SE AGREGO INSTRUCCION");
-
         list_add(archivo->instrucciones, inst);
     }
     
