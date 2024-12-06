@@ -179,7 +179,7 @@ int server_escuchar(char *server_name, int server_socket) {
 
 void* escuchar_kernel_memoria() {
     log_info(LOGGER_KERNEL, "Hilo de escucha para Memoria iniciado.");
-    while (server_escuchar("KERNEL-MEMORIA", socket_kernel_memoria)) {
+    while (server_escuchar("KERNEL-MEMORIA", socket_kernel_memoria) != -1) {
         log_info(LOGGER_KERNEL, "Conexión procesada.");
     }
     log_warning(LOGGER_KERNEL, "El servidor para Kernel terminó inesperadamente.");
@@ -188,7 +188,7 @@ void* escuchar_kernel_memoria() {
 
 void* escuchar_kernel_cpu_dispatch() {
     log_info(LOGGER_KERNEL, "Hilo de escucha para CPU Dispatch iniciado.");
-    while (server_escuchar("KERNEL-CPU_DISPATCH", socket_kernel_cpu_dispatch)) {
+    while (server_escuchar("KERNEL-CPU_DISPATCH", socket_kernel_cpu_dispatch != -1)) {
         log_info(LOGGER_KERNEL, "Conexión procesada.");
     }
     log_warning(LOGGER_KERNEL, "El servidor para CPU Dispatch terminó inesperadamente.");
@@ -197,7 +197,7 @@ void* escuchar_kernel_cpu_dispatch() {
 
 void* escuchar_kernel_cpu_interrupt() {
     log_info(LOGGER_KERNEL, "Hilo de escucha para CPU Interrupt iniciado.");
-    while (server_escuchar("KERNEL-CPU_INTERRUPT", socket_kernel_cpu_interrupt)) {
+    while (server_escuchar("KERNEL-CPU_INTERRUPT", socket_kernel_cpu_interrupt != -1)) {
         log_info(LOGGER_KERNEL, "Conexión procesada.");
     }
     log_warning(LOGGER_KERNEL, "El servidor para CPU Interrupt terminó inesperadamente.");
@@ -220,7 +220,7 @@ void* procesar_conexiones(void* void_args) {
         //     break;
         // }
 
-        if (recv(socket, &cod, sizeof(op_code), 0) != sizeof(op_code))
+        if (recv(socket, &cod, sizeof(op_code), MSG_WAITALL) != sizeof(op_code))
 		{
 			log_debug(LOGGER_KERNEL, "Cliente desconectado.\n");
 			return NULL;

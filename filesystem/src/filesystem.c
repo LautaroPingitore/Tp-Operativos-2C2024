@@ -146,8 +146,10 @@ void* gestionar_conexiones(void* void_args) {
     int socket_cliente = args->fd;
     //char* server_name = args->server_name;
 
+    free(args);
+
     op_code cod;
-    while (1) {
+    while (socket_cliente != -1) {
         // Recibir código de operación
         ssize_t bytes_recibidos = recv(socket_cliente, &cod, sizeof(op_code), MSG_WAITALL);
         if (bytes_recibidos != sizeof(op_code)) {
@@ -190,7 +192,6 @@ void* gestionar_conexiones(void* void_args) {
     log_warning(logger, "Finalizando conexión con el cliente.");
     close(socket_cliente); // Cerrar el socket del cliente
     free(args->server_name);
-    free(args);
 
     return NULL;
 }
@@ -210,7 +211,7 @@ t_archivo_dump* deserializar_archivo_dump(t_buffer* buffer) {
     }
 
     void* stream = buffer->stream;
-    int desplazamiento = 0;
+    int desplazamiento = sizeof(op_code);
 
     uint32_t tamanio_nombre, tamanio_contenido;
 

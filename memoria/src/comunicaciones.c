@@ -36,7 +36,7 @@ t_proceso_memoria* deserializar_proceso(t_buffer* buffer) {
         return NULL;
     }
     void* stream = buffer->stream;
-    int desplazamiento = 0;
+    int desplazamiento = sizeof(op_code);
 
     memcpy(&(proceso->pid), stream + desplazamiento, sizeof(uint32_t));
     desplazamiento += sizeof(uint32_t);
@@ -86,7 +86,7 @@ t_hilo_memoria* deserializar_hilo_memoria(t_buffer* buffer) {
     }
 
     void* stream = buffer->stream;
-    int desplazamiento = 0;
+    int desplazamiento = sizeof(op_code);
     uint32_t tamanio_archivo;
 
     memcpy(&hilo->tid, stream + desplazamiento, sizeof(uint32_t));
@@ -215,7 +215,7 @@ t_pid_tid* deserializar_identificadores(t_buffer* buffer) {
     }
    
    void * stream = buffer->stream; 
-   int desplazamiento = 0;
+   int desplazamiento = sizeof(op_code);
    
    memcpy(&(ident->pid), stream + desplazamiento, sizeof(uint32_t));
    desplazamiento += sizeof(uint32_t);
@@ -353,7 +353,7 @@ t_actualizar_contexto* deserializar_actualizacion(t_buffer* buffer) {
     }
 
     void* stream = buffer->stream;
-    int desplazamiento = 0;
+    int desplazamiento = sizeof(op_code);
 
     memcpy(&(act_cont->pid), stream + desplazamiento, sizeof(uint32_t));
     desplazamiento += sizeof(uint32_t);
@@ -511,7 +511,7 @@ t_write_mem* deserializar_write_mem(t_buffer* buffer) {
     }
 
     void * stream = buffer->stream;
-    int desplazamiento = 0;
+    int desplazamiento = sizeof(op_code);
     
     memcpy(&(wri_mem->pid), stream + desplazamiento, sizeof(uint32_t));
     desplazamiento += sizeof(uint32_t);
@@ -554,7 +554,7 @@ t_read_mem* recibir_read_mem(int socket) {
 t_read_mem* deserializar_read_mem(t_buffer* buffer) {
     t_read_mem* read_mem = malloc(sizeof(t_read_mem));
     void* stream = buffer->stream;
-    int desplazamiento = 0;
+    int desplazamiento = sizeof(op_code);
 
     memcpy(&read_mem->pid, stream + desplazamiento, sizeof(uint32_t));
     desplazamiento += sizeof(uint32_t);
@@ -601,7 +601,7 @@ t_pedido_instruccion* deserializar_pedido_instruccion(t_buffer* buffer) {
     }
     
     void * stream = buffer->stream;
-    int desplazamiento = 0;
+    int desplazamiento = sizeof(op_code);
     
     memcpy(&(ped_inst->pid), stream + desplazamiento, sizeof(uint32_t));
     desplazamiento += sizeof(uint32_t);

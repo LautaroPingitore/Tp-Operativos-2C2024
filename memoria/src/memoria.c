@@ -176,8 +176,10 @@ void* procesar_conexion_memoria(void *void_args){
     int cliente_socket = args->fd;
     char *server_name = args->server_name;
 
+    free(args);
+
     op_code cod;
-    while (1) {
+    while (cliente_socket != -1) {
         // Recibir código de operación
         ssize_t bytes_recibidos = recv(cliente_socket, &cod, sizeof(op_code), MSG_WAITALL);
         if (bytes_recibidos != sizeof(op_code)) {
@@ -193,6 +195,8 @@ void* procesar_conexion_memoria(void *void_args){
 
             case PROCESS_CREATE:
                 t_proceso_memoria* proceso_nuevo = recibir_proceso(cliente_socket);
+
+                log_error(LOGGER_MEMORIA, "%d", proceso_nuevo->limite);
 
                 if(proceso_nuevo == NULL) {
                     enviar_mensaje("ERROR",cliente_socket);
@@ -375,6 +379,6 @@ void* procesar_conexion_memoria(void *void_args){
     log_warning(LOGGER_MEMORIA, "Finalizando conexión con el cliente.");
     close(cliente_socket); // Cerrar el socket del cliente
     free(args->server_name);
-    free(args);
+
     return NULL;
 }

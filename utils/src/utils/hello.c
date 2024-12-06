@@ -15,7 +15,7 @@ t_tcb* deserializar_paquete_tcb(t_buffer* buffer) {
 	}
 
 	void* stream = buffer->stream;
-	int desplazamiento = 0;
+	int desplazamiento = sizeof(op_code);
 
 	memcpy(&tcb->TID, stream + desplazamiento, sizeof(uint32_t));
     desplazamiento += sizeof(uint32_t);
@@ -42,7 +42,7 @@ t_instruccion* deserializar_instruccion(t_buffer* buffer) {
     }
 
 	void* stream = buffer->stream;
-	int desplazamiento = 0;
+	int desplazamiento = sizeof(op_code);
 	uint32_t tam_nom, tam_p1, tam_p2;
 
 	memcpy(&tam_nom, stream + desplazamiento, sizeof(uint32_t));
@@ -323,7 +323,7 @@ void recibir_mensaje(int socket_cliente, t_log *logger)
 void *serializar_paquete(t_paquete *paquete, int bytes)
 {
 	void *magic = malloc(bytes);
-	int desplazamiento = 0;
+	int desplazamiento = sizeof(op_code);
 
 	memcpy(magic + desplazamiento, &(paquete->codigo_operacion), sizeof(int));
 	desplazamiento += sizeof(int);

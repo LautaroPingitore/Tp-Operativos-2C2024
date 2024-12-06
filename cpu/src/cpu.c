@@ -161,7 +161,7 @@ void* procesar_conexion_dispatch(void* void_args) {
     //t_log *logger = args->log;
     int socket = args->fd;
     //char* server_name = args->server_name;
-
+    free(args);
 
     op_code cod;
     while(1) {
@@ -263,7 +263,7 @@ void* procesar_conexion_dispatch(void* void_args) {
     log_warning(LOGGER_CPU, "Finalizando conexión con el cliente.");
     close(socket); // Cerrar el socket del cliente
     free(args->server_name);
-    free(args);
+   
     return NULL;
 }
 
@@ -272,7 +272,7 @@ void* procesar_conexion_interrupt(void* void_args) {
     //t_log *logger = args->log;
     int socket = args->fd;
     //char* server_name = args->server_name;
-    
+    free(args);
     
     op_code cod;
     while(1) {
@@ -312,7 +312,7 @@ void* procesar_conexion_interrupt(void* void_args) {
     log_warning(LOGGER_CPU, "Finalizando conexión con el cliente.");
     close(socket); // Cerrar el socket del cliente 
     free(args->server_name);
-    free(args);
+
     return NULL;
 }
 
