@@ -54,7 +54,7 @@ t_instruccion* deserializar_instruccion(t_buffer* buffer) {
 		free(instruccion);
 		return NULL;
 	}
-	memcpy(&instruccion->nombre, stream + desplazamiento, tam_nom);
+	memcpy(instruccion->nombre, stream + desplazamiento, tam_nom);
 	desplazamiento += tam_nom;
 
 	memcpy(&tam_p1, stream + desplazamiento, sizeof(uint32_t));
@@ -67,7 +67,7 @@ t_instruccion* deserializar_instruccion(t_buffer* buffer) {
 		free(instruccion);
 		return NULL;
 	}
-	memcpy(&instruccion->parametro1, stream + desplazamiento, tam_p1);
+	memcpy(instruccion->parametro1, stream + desplazamiento, tam_p1);
 	desplazamiento += tam_p1;
 
 	memcpy(&tam_p2, stream + desplazamiento, sizeof(uint32_t));
@@ -81,7 +81,7 @@ t_instruccion* deserializar_instruccion(t_buffer* buffer) {
 		free(instruccion);
 		return NULL;
 	}
-	memcpy(&instruccion->parametro2, stream + desplazamiento, tam_p2);
+	memcpy(instruccion->parametro2, stream + desplazamiento, tam_p2);
 	desplazamiento += tam_p2;
 
 	memcpy(&instruccion->parametro3, stream + desplazamiento, sizeof(int));

@@ -182,7 +182,6 @@ void* procesar_conexion_memoria(void*) {
                 break;
 
             case INSTRUCCION:
-                log_warning(LOGGER_CPU, "ENTRO INSTRUCCION");
                 t_instruccion* inst = recibir_instruccion(socket_cpu_memoria);
                 log_warning(LOGGER_CPU, "RECIBIO INST %s", inst->nombre);
                 instruccion_actual = inst;
