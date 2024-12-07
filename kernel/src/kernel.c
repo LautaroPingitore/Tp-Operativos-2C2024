@@ -195,8 +195,8 @@ void manejar_comunicaciones(int socket, const char* nombre_modulo) {
             }
 
             default:
-                if(strcmp(nombre_modulo, "CPU_DISPATCH") == 0) {
-                    manejar_syscall(socket_kernel_cpu_dispatch);
+                if(strcmp(nombre_modulo, "CPU_INTERRUPT") == 0) {
+                    manejar_syscall(socket_kernel_cpu_interrupt);
                 } else {
                     log_warning(LOGGER_KERNEL, "Operación desconocida recibida desde %s.", nombre_modulo);
                 }

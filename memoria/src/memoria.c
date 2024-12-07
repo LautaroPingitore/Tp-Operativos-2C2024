@@ -234,6 +234,7 @@ void* procesar_conexion_memoria(void *void_args){
                 break;
 
             case THREAD_CREATE:
+
                 t_hilo_memoria* hilo_a_crear = recibir_hilo_memoria(cliente_socket);
                 if(!hilo_a_crear) {
                     enviar_mensaje("ERROR", cliente_socket);
@@ -287,7 +288,6 @@ void* procesar_conexion_memoria(void *void_args){
 
             case ACTUALIZAR_CONTEXTO:
                 t_actualizar_contexto* act_cont = recibir_actualizacion(cliente_socket);
-
                 procesar_actualizacion_contexto(cliente_socket, act_cont->pid, act_cont->tid, act_cont->contexto);
                 free(act_cont->contexto);
                 free(act_cont);

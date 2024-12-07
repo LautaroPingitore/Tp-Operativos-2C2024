@@ -5,7 +5,7 @@ int respuesta_memoria = -1;
 void enviar_proceso_memoria(int socket_cliente, t_pcb* pcb, op_code codigo) {
     t_paquete* paquete = crear_paquete_con_codigo_de_operacion(codigo);    
 
-    paquete->buffer->size = sizeof(uint32_t) + sizeof(int) + sizeof(t_contexto_ejecucion);
+    paquete->buffer->size = sizeof(uint32_t) + sizeof(int) + sizeof(t_registros);
     paquete->buffer->stream = malloc(paquete->buffer->size);
     if (paquete->buffer->stream == NULL) {
         log_error(LOGGER_KERNEL, "Error al asignar memoria para el buffer de serialización");
@@ -24,7 +24,7 @@ void enviar_proceso_memoria(int socket_cliente, t_pcb* pcb, op_code codigo) {
     desplazamiento += sizeof(int);
 
     // Serializar el contexto de ejecución
-    memcpy(paquete->buffer->stream + desplazamiento, pcb->CONTEXTO, sizeof(t_contexto_ejecucion));
+    memcpy(paquete->buffer->stream + desplazamiento, pcb->CONTEXTO->registros, sizeof(t_registros));
 
     // Enviar el paquete
     if (enviar_paquete(paquete, socket_cliente) == -1) {

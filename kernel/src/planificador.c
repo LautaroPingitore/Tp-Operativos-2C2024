@@ -213,11 +213,8 @@ void inicializar_proceso(t_pcb* pcb, char* path_proceso) {
 
     sem_wait(&sem_process_create);
     
-    log_warning(LOGGER_KERNEL, "Paso del Sem");
-
     pthread_mutex_lock(&mutex_process_create);
 
-    log_warning(LOGGER_KERNEL, "Entro al mutex process create");
     if (se_pudo_asignar) {
         log_info(LOGGER_KERNEL, "Proceso %d inicializado y movido a READY", pcb->PID);
         se_pudo_asignar = false;

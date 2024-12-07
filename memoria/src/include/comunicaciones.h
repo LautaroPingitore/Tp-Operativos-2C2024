@@ -8,7 +8,6 @@ extern pthread_mutex_t mutex_procesos;
 extern pthread_mutex_t mutex_instrucciones;
 
 t_instruccion* obtener_instruccion(uint32_t, uint32_t);
-t_contexto_ejecucion*  obtener_contexto(uint32_t);
 
 void recibir_log(char [256], int);
 
@@ -16,7 +15,7 @@ typedef struct {
     uint32_t pid;
     uint32_t base;
     uint32_t limite;
-    t_contexto_ejecucion* contexto;
+    t_registros* contexto;
 } t_proceso_memoria;
 
 typedef struct {
@@ -27,7 +26,7 @@ typedef struct {
 
 typedef struct {
     uint32_t pid;
-    t_contexto_ejecucion* contexto;
+    t_registros* contexto;
 } t_contexto_proceso;
 
 typedef struct {
@@ -43,7 +42,7 @@ typedef struct {
 typedef struct {
     uint32_t pid;
     uint32_t tid;
-    t_contexto_ejecucion* contexto;
+    t_registros* contexto;
 } t_actualizar_contexto;
 
 typedef struct {
@@ -72,7 +71,7 @@ int enviar_instruccion(int, t_instruccion*);
 void enviar_valor_leido_cpu(int, uint32_t, uint32_t);
 void procesar_solicitud_contexto(int, uint32_t, uint32_t);
 int enviar_contexto_cpu(t_proceso_memoria*);
-void procesar_actualizacion_contexto(int, uint32_t, uint32_t, t_contexto_ejecucion*);
+void procesar_actualizacion_contexto(int, uint32_t, uint32_t, t_registros*);
 int  mandar_solicitud_dump_memory(char*, char*, uint32_t);
 void liberar_instrucciones(t_list*);
 t_proceso_memoria* obtener_proceso_memoria(uint32_t);
@@ -100,7 +99,7 @@ void eliminar_proceso_de_lista(uint32_t);
 void inicializar_datos();
 //void recibir_creacion_hilo(int);
 //void recibir_finalizacion_hilo(int);
-t_contexto_ejecucion* obtener_contexto(uint32_t);
+t_registros* obtener_contexto(uint32_t);
 void eliminar_instrucciones_hilo(uint32_t);
 int solicitar_archivo_filesystem(uint32_t, uint32_t);
 void recibir_solicitud_instruccion(int);

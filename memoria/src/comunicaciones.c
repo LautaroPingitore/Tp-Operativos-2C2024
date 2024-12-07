@@ -54,7 +54,7 @@ t_proceso_memoria* deserializar_proceso(t_buffer* buffer) {
     desplazamiento += sizeof(uint32_t);
 
 
-    proceso->contexto = malloc(sizeof(t_contexto_ejecucion));
+    proceso->contexto = malloc(sizeof(t_registros));
     if (!proceso->contexto) {
         free(proceso);
         log_error(LOGGER_MEMORIA, "Error al asignar memoria para el contexto.");
@@ -62,7 +62,7 @@ t_proceso_memoria* deserializar_proceso(t_buffer* buffer) {
     }
 
 
-    memcpy(proceso->contexto, buffer->stream + desplazamiento, sizeof(t_contexto_ejecucion));
+    memcpy(proceso->contexto, buffer->stream + desplazamiento, sizeof(t_registros));
 
 
     return proceso;
@@ -186,7 +186,7 @@ void eliminar_espacio_hilo(t_hilo_memoria* hilo) {
 }
 
 
-t_contexto_ejecucion* obtener_contexto(uint32_t pid) {
+t_registros* obtener_contexto(uint32_t pid) {
     for(int i = 0; i < list_size(lista_procesos); i++) {
         t_proceso_memoria* pcb_actual = list_get(lista_procesos, i);
         if(pcb_actual->pid == pid) {
@@ -310,7 +310,7 @@ char* obtener_contenido_proceso(uint32_t pid, uint32_t tid) {
 
 
     // Agregar los registros al contenido
-    t_list* lista_registros = convertir_registros_a_char(pcb->contexto->registros);
+    t_list* lista_registros = convertir_registros_a_char(pcb->contexto);
     if (!lista_registros) {
         free(contenido);
         log_error(LOGGER_MEMORIA, "Error al convertir registros para PID: %d", pid);
@@ -399,29 +399,46 @@ t_actualizar_contexto* deserializar_actualizacion(t_buffer* buffer) {
         return NULL;
     }
 
-
     void* stream = buffer->stream;
     int desplazamiento = 0;
-
 
     memcpy(&(act_cont->pid), stream + desplazamiento, sizeof(uint32_t));
     desplazamiento += sizeof(uint32_t);
 
-
     memcpy(&(act_cont->tid), stream + desplazamiento, sizeof(uint32_t));
     desplazamiento += sizeof(uint32_t);
 
-
-    act_cont->contexto = malloc(sizeof(t_contexto_ejecucion));
+    act_cont->contexto = malloc(sizeof(t_registros));
     if(!act_cont->contexto) {
-        printf("Error al asignar el contexto");
         free(act_cont);
+        log_error(LOGGER_MEMORIA, "Error al asignar espacio a los registros");
         return NULL;
     }
 
+    memcpy(act_cont->contexto, stream + desplazamiento, sizeof(t_registros));
 
-    memcpy(&(act_cont->contexto), stream + desplazamiento, sizeof(t_contexto_ejecucion));
+    // memcpy(&(act_cont->contexto->AX), stream + desplazamiento, sizeof(uint32_t));
+    // desplazamiento += sizeof(uint32_t);
 
+    // memcpy(&(act_cont->contexto->BX), stream + desplazamiento, sizeof(uint32_t));
+    // desplazamiento += sizeof(uint32_t);
+
+    // memcpy(&(act_cont->contexto->CX), stream + desplazamiento, sizeof(uint32_t));
+    // desplazamiento += sizeof(uint32_t);
+
+    // memcpy(&(act_cont->contexto->DX), stream + desplazamiento, sizeof(uint32_t));
+    // desplazamiento += sizeof(uint32_t);
+
+    // memcpy(&(act_cont->contexto->EX), stream + desplazamiento, sizeof(uint32_t));
+    // desplazamiento += sizeof(uint32_t);
+
+    // memcpy(&(act_cont->contexto->FX), stream + desplazamiento, sizeof(uint32_t));
+    // desplazamiento += sizeof(uint32_t);
+
+    // memcpy(&(act_cont->contexto->GX), stream + desplazamiento, sizeof(uint32_t));
+    // desplazamiento += sizeof(uint32_t);
+
+    // memcpy(&(act_cont->contexto->HX), stream + desplazamiento, sizeof(uint32_t));
 
     return act_cont;
 }
@@ -520,35 +537,31 @@ void procesar_solicitud_contexto(int socket_cliente, uint32_t pid, uint32_t tid)
 int enviar_contexto_cpu(t_proceso_memoria* proceso) {
     t_paquete* paquete = crear_paquete_con_codigo_de_operacion(CONTEXTO);
    
-    paquete->buffer->size = sizeof(uint32_t) + sizeof(t_registros) + sizeof(finalizacion_proceso);
+    paquete->buffer->size = sizeof(uint32_t) + sizeof(t_registros);
     paquete->buffer->stream = malloc(paquete->buffer->size);
 
     int desplazamiento = 0;
 
     memcpy(paquete->buffer->stream + desplazamiento, &(proceso->pid), sizeof(uint32_t));
     desplazamiento += sizeof(uint32_t);
-    memcpy(paquete->buffer->stream + desplazamiento, &(proceso->contexto->registros), sizeof(uint32_t)); // el segundo parametro lleva & o no???
-    desplazamiento += sizeof(uint32_t);
-    memcpy(paquete->buffer->stream + desplazamiento, &(proceso->contexto->motivo_finalizacion), sizeof(uint32_t));
-       
+    memcpy(paquete->buffer->stream + desplazamiento, &(proceso->contexto), sizeof(uint32_t)); // el segundo parametro lleva & o no???
+   
     int resultado = enviar_paquete(paquete, socket_memoria_cpu);
     eliminar_paquete(paquete);
     return resultado;
 }
 
 
-void procesar_actualizacion_contexto(int socket_cliente, uint32_t pid, uint32_t tid, t_contexto_ejecucion* nuevo_contexto) {
+void procesar_actualizacion_contexto(int socket_cliente, uint32_t pid, uint32_t tid, t_registros* nuevo_contexto) {
     for (int i = 0; i < list_size(lista_procesos); i++) {
         t_proceso_memoria* proceso = list_get(lista_procesos, i);
-       
         if (proceso->pid == pid) {
-            proceso->contexto = nuevo_contexto;
+            memcpy(proceso->contexto, nuevo_contexto, sizeof(t_registros));
             log_info(LOGGER_MEMORIA, "## Contexto <Actualizado> - (PID:TID) - (<%d>:<%d)", pid, tid);
-            enviar_mensaje("OK", socket_cliente);
+
             return;
         }
     }
-
 
     log_error(LOGGER_MEMORIA, "No se encontró contexto para actualizar en PID: %d, TID: %d", pid, tid);
     enviar_mensaje("ERROR", socket_cliente);

@@ -117,10 +117,10 @@ void pedir_instruccion_memoria(uint32_t pid, uint32_t tid, uint32_t pc, int sock
     eliminar_paquete(paquete);
 }
 
-void enviar_contexto_memoria(uint32_t pid, uint32_t tid, t_registros* registros, uint32_t program_counter, int socket_memoria) {
+void enviar_contexto_memoria(uint32_t pid, uint32_t tid, t_registros* registros, int socket_memoria) {
     t_paquete *paquete = crear_paquete_con_codigo_de_operacion(ACTUALIZAR_CONTEXTO);
 
-    paquete->buffer->size = sizeof(uint32_t) * 3 + sizeof(t_registros);
+    paquete->buffer->size = sizeof(uint32_t) * 2 + sizeof(t_registros);
     paquete->buffer->stream = malloc(paquete->buffer->size);
 
     int desplazamiento = 0;
@@ -129,11 +129,32 @@ void enviar_contexto_memoria(uint32_t pid, uint32_t tid, t_registros* registros,
     desplazamiento += sizeof(uint32_t);
     memcpy(paquete->buffer->stream + desplazamiento, &(tid), sizeof(uint32_t));
     desplazamiento += sizeof(uint32_t);
-    memcpy(paquete->buffer->stream + desplazamiento, &(registros), sizeof(t_registros));
-    desplazamiento += sizeof(t_registros);
-    memcpy(paquete->buffer->stream + desplazamiento, &(program_counter), sizeof(uint32_t));
     
+    memcpy(paquete->buffer->stream + desplazamiento, registros, sizeof(t_registros));
 
+    // memcpy(paquete->buffer->stream + desplazamiento, &(registros->AX), sizeof(uint32_t));
+    // desplazamiento += sizeof(uint32_t);
+
+    // memcpy(paquete->buffer->stream + desplazamiento, &(registros->BX), sizeof(uint32_t));
+    // desplazamiento += sizeof(uint32_t);
+
+    // memcpy(paquete->buffer->stream + desplazamiento, &(registros->CX), sizeof(uint32_t));
+    // desplazamiento += sizeof(uint32_t);
+
+    // memcpy(paquete->buffer->stream + desplazamiento, &(registros->DX), sizeof(uint32_t));
+    // desplazamiento += sizeof(uint32_t);
+
+    // memcpy(paquete->buffer->stream + desplazamiento, &(registros->EX), sizeof(uint32_t));
+    // desplazamiento += sizeof(uint32_t);
+
+    // memcpy(paquete->buffer->stream + desplazamiento, &(registros->FX), sizeof(uint32_t));
+    // desplazamiento += sizeof(uint32_t);
+    
+    // memcpy(paquete->buffer->stream + desplazamiento, &(registros->GX), sizeof(uint32_t));
+    // desplazamiento += sizeof(uint32_t);
+
+    // memcpy(paquete->buffer->stream + desplazamiento, &(registros->HX), sizeof(uint32_t));
+ 
     enviar_paquete(paquete, socket_memoria);
     eliminar_paquete(paquete);
 }
@@ -141,11 +162,11 @@ void enviar_contexto_memoria(uint32_t pid, uint32_t tid, t_registros* registros,
 void enviar_syscall_kernel(t_instruccion* instruccion, op_code syscall) {
     t_paquete* paquete = crear_paquete_con_codigo_de_operacion(syscall);
  
-   uint32_t tamanio_nombre = strlen(instruccion->nombre) + 1;
-   uint32_t tamanio_par1 = strlen(instruccion->parametro1) + 1;
-   uint32_t tamanio_par2 = strlen(instruccion->parametro2) + 1;
+    uint32_t tamanio_nombre = strlen(instruccion->nombre) + 1;
+    uint32_t tamanio_par1 = strlen(instruccion->parametro1) + 1;
+    uint32_t tamanio_par2 = strlen(instruccion->parametro2) + 1;
 
-   paquete->buffer->size = tamanio_nombre + tamanio_par1 + tamanio_par2 + sizeof(int) + sizeof(uint32_t) * 3;
+    paquete->buffer->size = tamanio_nombre + tamanio_par1 + tamanio_par2 + sizeof(int) + sizeof(uint32_t) * 3;
 
     paquete->buffer->stream=malloc(paquete->buffer->size);
     int desplazamiento=0;
