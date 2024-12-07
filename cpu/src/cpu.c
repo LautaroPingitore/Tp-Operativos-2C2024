@@ -16,6 +16,9 @@ int socket_cpu_dispatch_kernel;
 int socket_cpu_interrupt_kernel;
 int socket_cpu_memoria;
 
+t_list* hilos_ejecutados;
+t_list* procesos_ejecutados;
+
 pthread_t hilo_servidor_dispatch;
 pthread_t hilo_servidor_interrupt;
 pthread_t hilo_com_memoria;
@@ -33,7 +36,7 @@ int main() {
     inicializar_config("../configs/cpu");
     log_info(LOGGER_CPU, "Iniciando CPU");
 
-    iniciar_semaforos();
+    inicializar_cpu();
     iniciar_conexiones();
 
     pthread_exit(NULL); // Evita que el hilo principal finalice y permite que los hilos creados sigan ejecutándose
@@ -326,8 +329,16 @@ void* procesar_conexion_cpu(void* void_args) {
                 break;
 
             case HILO:
-                hilo_actual = recibir_hilo(socket);
-                log_warning(LOGGER_CPU, "HILO %d RECIBIDO", hilo_actual->TID);
+                t_tcb* hilo_recibido = recibir_hilo(socket);
+
+                t_tcb* hilo_lista = esta_hilo_guardado(hilo_recibido);
+                if(hilo_lista == NULL) {
+                    list_add(hilos_ejecutados, hilo_recibido);
+                    hilo_actual = hilo_recibido;
+                } else {
+                    hilo_actual = hilo_lista;
+                }
+
                 sem_wait(&sem_proceso_actual);
 
                 pthread_mutex_lock(&mutex_syscall);
@@ -338,8 +349,16 @@ void* procesar_conexion_cpu(void* void_args) {
                 break;
 
             case SOLICITUD_PROCESO:
-                pcb_actual = recibir_proceso(socket);
-                log_warning(LOGGER_CPU, "PROCESO %d RECIBIDO", pcb_actual->PID);
+                t_proceso_cpu* proceso_recibido = recibir_proceso(socket);
+
+                t_proceso_cpu* proceso_lista = esta_proceso_guardado(proceso_recibido);
+                if(proceso_lista == NULL) {
+                    list_add(procesos_ejecutados, proceso_recibido);
+                    pcb_actual = proceso_recibido;
+                } else {
+                    pcb_actual = proceso_lista;
+                }
+
                 sem_post(&sem_proceso_actual);
                 break;
 
@@ -364,7 +383,7 @@ void* procesar_conexion_cpu(void* void_args) {
     return NULL;
 }
 
-void iniciar_semaforos() {
+void inicializar_cpu() {
     sem_init(&sem_base, 0, 0);
     sem_init(&sem_limite, 0, 0);
     sem_init(&sem_valor_memoria, 0, 0);
@@ -372,6 +391,9 @@ void iniciar_semaforos() {
     sem_init(&sem_proceso_actual, 0, 0);
     sem_init(&sem_mutex_globales, 0, 1);
     pthread_mutex_init(&mutex_syscall, NULL);
+
+    hilos_ejecutados = list_create();
+    procesos_ejecutados = list_create();
 }
 
 void destruir_semaforos() {

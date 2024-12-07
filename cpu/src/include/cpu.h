@@ -20,6 +20,9 @@ extern uint32_t limite_pedido;
 extern uint32_t valor_memoria;
 extern t_instruccion* instruccion_actual;
 
+extern t_list* hilos_ejecutados;
+extern t_list* procesos_ejecutados;
+
 extern sem_t sem_base; 
 extern sem_t sem_limite;
 extern sem_t sem_valor_memoria;
@@ -44,8 +47,7 @@ void* procesar_conexion_cpu_interrupt(void*);
 void* procesar_conexion_cpu_dispatch(void*);
 void* procesar_conexion_cpu(void*);
 
-
-void iniciar_semaforos();
+void inicializar_cpu();
 void destruir_semaforos();
 
 #endif /* CPU_H_ */

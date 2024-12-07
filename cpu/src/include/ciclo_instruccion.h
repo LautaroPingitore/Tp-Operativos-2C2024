@@ -51,4 +51,8 @@ void liberar_instruccion(t_instruccion*);
 
 void actualizar_contexto_memoria();
 
+t_tcb* esta_hilo_guardado(t_tcb*);
+t_proceso_cpu* esta_proceso_guardado(t_proceso_cpu*);
+void actualizar_listas_cpu(t_proceso_cpu* pcb, t_tcb*);
+
 #endif //CICLO_INSTRUCCION_H_

@@ -241,6 +241,7 @@ void manejar_comunicaciones(int socket, const char* nombre_modulo) {
                 uint32_t tid_esperado = atoi(inst_tj->parametro1);
                 log_syscall("THREAD_JOIN", hilo_tj);
                 syscall_thread_join(hilo_tj->PID_PADRE, hilo_tj->TID, tid_esperado);
+                intentar_mover_a_execute();
                 break;
             case THREAD_CANCEL:
                 t_tcb* hilo_tcl = list_remove(cola_exec, 0);
@@ -303,12 +304,7 @@ void manejar_comunicaciones(int socket, const char* nombre_modulo) {
                 break;
 
             default:
-                // if(strcmp(nombre_modulo, "CPU_INTERRUPT") == 0) {
-                //     log_warning(LOGGER_KERNEL, "A PUNTO DE MANEJAR LAS SYSCALSS");
-                //     manejar_syscall(socket_kernel_cpu_interrupt, cod);
-                // } else {
-                    log_warning(LOGGER_KERNEL, "Operación desconocida recibida desde %s.", nombre_modulo);
-                //}
+                log_warning(LOGGER_KERNEL, "Operación desconocida recibida desde %s.", nombre_modulo);
                 break;
         }
     }

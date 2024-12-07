@@ -304,10 +304,10 @@ void intentar_inicializar_proceso_de_new() {
 // MUEVE UN PROCESO A EXIT LIBERANDO SUS RECURSOS E INTENTA INICIALIZAR OTRO A NEW
 void process_exit(t_pcb* pcb) {
     mover_a_exit(pcb);
-    liberar_recursos_proceso(pcb);
     enviar_proceso_memoria(socket_kernel_memoria, pcb, PROCESS_EXIT);
-    eliminar_path(pcb->PID);
     eliminar_pcb_lista(tabla_procesos, pcb->PID);
+    eliminar_path(pcb->PID);
+    liberar_recursos_proceso(pcb);
     intentar_inicializar_proceso_de_new();
 }
 
@@ -319,10 +319,10 @@ void liberar_recursos_proceso(t_pcb* pcb) {
         list_destroy_and_destroy_elements(pcb->MUTEXS, free);
     }
 
+    log_info(LOGGER_KERNEL, "Recursos del proceso %d liberados.", pcb->PID);
+
     // Liberar PCB
     free(pcb);
-
-    log_info(LOGGER_KERNEL, "Recursos del proceso %d liberados.", pcb->PID);
 }
 
 // MANEJO DE HILOS ==============================
@@ -372,6 +372,11 @@ void thread_join(t_pcb* pcb, uint32_t tid_actual, uint32_t tid_esperado) {
     // VE SI EL HILO ESTA EJECUTANDOSE O EN READY, EN DICHO CASO BLOQUEA EL HILO ACTUAL
     if (tcb_esperado->ESTADO == EXIT) {
         log_info(LOGGER_KERNEL, "El hilo %d ya terminado, no es necesario hacer el join", tid_esperado);
+
+        pthread_mutex_lock(&mutex_cola_ready);
+        list_add(cola_ready, tcb_actual);
+        pthread_mutex_unlock(&mutex_cola_ready);
+
         return;
     }
 
@@ -485,11 +490,15 @@ void thread_exit(t_pcb* pcb, uint32_t tid) {
     // MARCA EL HILO COMO FINALIZADO
     tcb->ESTADO = EXIT;
     log_info(LOGGER_KERNEL, "(<%d>:<%d>) Finaliza el Hilo", tcb->PID_PADRE, tcb->TID);
-    liberar_recursos_hilo(pcb, tcb);
 
-    if(list_size(pcb->TIDS) == 0) {
-        process_exit(pcb);
-    }
+    // ESTO SE TENDIRA QUE LIBERAR CUANDO EL PROCESO TERMINA
+    // NO CUANDO EL HILO, PORQUE SI NO TE VA A DAR PROBLEMAS
+    // EN LOS JOIN O EN ALGUNOS MUTEXS
+    // liberar_recursos_hilo(pcb, tcb);
+
+    // if(list_size(pcb->TIDS) == 0) {
+    //     process_exit(pcb);
+    // }
 }
 
 // A CHEQUEAR
@@ -499,6 +508,7 @@ void intentar_mover_a_execute() {
 
     if (list_is_empty(cola_ready)) {
         log_info(LOGGER_KERNEL, "No hay procesos en READY para mover a EXECUTE");
+        log_info(LOGGER_KERNEL, "Se termina la ejecucion del programa");
         pthread_mutex_unlock(&mutex_cola_ready);
         return;
     }

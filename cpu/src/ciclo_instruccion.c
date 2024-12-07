@@ -38,6 +38,7 @@ void ejecutar_ciclo_instruccion() {
 
         pthread_mutex_lock(&mutex_syscall);
         if(hay_syscall) {
+            actualizar_listas_cpu(pcb_actual, hilo_actual);
             pthread_mutex_unlock(&mutex_syscall);
             return;
         }
@@ -263,6 +264,7 @@ void check_interrupt() {
     //recibir_interrupcion(socket_cpu_interrupt_kernel);
     if(hay_interrupcion) {
         log_info(LOGGER_CPU, "## Llega interrupción al puerto Interrupt");
+        actualizar_listas_cpu(pcb_actual, hilo_actual);
         actualizar_contexto_memoria();
         devolver_control_al_kernel();
     }
@@ -296,4 +298,41 @@ void actualizar_contexto_memoria() {
     // A través de la memoria se actualizaría el PCB
     enviar_contexto_memoria(hilo_actual->PID_PADRE, hilo_actual->TID, pcb_actual->REGISTROS, socket_cpu_memoria);
     log_info(LOGGER_CPU, "## TID <%d> - Actualizo Contexto Ejecucion", hilo_actual->TID);
+}
+
+
+t_tcb* esta_hilo_guardado(t_tcb* tcb) {
+    for(int i=0; i < list_size(hilos_ejecutados); i++) {
+        t_tcb* tcb_act = list_get(hilos_ejecutados, i);
+        if(tcb->TID == tcb_act->TID) {
+            return tcb_act;
+        }
+    }
+    return NULL;
+}
+
+t_proceso_cpu* esta_proceso_guardado(t_proceso_cpu* pcb) {
+    for(int i=0; i < list_size(procesos_ejecutados); i++) {
+        t_proceso_cpu* pcb_act = list_get(procesos_ejecutados, i);
+        if(pcb->PID == pcb_act->PID) {
+            return pcb_act;
+        }
+    }
+    return NULL;
+}
+
+void actualizar_listas_cpu(t_proceso_cpu* pcb, t_tcb* tcb) {
+    for(int i=0; i < list_size(procesos_ejecutados); i++) {
+        t_proceso_cpu* pcb_act = list_get(procesos_ejecutados, i);
+        if(pcb->PID == pcb_act->PID) {
+            list_replace(procesos_ejecutados, i, pcb);
+        }
+    }
+
+    for(int j=0; j < list_size(hilos_ejecutados); j++) {
+        t_tcb* tcb_act = list_get(hilos_ejecutados, j);
+        if(tcb->TID == tcb_act->TID) {
+            list_replace(hilos_ejecutados, j, tcb);
+        }
+    }
 }
