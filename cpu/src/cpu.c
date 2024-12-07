@@ -140,8 +140,6 @@ int server_escuchar(char *server_name, int server_socket, pthread_t hilo_servido
         args->fd = cliente_socket;
         args->server_name = strdup(server_name);
 
-        log_error(LOGGER_CPU, "EL SOCKET DEL SERVER %s ES %d", args->server_name, args->fd);
-
         pthread_create(&hilo_servidor, NULL, procesar_conexion_cpu, (void*) args);
         pthread_detach(hilo_servidor);
     }
@@ -329,12 +327,19 @@ void* procesar_conexion_cpu(void* void_args) {
 
             case HILO:
                 hilo_actual = recibir_hilo(socket);
+                log_warning(LOGGER_CPU, "HILO %d RECIBIDO", hilo_actual->TID);
                 sem_wait(&sem_proceso_actual);
+
+                pthread_mutex_lock(&mutex_syscall);
+                hay_syscall = false;
+                pthread_mutex_unlock(&mutex_syscall);
+                
                 ejecutar_ciclo_instruccion();
                 break;
 
             case SOLICITUD_PROCESO:
                 pcb_actual = recibir_proceso(socket);
+                log_warning(LOGGER_CPU, "PROCESO %d RECIBIDO", pcb_actual->PID);
                 sem_post(&sem_proceso_actual);
                 break;
 
@@ -366,6 +371,7 @@ void iniciar_semaforos() {
     sem_init(&sem_instruccion, 0, 0);
     sem_init(&sem_proceso_actual, 0, 0);
     sem_init(&sem_mutex_globales, 0, 1);
+    pthread_mutex_init(&mutex_syscall, NULL);
 }
 
 void destruir_semaforos() {

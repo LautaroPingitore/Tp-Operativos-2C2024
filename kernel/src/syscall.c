@@ -1,7 +1,7 @@
 #include "include/gestor.h"
 
 void syscall_process_create(t_tcb* hilo_actual, char* path_proceso, int tamanio_proceso, int prioridad) {
-    if (path_proceso == NULL || tamanio_proceso <= 0 || prioridad < 0) {
+    if (!path_proceso || tamanio_proceso <= 0 || prioridad < 0) {
         log_error(LOGGER_KERNEL, "Syscall PROCESS_CREATE: Argumentos inválidos");
         return;
     }
@@ -14,7 +14,7 @@ void syscall_process_create(t_tcb* hilo_actual, char* path_proceso, int tamanio_
 }
 
 void syscall_process_exit(uint32_t pid) {
-    if (!pid) {
+    if (pid < 0) {
         log_error(LOGGER_KERNEL, "Syscall PROCESS_EXIT: Argumento PCB nulo");
         return;
     }
@@ -25,7 +25,7 @@ void syscall_process_exit(uint32_t pid) {
 
 
 void syscall_thread_create(t_tcb* hilo_actual, uint32_t pid, char* archivo_pseudocodigo, int prioridad){
-    if (!pid || !archivo_pseudocodigo || prioridad < 0) {
+    if (pid < 0 || !archivo_pseudocodigo || prioridad < 0) {
         log_error(LOGGER_KERNEL, "Syscall THREAD_CREATE: Argumentos inválidos");
         return;
     }
@@ -41,7 +41,7 @@ void syscall_thread_create(t_tcb* hilo_actual, uint32_t pid, char* archivo_pseud
 }
 
 void syscall_thread_join(uint32_t pid, uint32_t tid_actual, uint32_t tid_esperado) {
-    if (!pid) {
+    if (pid < 0) {
         log_error(LOGGER_KERNEL, "Syscall THREAD_JOIN: PCB nulo");
         return;
     }
@@ -54,7 +54,7 @@ void syscall_thread_join(uint32_t pid, uint32_t tid_actual, uint32_t tid_esperad
 }
 
 void syscall_thread_cancel(uint32_t pid, uint32_t tid) {
-    if (!pid) {
+    if (pid < 0) {
         log_error(LOGGER_KERNEL, "Syscall THREAD_CANCEL: PCB nulo");
         return;
     }
@@ -66,7 +66,7 @@ void syscall_thread_cancel(uint32_t pid, uint32_t tid) {
 }
 
 void syscall_thread_exit(uint32_t pid, uint32_t tid) {
-    if (!pid) {
+    if (pid < 0) {
         log_error(LOGGER_KERNEL, "Syscall THREAD_EXIT: PCB nulo");
         return;
     }
@@ -197,7 +197,7 @@ void syscall_dump_memory(uint32_t pid, uint32_t tid) {
 void syscall_io(uint32_t pid, uint32_t tid, int milisegundos) {
     t_pcb* pcb =obtener_pcb_padre_de_hilo(pid);
 
-    if (pcb == NULL || milisegundos <= 0) {
+    if (pcb < 0 || milisegundos <= 0) {
         log_error(LOGGER_KERNEL, "Syscall IO: Argumentos inválidos");
         return;
     }

@@ -1,6 +1,9 @@
 #ifndef CICLO_INSTRUCCION_H_
 #define CICLO_INSTRUCCION_H_
 
+extern pthread_mutex_t mutex_syscall;
+extern bool hay_syscall;
+
 typedef struct {
     uint32_t PID;
     t_registros* REGISTROS;

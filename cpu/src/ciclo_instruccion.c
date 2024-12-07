@@ -3,10 +3,13 @@
 // VARIABLES GLOBALES
 t_proceso_cpu* pcb_actual = NULL;
 t_tcb* hilo_actual = NULL;
+bool hay_syscall = false;
+
+pthread_mutex_t mutex_syscall;
 
 void ejecutar_ciclo_instruccion() {
 
-    while (true) {
+    while (1) {
 
         if (!hilo_actual) {
             log_error(LOGGER_CPU, "No hay Hilo actual. Terminando ciclo de instrucción.");
@@ -19,8 +22,6 @@ void ejecutar_ciclo_instruccion() {
         }
 
         t_instruccion *instruccion = fetch(hilo_actual->PID_PADRE, hilo_actual->TID, hilo_actual->PC);
-
-        log_warning(LOGGER_CPU, "Instruccion %s %s %s %d", instruccion->nombre, instruccion->parametro1, instruccion->parametro2, instruccion->parametro3);
         
         if (!instruccion) {
             log_error(LOGGER_CPU, "Error al obtener la instrucción. Terminando ciclo.");
@@ -34,6 +35,13 @@ void ejecutar_ciclo_instruccion() {
         check_interrupt();
 
         liberar_instruccion(instruccion);
+
+        pthread_mutex_lock(&mutex_syscall);
+        if(hay_syscall) {
+            pthread_mutex_unlock(&mutex_syscall);
+            return;
+        }
+        pthread_mutex_unlock(&mutex_syscall);
     }
 }
 
@@ -134,56 +142,112 @@ void execute(t_instruccion *instruccion, int socket, t_tcb* tcb) {
         case INST_DUMP_MEMORY:
             loguear_y_sumar_pc(instruccion);
             actualizar_contexto_memoria();
+
+            pthread_mutex_lock(&mutex_syscall);
+            hay_syscall = true;
+            pthread_mutex_unlock(&mutex_syscall);
+
             enviar_syscall_kernel(instruccion, DUMP_MEMORY);
             break;
         case INST_IO:
             loguear_y_sumar_pc(instruccion);
             actualizar_contexto_memoria();
+
+            pthread_mutex_lock(&mutex_syscall);
+            hay_syscall = true;
+            pthread_mutex_unlock(&mutex_syscall);
+            
             enviar_syscall_kernel(instruccion, IO);
             break;
         case INST_PROCESS_CREATE:
             loguear_y_sumar_pc(instruccion);
             actualizar_contexto_memoria();
+            
+            pthread_mutex_lock(&mutex_syscall);
+            hay_syscall = true;
+            pthread_mutex_unlock(&mutex_syscall);
+            
             enviar_syscall_kernel(instruccion, PROCESS_CREATE);
             break;
         case INST_THREAD_CREATE:
             loguear_y_sumar_pc(instruccion);
             actualizar_contexto_memoria();
+
+            pthread_mutex_lock(&mutex_syscall);
+            hay_syscall = true;
+            pthread_mutex_unlock(&mutex_syscall);
+            
             enviar_syscall_kernel(instruccion, THREAD_CREATE);
             break;
         case INST_THREAD_JOIN:
             loguear_y_sumar_pc(instruccion);
             actualizar_contexto_memoria();
+            
+            pthread_mutex_lock(&mutex_syscall);
+            hay_syscall = true;
+            pthread_mutex_unlock(&mutex_syscall);
+
+            
             enviar_syscall_kernel(instruccion, THREAD_JOIN);
             break;
         case INST_THREAD_CANCEL:
             loguear_y_sumar_pc(instruccion);
             actualizar_contexto_memoria();
+
+            pthread_mutex_lock(&mutex_syscall);
+            hay_syscall = true;
+            pthread_mutex_unlock(&mutex_syscall);
+
             enviar_syscall_kernel(instruccion, THREAD_CANCEL);
             break;
         case INST_MUTEX_CREATE:
             loguear_y_sumar_pc(instruccion);
             actualizar_contexto_memoria();
+            
+            pthread_mutex_lock(&mutex_syscall);
+            hay_syscall = true;
+            pthread_mutex_unlock(&mutex_syscall);
+            
             enviar_syscall_kernel(instruccion, MUTEX_CREATE);
             break;
         case INST_MUTEX_LOCK:
             loguear_y_sumar_pc(instruccion);
             actualizar_contexto_memoria();
+            
+            pthread_mutex_lock(&mutex_syscall);
+            hay_syscall = true;
+            pthread_mutex_unlock(&mutex_syscall);
+            
             enviar_syscall_kernel(instruccion, MUTEX_LOCK);
             break;
         case INST_MUTEX_UNLOCK:
             loguear_y_sumar_pc(instruccion);
             actualizar_contexto_memoria();
+            
+            pthread_mutex_lock(&mutex_syscall);
+            hay_syscall = true;
+            pthread_mutex_unlock(&mutex_syscall);
+            
             enviar_syscall_kernel(instruccion, MUTEX_UNLOCK);
             break;
         case INST_THREAD_EXIT:
             loguear_y_sumar_pc(instruccion);
             actualizar_contexto_memoria();
+            
+            pthread_mutex_lock(&mutex_syscall);
+            hay_syscall = true;
+            pthread_mutex_unlock(&mutex_syscall);
+            
             enviar_syscall_kernel(instruccion, THREAD_EXIT);
             break;
         case INST_PROCESS_EXIT:
             loguear_y_sumar_pc(instruccion);
             actualizar_contexto_memoria();
+            
+            pthread_mutex_lock(&mutex_syscall);
+            hay_syscall = true;
+            pthread_mutex_unlock(&mutex_syscall);
+
             enviar_syscall_kernel(instruccion, PROCESS_EXIT);
             break;
         default:
