@@ -60,7 +60,7 @@ void thread_create(t_pcb*, char*, int);
 void thread_join(t_pcb*, uint32_t, uint32_t);
 t_tcb* buscar_hilo_por_tid(t_pcb*, uint32_t);
 void thread_cancel(t_pcb*, uint32_t);
-void liberar_recursos_hilo(t_tcb*);
+void liberar_recursos_hilo(t_pcb*, t_tcb*);
 void thread_exit(t_pcb*, uint32_t);
 void intentar_mover_a_execute();
 

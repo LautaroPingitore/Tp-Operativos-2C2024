@@ -255,7 +255,7 @@ void manejar_comunicaciones(int socket, const char* nombre_modulo) {
                 t_tcb* hilo_te = list_remove(cola_exec, 0);
                 cpu_libre = true;
                 t_instruccion* inst_te = recibir_instruccion(socket);
-                log_syscall("THREAD_CANCEL", hilo_te);
+                log_syscall("THREAD_EXIT", hilo_te);
                 syscall_thread_exit(hilo_te->PID_PADRE, hilo_te->TID);
                 intentar_mover_a_execute();
                 free(inst_te);

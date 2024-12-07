@@ -334,7 +334,7 @@ void thread_create(t_pcb *pcb, char* archivo_pseudocodigo, int prioridad) {
 
     // CREA EL NUEVO HILO
     t_tcb* nuevo_tcb = crear_tcb(pcb->PID, nuevo_tid, archivo_pseudocodigo, prioridad, NEW);
-    list_add(pcb->TIDS, &nuevo_tid);
+    list_add(pcb->TIDS, nuevo_tcb);
 
     // CARGA PSEUDOGODIO A EJECUTAR
     nuevo_tcb->archivo = archivo_pseudocodigo;
@@ -453,7 +453,7 @@ void thread_cancel(t_pcb* pcb, uint32_t tid) {
 
     // CAMBIA EL ESTADO DEL TCB Y LIBERA LOS RECURSOS
     tcb->ESTADO = EXIT;
-    liberar_recursos_hilo(tcb);
+    liberar_recursos_hilo(pcb,tcb);
     log_info(LOGGER_KERNEL, "Hilo %d cancelado en el proceso %d", tid, pcb->PID);
 
     if(list_size(pcb->TIDS) == 0) {
@@ -461,10 +461,14 @@ void thread_cancel(t_pcb* pcb, uint32_t tid) {
     }
 }
 
-void liberar_recursos_hilo(t_tcb* tcb) {
-    // REMUEVE EL HILO EJECUTANDOSE
-    list_remove(cola_exec, 0);
-
+void liberar_recursos_hilo(t_pcb* pcb, t_tcb* tcb) {
+    for(int i=0; i < list_size(pcb->TIDS); i++) {
+        t_tcb* act = list_get(pcb->TIDS, i);
+        if(act->TID == tcb->TID) {
+            list_remove(pcb->TIDS, i);
+            break;
+        }
+    }
     free(tcb);
 }
 
@@ -480,8 +484,8 @@ void thread_exit(t_pcb* pcb, uint32_t tid) {
 
     // MARCA EL HILO COMO FINALIZADO
     tcb->ESTADO = EXIT;
-    liberar_recursos_hilo(tcb);
     log_info(LOGGER_KERNEL, "(<%d>:<%d>) Finaliza el Hilo", tcb->PID_PADRE, tcb->TID);
+    liberar_recursos_hilo(pcb, tcb);
 
     if(list_size(pcb->TIDS) == 0) {
         process_exit(pcb);
