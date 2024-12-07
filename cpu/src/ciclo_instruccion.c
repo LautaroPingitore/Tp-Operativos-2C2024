@@ -18,7 +18,9 @@ void ejecutar_ciclo_instruccion() {
             break;
         }
 
-        t_instruccion *instruccion = fetch(hilo_actual->TID, hilo_actual->PC);
+        t_instruccion *instruccion = fetch(hilo_actual->PID_PADRE, hilo_actual->TID, hilo_actual->PC);
+
+        log_warning(LOGGER_CPU, "Instruccion %s %s %s %d", instruccion->nombre, instruccion->parametro1, instruccion->parametro2, instruccion->parametro3);
         
         if (!instruccion) {
             log_error(LOGGER_CPU, "Error al obtener la instrucción. Terminando ciclo.");
@@ -27,23 +29,17 @@ void ejecutar_ciclo_instruccion() {
 
         // Aquí se llama a decode, pero por simplicidad se omite en este ejemplo
         execute(instruccion, socket_cpu_dispatch_kernel, hilo_actual);
-
-        log_warning(LOGGER_CPU, "TRMINO LA EJECUCION");
         
         // Verifica si se necesita realizar un check_interrupt
         check_interrupt();
 
-        log_warning(LOGGER_CPU, "TERMINO EL INTERRUPT");
-
         liberar_instruccion(instruccion);
-
-        log_warning(LOGGER_CPU, "LIBERO LA INSTRUCCION");
     }
 }
 
 // RECIBE LA PROXIMA EJECUCION A REALIZAR OBTENIDA DEL MODULO MEMORIA
-t_instruccion *fetch(uint32_t tid, uint32_t pc) {
-    pedir_instruccion_memoria(tid, pc, socket_cpu_memoria);
+t_instruccion *fetch(uint32_t pid, uint32_t tid, uint32_t pc) {
+    pedir_instruccion_memoria(pid, tid, pc, socket_cpu_memoria);
     t_instruccion* inst = malloc(sizeof(t_instruccion));
 
     sem_wait(&sem_instruccion);
@@ -235,6 +231,6 @@ void actualizar_contexto_memoria() {
     log_info(LOGGER_CPU, "## TID <%d> - Actualizo Contexto Ejecucion", hilo_actual->TID);
     // Enviar los registros y el program counter a memoria
     // A través de la memoria se actualizaría el PCB
-    enviar_contexto_memoria(hilo_actual->PID_PADRE, hilo_actual->TID, pcb_actual->CONTEXTO->registros, hilo_actual->PC, socket_cpu_memoria);
+    enviar_contexto_memoria(hilo_actual->PID_PADRE, hilo_actual->TID, pcb_actual->REGISTROS, hilo_actual->PC, socket_cpu_memoria);
 
 }

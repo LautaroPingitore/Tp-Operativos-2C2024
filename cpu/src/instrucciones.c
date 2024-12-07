@@ -14,7 +14,7 @@ bool es_numerico(const char* str) {
 
 // Obtener puntero al registro basado en su nombre
 uint32_t* obtener_registro(char* registro){
-    t_registros* regs = pcb_actual->CONTEXTO->registros;
+    t_registros* regs = pcb_actual->REGISTROS;
 
     if (strcmp(registro, "AX") == 0) return &regs->AX;
     if (strcmp(registro, "BX") == 0) return &regs->BX;
@@ -31,7 +31,7 @@ uint32_t* obtener_registro(char* registro){
 void set_registro(char* registro, char *valor) {
     uint32_t *reg = obtener_registro(registro);
 
-    if (!reg) {
+    if (reg == NULL) {
         log_warning(LOGGER_CPU, "Error: Registro invalido en set_registros.");
         return;
     }

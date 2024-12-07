@@ -143,7 +143,7 @@ typedef struct {
 } t_registros;
 
 typedef struct {
-    t_registros *registros;
+    t_registros* registros;
     finalizacion_proceso motivo_finalizacion;
 } t_contexto_ejecucion;
 

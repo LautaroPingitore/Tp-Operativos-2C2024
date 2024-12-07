@@ -3,7 +3,7 @@
 
 typedef struct {
     uint32_t PID;
-    t_contexto_ejecucion* CONTEXTO;
+    t_registros* REGISTROS;
 } t_proceso_cpu;
 
 extern t_proceso_cpu* pcb_actual;
@@ -37,7 +37,7 @@ typedef enum {
 } nombre_instruccion;
 
 void ejecutar_ciclo_instruccion();
-t_instruccion *fetch(uint32_t, uint32_t);
+t_instruccion *fetch(uint32_t, uint32_t, uint32_t);
 void execute(t_instruccion *, int, t_tcb*);
 void check_interrupt();
 

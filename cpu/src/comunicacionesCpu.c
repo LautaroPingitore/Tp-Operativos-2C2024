@@ -41,13 +41,13 @@ t_proceso_cpu* deserializar_proceso(t_buffer* buffer) {
     memcpy(&pcb->PID, stream + desplazamiento, sizeof(uint32_t));
     desplazamiento += sizeof(uint32_t);
 
-    pcb->CONTEXTO = malloc(sizeof(t_contexto_ejecucion));
-    if(!pcb->CONTEXTO) {
-        printf("Error al crear el contexto");
+    pcb->REGISTROS = malloc(sizeof(t_registros));
+    if(!pcb->REGISTROS) {
+        printf("Error al crear los registros");
         free(pcb);
         return NULL;
     }
-    memcpy(&pcb->CONTEXTO, stream + desplazamiento, sizeof(t_contexto_ejecucion));
+    memcpy((pcb->REGISTROS), stream + desplazamiento, sizeof(t_registros));
 
     return pcb;
 }
@@ -99,14 +99,16 @@ bool deserializar_interrupcion(void* stream, int size, int quantum, bool interru
     return true;
 }
 
-void pedir_instruccion_memoria(uint32_t tid, uint32_t pc, int socket) {
+void pedir_instruccion_memoria(uint32_t pid, uint32_t tid, uint32_t pc, int socket) {
     t_paquete *paquete = crear_paquete_con_codigo_de_operacion(PEDIDO_INSTRUCCION);
     
-    paquete->buffer->size = sizeof(uint32_t) * 2;
+    paquete->buffer->size = sizeof(uint32_t) * 3;
     paquete->buffer->stream = malloc(paquete->buffer->size);
 
     int desplazamiento = 0;
 
+    memcpy(paquete->buffer->stream + desplazamiento, &(pid), sizeof(uint32_t));
+    desplazamiento += sizeof(uint32_t);
     memcpy(paquete->buffer->stream + desplazamiento, &(tid), sizeof(uint32_t));
     desplazamiento += sizeof(uint32_t);
     memcpy(paquete->buffer->stream + desplazamiento, &(pc), sizeof(uint32_t));

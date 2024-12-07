@@ -40,13 +40,13 @@ void enviar_proceso_memoria(int socket_cliente, t_pcb* pcb, op_code codigo) {
 void enviar_proceso_cpu(int socket, t_pcb* pcb) {
     t_paquete* paquete = crear_paquete_con_codigo_de_operacion(SOLICITUD_PROCESO);
 
-    paquete->buffer->size = sizeof(uint32_t) + sizeof(t_contexto_ejecucion);
+    paquete->buffer->size = sizeof(uint32_t) + sizeof(t_registros);
     paquete->buffer->stream = malloc(paquete->buffer->size);
 
     int desplazamiento = 0;
     memcpy(paquete->buffer->stream + desplazamiento, &(pcb->PID), sizeof(uint32_t));
     desplazamiento += sizeof(uint32_t);
-    memcpy(paquete->buffer->stream + desplazamiento, pcb->CONTEXTO, sizeof(t_contexto_ejecucion));    
+    memcpy(paquete->buffer->stream + desplazamiento, pcb->CONTEXTO->registros, sizeof(t_registros));    
 
     if(enviar_paquete(paquete, socket) != 0) {
         log_error(LOGGER_KERNEL, "No se a podido enviar el proceso requerido hacia el modulo de cpu :(");
