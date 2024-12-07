@@ -10,6 +10,7 @@ int enviar_hilo_a_cpu(t_tcb*);
 void enviar_memory_dump(t_pcb*, uint32_t);
 void enviar_interrupcion_cpu(op_code, int);
 void enviar_proceso_cpu(int , t_pcb* );
+t_instruccion* recibir_instruccion(int);
 
 
 

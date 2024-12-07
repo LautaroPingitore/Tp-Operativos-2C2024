@@ -205,12 +205,12 @@ void syscall_io(uint32_t pid, uint32_t tid, int milisegundos) {
     io(pcb, tid, milisegundos);  // Invoca la funcion que gestiona la operacion IO
 }
 
-void manejar_syscall(int socket) {
+void manejar_syscall(int socket, op_code cod) {
     t_paquete* paquete = recibir_paquete(socket);
     t_instruccion* inst = deserializar_instruccion(paquete->buffer->stream);
     t_tcb* hilo_actual = list_remove(cola_exec, 0);
 
-    switch (paquete->codigo_operacion) {
+    switch (cod) {
         case PROCESS_CREATE:
             int tamanio = atoi(inst->parametro2);
             log_syscall("PROCESS_CREATE", hilo_actual);

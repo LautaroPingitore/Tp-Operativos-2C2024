@@ -38,9 +38,12 @@ void iniciar_conexiones();
 void* escuchar_cpu();
 void* escuchar_cpu_dispatch();
 void* escuchar_cpu_interrupt();
-int server_escuchar(char*, int);
+int server_escuchar(char*, int, pthread_t);
 void* procesar_conexion_memoria(void*);
+void* procesar_conexion_cpu_interrupt(void*);
+void* procesar_conexion_cpu_dispatch(void*);
 void* procesar_conexion_cpu(void*);
+
 
 void iniciar_semaforos();
 void destruir_semaforos();

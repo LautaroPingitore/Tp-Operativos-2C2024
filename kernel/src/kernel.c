@@ -166,7 +166,7 @@ void manejar_comunicaciones(int socket, const char* nombre_modulo) {
                 log_info(LOGGER_KERNEL, "Handshake recibido de %s.", nombre_modulo);
                 break;
 
-            case MENSAJE: {
+            case MENSAJE: 
                 char* respuesta = recibir_mensaje(socket);
                 if (respuesta && strcmp(respuesta, "OK") == 0) {
                     pthread_mutex_lock(&mutex_process_create);
@@ -176,9 +176,9 @@ void manejar_comunicaciones(int socket, const char* nombre_modulo) {
                 sem_post(&sem_process_create);
                 free(respuesta);
                 break;
-            }
+            
 
-            case DEVOLVER_CONTROL_KERNEL: {
+            case DEVOLVER_CONTROL_KERNEL: 
                 if (strcmp(nombre_modulo, "CPU_INTERRUPT") == 0) {
                     t_tcb* tcb = recibir_hilo(socket);
                     if (tcb->motivo_desalojo == INTERRUPCION_BLOQUEO) {
@@ -192,14 +192,98 @@ void manejar_comunicaciones(int socket, const char* nombre_modulo) {
                     }
                 }
                 break;
-            }
+            
+            case PROCESS_CREATE:
+                t_tcb* hilo_pc = list_remove(cola_exec, 0);
+                t_instruccion* inst_pc = recibir_instruccion(socket);
+                int tamanio = atoi(inst_pc->parametro2);
+                log_syscall("PROCESS_CREATE", hilo_pc);
+                syscall_process_create(hilo_pc, inst_pc->parametro1, tamanio, inst_pc->parametro3);
+                intentar_mover_a_execute();
+                break;
+            case PROCESS_EXIT:
+                t_tcb* hilo_pe = list_remove(cola_exec, 0);
+                t_instruccion* inst_pe = recibir_instruccion(socket);
+                log_syscall("PROCESS_EXIT", hilo_pe);
+                syscall_process_exit(hilo_pe->PID_PADRE);
+                intentar_mover_a_execute();
+                free(inst_pe);
+                break;
+            case THREAD_CREATE:
+                t_tcb* hilo_tc = list_remove(cola_exec, 0);
+                t_instruccion* inst_tc = recibir_instruccion(socket);
+                int prioridad = atoi(inst_tc->parametro2);
+                log_syscall("THREAD_CREATE", hilo_tc);
+                syscall_thread_create(hilo_tc, hilo_tc->PID_PADRE, inst_tc->parametro1, prioridad);
+                intentar_mover_a_execute();
+                break;
+            case THREAD_JOIN:
+                t_tcb* hilo_tj = list_remove(cola_exec, 0);
+                t_instruccion* inst_tj = recibir_instruccion(socket);
+                uint32_t tid_esperado = atoi(inst_tj->parametro1);
+                log_syscall("THREAD_JOIN", hilo_tj);
+                syscall_thread_join(hilo_tj->PID_PADRE, hilo_tj->TID, tid_esperado);
+                break;
+            case THREAD_CANCEL:
+                t_tcb* hilo_tcl = list_remove(cola_exec, 0);
+                t_instruccion* inst_tcl = recibir_instruccion(socket);
+                uint32_t tid = atoi(inst_tcl->parametro1);
+                log_syscall("THREAD_CANCEL", hilo_tcl);
+                syscall_thread_cancel(hilo_tcl->PID_PADRE, tid);
+                intentar_mover_a_execute();
+                break;
+            case THREAD_EXIT:
+                t_tcb* hilo_te = list_remove(cola_exec, 0);
+                t_instruccion* inst_te = recibir_instruccion(socket);
+                log_syscall("THREAD_CANCEL", hilo_te);
+                syscall_thread_exit(hilo_te->PID_PADRE, hilo_te->TID);
+                intentar_mover_a_execute();
+                free(inst_te);
+                break;
+            case MUTEX_CREATE:
+                t_tcb* hilo_mc = list_remove(cola_exec, 0);
+                t_instruccion* inst_mc = recibir_instruccion(socket);
+                log_syscall("MUTEX_CREATE", hilo_mc);
+                syscall_mutex_create(hilo_mc, hilo_mc->PID_PADRE, inst_mc->parametro1);
+                intentar_mover_a_execute();
+                break;
+            case MUTEX_LOCK:
+                t_tcb* hilo_ml = list_remove(cola_exec, 0);
+                t_instruccion* inst_ml = recibir_instruccion(socket);
+                log_syscall("MUTEX_LOCK", hilo_ml);
+                syscall_mutex_lock(hilo_ml, hilo_ml->PID_PADRE, inst_ml->parametro1);
+                intentar_mover_a_execute();
+                break;
+            case MUTEX_UNLOCK:
+                t_tcb* hilo_mu = list_remove(cola_exec, 0);
+                t_instruccion* inst_mu = recibir_instruccion(socket);
+                log_syscall("MUTEX_UNLOCK", hilo_mu);
+                syscall_mutex_unlock(hilo_mu, hilo_mu->PID_PADRE, inst_mu->parametro1);
+                intentar_mover_a_execute();
+                break;
+            case DUMP_MEMORY:
+                t_tcb* hilo_dm = list_remove(cola_exec, 0);
+                t_instruccion* inst_dm = recibir_instruccion(socket);
+                log_syscall("DUMP_MEMORY", hilo_dm);
+                syscall_dump_memory(hilo_dm->PID_PADRE, hilo_dm->TID);
+                intentar_mover_a_execute();
+                free(inst_dm);
+                break;
+            case IO:
+                t_tcb* hilo_io = list_remove(cola_exec, 0);
+                t_instruccion* inst_io = recibir_instruccion(socket);
+                int milisegundos = atoi(inst_io->parametro1);
+                log_syscall("IO", hilo_io);
+                syscall_io(hilo_io->PID_PADRE, hilo_io->TID, milisegundos);
+                break;
 
             default:
-                if(strcmp(nombre_modulo, "CPU_INTERRUPT") == 0) {
-                    manejar_syscall(socket_kernel_cpu_interrupt);
-                } else {
+                // if(strcmp(nombre_modulo, "CPU_INTERRUPT") == 0) {
+                //     log_warning(LOGGER_KERNEL, "A PUNTO DE MANEJAR LAS SYSCALSS");
+                //     manejar_syscall(socket_kernel_cpu_interrupt, cod);
+                // } else {
                     log_warning(LOGGER_KERNEL, "Operación desconocida recibida desde %s.", nombre_modulo);
-                }
+                //}
                 break;
         }
     }

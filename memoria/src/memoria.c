@@ -319,11 +319,7 @@ void* procesar_conexion_memoria(void *void_args){
             case PEDIDO_INSTRUCCION:
                 t_pedido_instruccion* ped_inst = recibir_pedido_instruccion(cliente_socket);
 
-                log_warning(LOGGER_MEMORIA, "PID = %d, TID = %d, PC = %d", ped_inst->pid, ped_inst->tid, ped_inst->pc);
-
                 t_instruccion* inst = obtener_instruccion(ped_inst->tid, ped_inst->pc);
-
-                log_warning(LOGGER_MEMORIA, "INSTRUCCION %s", inst->nombre);
 
                 if(enviar_instruccion(cliente_socket, inst) == 0) {
                     if(inst->parametro3 == -1) {

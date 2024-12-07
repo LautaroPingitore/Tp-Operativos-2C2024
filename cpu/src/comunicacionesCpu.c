@@ -153,7 +153,7 @@ void enviar_contexto_memoria(uint32_t pid, uint32_t tid, t_registros* registros,
     // memcpy(paquete->buffer->stream + desplazamiento, &(registros->GX), sizeof(uint32_t));
     // desplazamiento += sizeof(uint32_t);
 
-    // memcpy(paquete->buffer->stream + desplazamiento, &(registros->HX), sizeof(uint32_t));
+    // memcpy(paquete->buffer->stream + desplazamiento, &(registros->HX), sizeof(uint32_t)); 
  
     enviar_paquete(paquete, socket_memoria);
     eliminar_paquete(paquete);
@@ -161,26 +161,34 @@ void enviar_contexto_memoria(uint32_t pid, uint32_t tid, t_registros* registros,
 
 void enviar_syscall_kernel(t_instruccion* instruccion, op_code syscall) {
     t_paquete* paquete = crear_paquete_con_codigo_de_operacion(syscall);
- 
+
     uint32_t tamanio_nombre = strlen(instruccion->nombre) + 1;
     uint32_t tamanio_par1 = strlen(instruccion->parametro1) + 1;
     uint32_t tamanio_par2 = strlen(instruccion->parametro2) + 1;
 
     paquete->buffer->size = tamanio_nombre + tamanio_par1 + tamanio_par2 + sizeof(int) + sizeof(uint32_t) * 3;
 
-    paquete->buffer->stream=malloc(paquete->buffer->size);
+    paquete->buffer->stream = malloc(paquete->buffer->size);
     int desplazamiento=0;
 
+    memcpy(paquete->buffer->stream + desplazamiento, &tamanio_nombre, sizeof(uint32_t));
+    desplazamiento += sizeof(uint32_t);
     memcpy(paquete->buffer->stream + desplazamiento, instruccion->nombre, tamanio_nombre);
     desplazamiento += tamanio_nombre;
+
+    memcpy(paquete->buffer->stream + desplazamiento, &tamanio_par1, sizeof(uint32_t));
+    desplazamiento += sizeof(uint32_t);
     memcpy(paquete->buffer->stream + desplazamiento, instruccion->parametro1, tamanio_par1);
     desplazamiento += tamanio_par1;
+
+    memcpy(paquete->buffer->stream + desplazamiento, &tamanio_par2, sizeof(uint32_t));
+    desplazamiento += sizeof(uint32_t);
     memcpy(paquete->buffer->stream + desplazamiento, instruccion->parametro2, tamanio_par2);
     desplazamiento += tamanio_par2;
-    memcpy(paquete->buffer->stream + desplazamiento, &(instruccion->parametro3), sizeof(int));
-    
 
-    if(enviar_paquete(paquete, socket_cpu_interrupt_kernel) == 0) {
+    memcpy(paquete->buffer->stream + desplazamiento, &(instruccion->parametro3), sizeof(int)); 
+    
+    if(enviar_paquete(paquete, (socket_cpu_dispatch_kernel + 2)) == 0) {
         log_info(LOGGER_CPU, "Syscall notificada a KERNEL");
     } else {
         eliminar_paquete(paquete);

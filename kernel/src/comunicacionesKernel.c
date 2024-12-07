@@ -184,3 +184,10 @@ void enviar_interrupcion_cpu(op_code interrupcion, int quantum) {
     }
     eliminar_paquete(paquete);
 }
+
+t_instruccion* recibir_instruccion(int socket) {
+    t_paquete* paquete = recibir_paquete(socket);
+    t_instruccion* inst = deserializar_instruccion(paquete->buffer);
+    eliminar_paquete(paquete);
+    return inst;
+}

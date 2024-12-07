@@ -34,7 +34,7 @@ void syscall_mutex_lock(t_tcb*, uint32_t, char*);
 void syscall_mutex_unlock(t_tcb*, uint32_t, char*);
 void syscall_dump_memory(uint32_t, uint32_t);
 void syscall_io(uint32_t, uint32_t, int);
-void manejar_syscall(int);
+void manejar_syscall(int, op_code);
 void log_syscall(char*, t_tcb*);
 t_recurso* buscar_recurso_proceso(t_pcb*, char*);
 void reiniciar_quantum();
