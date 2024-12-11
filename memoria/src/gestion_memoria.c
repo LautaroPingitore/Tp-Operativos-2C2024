@@ -136,11 +136,8 @@ void consolidar_particiones_libres() {
     log_info(LOGGER_MEMORIA, "Particiones libres consolidadas.");
 }
 
-void liberar_espacio_memoria(t_proceso_memoria* proceso) {
-    if (proceso == NULL) {
-        log_error(LOGGER_MEMORIA, "Intento de liberar memoria para un proceso nulo.");
-        return;
-    }
+void liberar_espacio_memoria(uint32_t pid) {
+    t_proceso_memoria* proceso = obtener_proceso_memoria(pid);
 
     pthread_mutex_lock(&mutex_particiones);
     bool particion_encontrada = false;
@@ -148,7 +145,7 @@ void liberar_espacio_memoria(t_proceso_memoria* proceso) {
     for (int i = 0; i < list_size(lista_particiones); i++) {
         t_particion* particion = list_get(lista_particiones, i);
 
-        if (particion->inicio == proceso->base) {
+        if (particion->inicio == proceso->base && !particion->libre) {
             particion->libre = true;
             particion_encontrada = true;
 

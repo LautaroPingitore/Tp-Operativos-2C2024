@@ -4,7 +4,6 @@
 t_list* lista_procesos; // TIPO t_proceso_memoria
 t_list* lista_instrucciones; // TIPO t_hilo_instrucciones
 
-
 pthread_mutex_t mutex_procesos;
 pthread_mutex_t mutex_instrucciones;
 

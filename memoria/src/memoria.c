@@ -22,14 +22,6 @@ t_config* CONFIG_MEMORIA;
 
 pthread_t hilo_server_memoria;
 
-// ==== CONEXIONES ====
-/*
-    - KERNEL, USA MULTIHILOS A TRAVEZ DE LA FUNCION PROCESAR_CONEXION_KERNEL
-    - CPU, USA UNA UNICA CONEXION CON LA FUNCION PROCESAR_CONEXION_CPU
-    - FILESYSTEM, SE CREA UNA NUEVA CONEXION CON ESTE AL MOMENTO DE HACER DUMP_MEMORY
-*/
-
-
 int main(){//int argc, char* argv[]) {
     // if(argc != 2) {
     //     printf("Uso: %s [archivo_config] \n", argv[0]);
@@ -222,8 +214,8 @@ void* procesar_conexion_memoria(void *void_args){
                     enviar_mensaje("ERROR", cliente_socket);
                     break;
                 }
-                
-                liberar_espacio_memoria(proceso_a_eliminar);
+            
+                liberar_espacio_memoria(proceso_a_eliminar->pid);
                 pthread_mutex_lock(&mutex_procesos);
                 eliminar_proceso_de_lista(proceso_a_eliminar->pid);
                 pthread_mutex_unlock(&mutex_procesos);
