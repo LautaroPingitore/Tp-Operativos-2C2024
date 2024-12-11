@@ -544,7 +544,7 @@ void intentar_mover_a_execute() {
     t_tcb* hilo_a_ejecutar = seleccionar_hilo_por_algoritmo();
 
     if(strcmp(ALGORITMO_PLANIFICACION, "CMN") == 0) {
-        eliminar_hilo_cola_multinivel(t_tcb* tcb);
+        eliminar_hilo_cola_multinivel(hilo_a_ejecutar);
     } else {
         eliminar_tcb_lista(cola_ready, hilo_a_ejecutar->TID);
     }
@@ -672,7 +672,7 @@ void agregar_hilo_a_cola(t_tcb* hilo) {
 
 t_cola_multinivel* buscar_cola_multinivel(int prioridad) {
     // RETORNA UN NULL SI NO HAY NADA
-    t_cola_multinivel* cola_act = list_get(colas_multinivel, prioridad)
+    t_cola_multinivel* cola_act = list_get(colas_multinivel, prioridad);
     return cola_act;
 }
 
