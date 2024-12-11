@@ -6,6 +6,11 @@ typedef struct {
     t_list* cola;
 } t_cola_multinivel;
 
+typedef struct {
+    uint32_t tid_esperado;
+    t_tcb* hilo_bloqueado;
+} t_join;
+
 // COLAS QUE EN LAS CUALES SE GUARDARAN LOS PROCESOS
 extern t_list* cola_new;
 extern t_list* cola_ready;
@@ -84,8 +89,8 @@ void io(t_pcb*, uint32_t, int);
 extern t_pcb* obtener_pcb_padre_de_hilo(uint32_t);
 void eliminar_pcb_lista(t_list*, uint32_t);
 void eliminar_tcb_lista(t_list*, uint32_t);
-void esperar_a_que_termine(t_tcb*, t_tcb*);
-void bloquear_hilo_actual(t_tcb*);
-void desbloquear_hilo_actual(t_tcb*);
+void agregar_hilo_a_bloqueados(uint32_t, t_tcb*);
+void tiene_algun_hilo_bloqueado(uint32_t);
+void desbloquear_hilo_bloqueado(t_tcb*);
 
 #endif /* PLANIFICADOR_H_ */

@@ -27,19 +27,19 @@ pthread_mutex_t mutex_process_create;
 sem_t sem_process_create;
 
 // EL ARHCIVO DE PSEUDOCODIGO ESTA EN UNA CARPETA DE HOME LLAMADA scripts-pruebas
-int main(){//int argc, char* argv[]) {
+int main(int argc, char* argv[]) {
     // VERIFICACIÓN DE QUE SE PASARON AL MENOS 3 ARGUMENTOS (programa, archivo pseudocódigo, tamaño proceso)
 
-    // if(argc != 4) {
-    //     printf("Uso: %s [archivo_config] [archivo_pseudocodigo] [tamanio_proceso]\n", argv[0]);
-    //     return -1;
-    // }
+    if(argc != 4) {
+        printf("Uso: %s [archivo_config] [archivo_pseudocodigo] [tamanio_proceso]\n", argv[0]);
+        return -1;
+    }
 
     // OBTENCION DEL ARCHIVO DEL PSEUDOCODIGO Y EL TAMANIO DEL PROCESO
-    char* config = "planificacion";//argv[1];
+    char* config = argv[1];
     char pseudo_path[256];
     strcpy(pseudo_path, "/home/utnso/scripts-pruebas/");
-    strcat(pseudo_path, "PLANI_PROC");//argv[2]);
+    strcat(pseudo_path, argv[2]);
 
     int tamanio_proceso = 32;//atoi(argv[3]);
     //lista_recursos recursos_globales;

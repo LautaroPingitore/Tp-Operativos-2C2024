@@ -64,6 +64,7 @@ pthread_mutex_t mutex_cola_exec;
 pthread_mutex_t mutex_pid;
 pthread_mutex_t mutex_tid;
 pthread_mutex_t mutex_estado;
+pthread_mutex_t mutex_join;
 pthread_cond_t cond_estado = PTHREAD_COND_INITIALIZER;
 
 
@@ -92,7 +93,8 @@ void inicializar_kernel() {
     pthread_mutex_init(&mutex_cola_exit, NULL);
     pthread_mutex_init(&mutex_cola_blocked, NULL);
     pthread_mutex_init(&mutex_process_create, NULL);
-    pthread_mutex_init(&mutex_cola_exec,NULL);
+    pthread_mutex_init(&mutex_cola_exec, NULL);
+    pthread_mutex_init(&mutex_join, NULL);
 
     sem_init(&sem_process_create, 0, 0);
 }
@@ -349,11 +351,7 @@ void thread_create(t_pcb *pcb, char* archivo_pseudocodigo, int prioridad) {
     log_info(LOGGER_KERNEL, "(<%d>:<%d>) Se crea el Hilo - Estado: READY", nuevo_tcb->PID_PADRE, nuevo_tcb->TID);
 }
 
-// CUIDADO
-// HACE QUE UN HILO ESPERE LA FINALIZACION DE OTRO HILO DEL MISMO PROCESO
-// PODRIA USAR UN SEMAFORO DE MUTEX COLAS PERO NO ESTOY SEGURO
 void thread_join(t_pcb* pcb, uint32_t tid_actual, uint32_t tid_esperado) {
-
     // BUSCA EL HILO ESPERADO EN EL PCB
     t_tcb* tcb_esperado = buscar_hilo_por_tid(pcb, tid_esperado);
     if (tcb_esperado == NULL) {
@@ -383,54 +381,127 @@ void thread_join(t_pcb* pcb, uint32_t tid_actual, uint32_t tid_esperado) {
     }
 
     log_info(LOGGER_KERNEL, "EL hilo %d esperara al hilo %d", tid_actual, tid_esperado);
-
-    esperar_a_que_termine(tcb_esperado, tcb_actual);
+    agregar_hilo_a_bloqueados(tid_esperado, tcb_actual);
 }
 
-void esperar_a_que_termine(t_tcb* esperado,  t_tcb* actual) {
-    pthread_mutex_lock(&mutex_estado);
+void agregar_hilo_a_bloqueados(uint32_t tid_esperado, t_tcb* hilo_a_bloquear) {
+    hilo_a_bloquear->ESTADO = BLOCK_PTHREAD_JOIN;
 
-    actual->ESTADO = BLOCK_PTHREAD_JOIN;
-    
+    t_join* hilo_bloqueado = malloc(sizeof(t_join));
+    hilo_bloqueado->tid_esperado = tid_esperado;
+    hilo_bloqueado->hilo_bloqueado = hilo_a_bloquear;
+
     pthread_mutex_lock(&mutex_cola_blocked);
-    list_add(cola_blocked, actual);
+    list_add(cola_blocked, hilo_bloqueado);
     pthread_mutex_unlock(&mutex_cola_blocked);
+}
 
-    while (esperado->ESTADO != EXIT) {
-        pthread_cond_wait(&cond_estado, &mutex_estado);
+void tiene_algun_hilo_bloqueado(uint32_t tid_terminado) {
+    pthread_mutex_lock(&mutex_cola_blocked);
+    for(int i=0; i < list_size(cola_blocked); i ++) {
+        t_join* act = list_get(cola_blocked, i);
+        if(act->tid_esperado == tid_terminado) {
+            list_remove(cola_blocked, i);
+            i--;
+            desbloquear_hilo_bloqueado(act->hilo_bloqueado);
+            free(act);
+        }
     }
-
-    desbloquear_hilo_actual(actual);
-
-    pthread_mutex_unlock(&mutex_estado);
+    pthread_mutex_unlock(&mutex_cola_blocked);
 }
 
-void desbloquear_hilo_actual(t_tcb* actual) {
-
-    pthread_mutex_lock(&mutex_estado);
-
-    // Cambiar el estado del hilo a READY
-    actual->ESTADO = READY;
-    pthread_mutex_lock(&mutex_cola_blocked);
-    eliminar_tcb_lista(cola_blocked, actual->TID);
-    pthread_mutex_unlock(&mutex_cola_blocked);
+void desbloquear_hilo_bloqueado(t_tcb* hilo_a_desbloquear) {
+    hilo_a_desbloquear->ESTADO = READY;
 
     pthread_mutex_lock(&mutex_cola_ready);
     if(strcmp(ALGORITMO_PLANIFICACION, "CMN") == 0) {
-            agregar_hilo_a_cola(actual);
+        agregar_hilo_a_cola(hilo_a_desbloquear);
     } else {
-        list_add(cola_ready, actual);
+        list_add(cola_ready, hilo_a_desbloquear);
     }
     pthread_mutex_unlock(&mutex_cola_ready);
-
-    log_info(LOGGER_KERNEL, "Hilo %d desbloqueado.", actual->TID);
-
-    // Enviar señal para despertar a todos los hilos bloqueados en esta condición
-    // FUNCION RARA
-    pthread_cond_broadcast(&cond_estado);
-
-    pthread_mutex_unlock(&mutex_estado);
+    log_info(LOGGER_KERNEL, "Hilo %d desbloqueado del PTHREAD_JOIN", hilo_a_desbloquear->TID);
 }
+
+// void thread_join(t_pcb* pcb, uint32_t tid_actual, uint32_t tid_esperado) {
+
+//     // BUSCA EL HILO ESPERADO EN EL PCB
+//     t_tcb* tcb_esperado = buscar_hilo_por_tid(pcb, tid_esperado);
+//     if (tcb_esperado == NULL) {
+//         log_error(LOGGER_KERNEL, "Error: TID %d no encontrado en el proceso %d", tid_esperado, pcb->PID);
+//         return;
+//     }
+
+//     t_tcb* tcb_actual = buscar_hilo_por_tid(pcb, tid_actual);
+//     if (tcb_actual == NULL) {
+//         log_info(LOGGER_KERNEL, "Error: No se encontro el hilo actual  %d", tid_actual);
+//         return;
+//     }
+
+//     // VE SI EL HILO ESTA EJECUTANDOSE O EN READY, EN DICHO CASO BLOQUEA EL HILO ACTUAL
+//     if (tcb_esperado->ESTADO == EXIT) {
+//         log_info(LOGGER_KERNEL, "El hilo %d ya terminado, no es necesario hacer el join", tid_esperado);
+
+//         pthread_mutex_lock(&mutex_cola_ready);
+//         if(strcmp(ALGORITMO_PLANIFICACION, "CMN") == 0) {
+//             agregar_hilo_a_cola(tcb_actual);
+//         } else {
+//             list_add(cola_ready, tcb_actual);
+//         }
+//         pthread_mutex_unlock(&mutex_cola_ready);
+
+//         return;
+//     }
+
+//     log_info(LOGGER_KERNEL, "EL hilo %d esperara al hilo %d", tid_actual, tid_esperado);
+
+//     esperar_a_que_termine(tcb_esperado, tcb_actual);
+// }
+
+// void esperar_a_que_termine(t_tcb* esperado,  t_tcb* actual) {
+//     pthread_mutex_lock(&mutex_estado);
+
+//     actual->ESTADO = BLOCK_PTHREAD_JOIN;
+    
+//     pthread_mutex_lock(&mutex_cola_blocked);
+//     list_add(cola_blocked, actual);
+//     pthread_mutex_unlock(&mutex_cola_blocked);
+
+//     while (esperado->ESTADO != EXIT) {
+//         pthread_cond_wait(&cond_estado, &mutex_estado);
+//     }
+
+//     desbloquear_hilo_actual(actual);
+
+//     pthread_mutex_unlock(&mutex_estado);
+// }
+
+// void desbloquear_hilo_actual(t_tcb* actual) {
+
+//     pthread_mutex_lock(&mutex_estado);
+
+//     // Cambiar el estado del hilo a READY
+//     actual->ESTADO = READY;
+//     pthread_mutex_lock(&mutex_cola_blocked);
+//     eliminar_tcb_lista(cola_blocked, actual->TID);
+//     pthread_mutex_unlock(&mutex_cola_blocked);
+
+//     pthread_mutex_lock(&mutex_cola_ready);
+//     if(strcmp(ALGORITMO_PLANIFICACION, "CMN") == 0) {
+//             agregar_hilo_a_cola(actual);
+//     } else {
+//         list_add(cola_ready, actual);
+//     }
+//     pthread_mutex_unlock(&mutex_cola_ready);
+
+//     log_info(LOGGER_KERNEL, "Hilo %d desbloqueado.", actual->TID);
+
+//     // Enviar señal para despertar a todos los hilos bloqueados en esta condición
+//     // FUNCION RARA
+//     pthread_cond_broadcast(&cond_estado);
+
+//     pthread_mutex_unlock(&mutex_estado);
+// }
 
 t_tcb* buscar_hilo_por_tid(t_pcb* pcb, uint32_t tid) {
     for (int i=0; i < list_size(pcb->TIDS); i++) {
@@ -464,12 +535,9 @@ void thread_cancel(t_pcb* pcb, uint32_t tid) {
 
     // CAMBIA EL ESTADO DEL TCB Y LIBERA LOS RECURSOS
     tcb->ESTADO = EXIT;
-    liberar_recursos_hilo(pcb,tcb);
+    tiene_algun_hilo_bloqueado(tcb->TID);
     log_info(LOGGER_KERNEL, "Hilo %d cancelado en el proceso %d", tid, pcb->PID);
-
-    if(list_size(pcb->TIDS) == 0) {
-        process_exit(pcb);
-    }
+    //liberar_recursos_hilo(pcb,tcb);
 }
 
 void liberar_recursos_hilo(t_pcb* pcb, t_tcb* tcb) {
@@ -495,16 +563,9 @@ void thread_exit(t_pcb* pcb, uint32_t tid) {
 
     // MARCA EL HILO COMO FINALIZADO
     tcb->ESTADO = EXIT;
+    tiene_algun_hilo_bloqueado(tcb->TID);
     log_info(LOGGER_KERNEL, "(<%d>:<%d>) Finaliza el Hilo", tcb->PID_PADRE, tcb->TID);
-
-    // ESTO SE TENDIRA QUE LIBERAR CUANDO EL PROCESO TERMINA
-    // NO CUANDO EL HILO, PORQUE SI NO TE VA A DAR PROBLEMAS
-    // EN LOS JOIN O EN ALGUNOS MUTEXS
-    // liberar_recursos_hilo(pcb, tcb);
-
-    // if(list_size(pcb->TIDS) == 0) {
-    //     process_exit(pcb);
-    // }
+    //liberar_recursos_hilo(pcb, tcb);
 }
 
 // A CHEQUEAR PARA TEMA DE MULTINIVEL
@@ -522,11 +583,13 @@ void intentar_mover_a_execute() {
         log_info(LOGGER_KERNEL, "No hay hilos en READY para mover a EXECUTE");
         log_info(LOGGER_KERNEL, "Se termina la ejecucion del programa");
         pthread_mutex_unlock(&mutex_cola_ready);
+        exit(SUCCES);
     } else {
         if (list_is_empty(cola_ready)) {
             log_info(LOGGER_KERNEL, "No hay hilos en READY para mover a EXECUTE");
             log_info(LOGGER_KERNEL, "Se termina la ejecucion del programa");
             pthread_mutex_unlock(&mutex_cola_ready);
+            exit(SUCCES);
             return;
         }
     }
@@ -564,8 +627,6 @@ void intentar_mover_a_execute() {
         return;
     }
 
-    log_info(LOGGER_KERNEL, "(<%d>:<%d>) Movido a Excecute", hilo_a_ejecutar->PID_PADRE, hilo_a_ejecutar->TID);
-
     enviar_proceso_cpu(socket_kernel_cpu_dispatch, pcb_padre);
     
     int resultado = enviar_hilo_a_cpu(hilo_a_ejecutar);
@@ -583,6 +644,8 @@ void intentar_mover_a_execute() {
         }
         pthread_mutex_lock(&mutex_cola_ready);
     }
+
+    log_info(LOGGER_KERNEL, "(<%d>:<%d>) Movido a Excecute", hilo_a_ejecutar->PID_PADRE, hilo_a_ejecutar->TID);
 }
 
 // PLANIFICADOR A CORTO PLAZO ===============
