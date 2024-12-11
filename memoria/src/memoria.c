@@ -184,6 +184,9 @@ void* procesar_conexion_memoria(void *void_args){
                 log_info(LOGGER_MEMORIA, "## KERNEL Conectado - FD del socket: <%d>", cliente_socket);
                 break;
 
+            // OJO, ANTE UNA DE LAS PETICIONES QUE RECIBE MEMORIA SE TIENE QUE TENER UN
+            // RETARDO DE RESPUESTA DEFINIDO EN LAS CONFIGS
+
             case PROCESS_CREATE:
                 t_proceso_memoria* proceso_nuevo = recibir_proceso(cliente_socket);
 

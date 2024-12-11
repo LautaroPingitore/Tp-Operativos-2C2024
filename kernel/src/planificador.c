@@ -48,9 +48,7 @@ t_list* cola_ready;
 t_list* cola_exec;
 t_list* cola_blocked;
 t_list* cola_exit;
-t_list* cola_nivel_1;
-t_list* cola_nivel_2;
-t_list* cola_nivel_3;
+t_list* colas_multinivel;
 
 t_list* tabla_paths;
 t_list* tabla_procesos;
@@ -81,9 +79,7 @@ void inicializar_kernel() {
     cola_exit = list_create();
     cola_blocked = list_create();
 
-    cola_nivel_1 = list_create();
-    cola_nivel_2 = list_create();
-    cola_nivel_3 = list_create();
+    colas_multinivel = list_create();
 
     tabla_paths = list_create();
     tabla_procesos = list_create();
@@ -143,7 +139,11 @@ t_pcb* crear_pcb(uint32_t pid, int tamanio, t_contexto_ejecucion* contexto_ejecu
     t_tcb* hilo_principal = crear_tcb(pid, asignar_tid(pcb), archivo, 0, NEW);
 
     pthread_mutex_lock(&mutex_cola_ready);
-    list_add(cola_ready, hilo_principal);
+    if(strcmp(ALGORITMO_PLANIFICACION, "CMN") == 0) {
+        agregar_hilo_a_cola(hilo_principal);
+    } else {
+        list_add(cola_ready, hilo_principal);
+    }
     pthread_mutex_unlock(&mutex_cola_ready);
 
     list_add(pcb->TIDS, hilo_principal);
@@ -257,12 +257,6 @@ void eliminar_tcb_lista(t_list* lista, uint32_t tid) {
 
 //OJO CON ESTA FUNCION
 void mover_a_exit(t_pcb* pcb) {
-    // NO HACE FALTA PORQUE LOS HILOS ESTAN EL COLA READY, NO LOS PROCESOS
-    // REMUEVE EL PROCESO DE LA COLA READY
-    // pthread_mutex_lock(&mutex_cola_ready);
-    // eliminar_pcb_lista(cola_ready, pcb->PID);
-    // pthread_mutex_unlock(&mutex_cola_ready);
-
     pcb->ESTADO = EXIT;
     pthread_mutex_lock(&mutex_cola_exit);
     list_add(cola_exit, pcb);
@@ -345,7 +339,11 @@ void thread_create(t_pcb *pcb, char* archivo_pseudocodigo, int prioridad) {
     // MUEVE EL HILO A LA COLA DE READY SI PUEDE
     nuevo_tcb->ESTADO = READY;
     pthread_mutex_lock(&mutex_cola_ready);
-    list_add(cola_ready, nuevo_tcb);
+    if(strcmp(ALGORITMO_PLANIFICACION, "CMN") == 0) {
+        agregar_hilo_a_cola(nuevo_tcb);
+    } else {
+        list_add(cola_ready, nuevo_tcb);
+    }
     pthread_mutex_unlock(&mutex_cola_ready);
 
     log_info(LOGGER_KERNEL, "(<%d>:<%d>) Se crea el Hilo - Estado: READY", nuevo_tcb->PID_PADRE, nuevo_tcb->TID);
@@ -374,7 +372,11 @@ void thread_join(t_pcb* pcb, uint32_t tid_actual, uint32_t tid_esperado) {
         log_info(LOGGER_KERNEL, "El hilo %d ya terminado, no es necesario hacer el join", tid_esperado);
 
         pthread_mutex_lock(&mutex_cola_ready);
-        list_add(cola_ready, tcb_actual);
+        if(strcmp(ALGORITMO_PLANIFICACION, "CMN") == 0) {
+            agregar_hilo_a_cola(tcb_actual);
+        } else {
+            list_add(cola_ready, tcb_actual);
+        }
         pthread_mutex_unlock(&mutex_cola_ready);
 
         return;
@@ -414,7 +416,11 @@ void desbloquear_hilo_actual(t_tcb* actual) {
     pthread_mutex_unlock(&mutex_cola_blocked);
 
     pthread_mutex_lock(&mutex_cola_ready);
-    list_add(cola_ready, actual);
+    if(strcmp(ALGORITMO_PLANIFICACION, "CMN") == 0) {
+            agregar_hilo_a_cola(actual);
+    } else {
+        list_add(cola_ready, actual);
+    }
     pthread_mutex_unlock(&mutex_cola_ready);
 
     log_info(LOGGER_KERNEL, "Hilo %d desbloqueado.", actual->TID);
@@ -501,17 +507,30 @@ void thread_exit(t_pcb* pcb, uint32_t tid) {
     // }
 }
 
-// A CHEQUEAR
+// A CHEQUEAR PARA TEMA DE MULTINIVEL
 void intentar_mover_a_execute() {
 
     pthread_mutex_lock(&mutex_cola_ready);
 
-    if (list_is_empty(cola_ready)) {
-        log_info(LOGGER_KERNEL, "No hay procesos en READY para mover a EXECUTE");
+    if(strcmp(ALGORITMO_PLANIFICACION, "CMN") == 0) {
+        for(int i=0; i < list_size(colas_multinivel); i++) {
+            t_cola_multinivel* cola_act = list_get(colas_multinivel, i);
+            if(list_size(cola_act->cola) != 0) {
+                break;
+            }
+        }
+        log_info(LOGGER_KERNEL, "No hay hilos en READY para mover a EXECUTE");
         log_info(LOGGER_KERNEL, "Se termina la ejecucion del programa");
         pthread_mutex_unlock(&mutex_cola_ready);
-        return;
+    } else {
+        if (list_is_empty(cola_ready)) {
+            log_info(LOGGER_KERNEL, "No hay hilos en READY para mover a EXECUTE");
+            log_info(LOGGER_KERNEL, "Se termina la ejecucion del programa");
+            pthread_mutex_unlock(&mutex_cola_ready);
+            return;
+        }
     }
+
 
     if (!cpu_libre) {
         log_info(LOGGER_KERNEL, "CPU ocupada, no se puede mover un proceso a EXECUTE");
@@ -524,7 +543,11 @@ void intentar_mover_a_execute() {
     // Obtener el proximo hilo a ejecutar en base al planificador
     t_tcb* hilo_a_ejecutar = seleccionar_hilo_por_algoritmo();
 
-    eliminar_tcb_lista(cola_ready, hilo_a_ejecutar->TID);
+    if(strcmp(ALGORITMO_PLANIFICACION, "CMN") == 0) {
+        eliminar_hilo_cola_multinivel(t_tcb* tcb);
+    } else {
+        eliminar_tcb_lista(cola_ready, hilo_a_ejecutar->TID);
+    }
 
     t_pcb* pcb_padre = obtener_pcb_padre_de_hilo(hilo_a_ejecutar->PID_PADRE);
 
@@ -553,7 +576,11 @@ void intentar_mover_a_execute() {
         pcb_padre->ESTADO = READY;
         cpu_libre = true;
         pthread_mutex_lock(&mutex_cola_ready);
-        list_add(cola_ready, hilo_a_ejecutar);
+        if(strcmp(ALGORITMO_PLANIFICACION, "CMN") == 0) {
+            agregar_hilo_a_cola(hilo_a_ejecutar);
+        } else {
+            list_add(cola_ready, hilo_a_ejecutar);
+        }
         pthread_mutex_lock(&mutex_cola_ready);
     }
 }
@@ -612,40 +639,60 @@ t_tcb* obtener_hilo_x_prioridad() {
     return hilo_a_ejecutar;
 }
 
+// COLAS MULTINIVEL ===============
+
 t_tcb* seleccionar_hilo_multinivel() {
     pthread_mutex_lock(&mutex_cola_ready);
-    t_tcb* siguiente_hilo = NULL;
-
-    if (!list_is_empty(cola_nivel_1)) {
-        siguiente_hilo = list_remove(cola_nivel_1, 0);
-    } else if (!list_is_empty(cola_nivel_2)) {
-        siguiente_hilo = list_remove(cola_nivel_2, 0);
-    } else if (!list_is_empty(cola_nivel_3)) {
-        siguiente_hilo = list_remove(cola_nivel_3, 0);
+    for(int i=0; i < list_size(colas_multinivel); i++) {
+        t_cola_multinivel* cola_act = list_get(colas_multinivel, i);
+        if(list_size(cola_act->cola) > 0) {
+            t_tcb* hilo_a_ejecutar = list_remove(cola_act->cola, 0);
+            pthread_mutex_unlock(&mutex_cola_ready);
+            return hilo_a_ejecutar;
+        }
     }
     pthread_mutex_unlock(&mutex_cola_ready);
+    return NULL;
+}
 
-    // Si no hay hilos en ninguna cola, verificar tabla de procesos
-    if (siguiente_hilo == NULL) {
-        pthread_mutex_lock(&mutex_cola_ready);
-        if (list_is_empty(tabla_procesos)) {
-            log_info(LOGGER_KERNEL, "Todos los procesos han finalizado. Deteniendo sistema.");
-            exit(EXIT_SUCCESS);
+void agregar_hilo_a_cola(t_tcb* hilo) {
+    t_cola_multinivel* cola = buscar_cola_multinivel(hilo->PRIORIDAD);
+
+    if(cola == NULL) {
+        t_cola_multinivel* cola_nueva = malloc(sizeof(t_cola_multinivel));
+        cola_nueva->nro = hilo->PRIORIDAD;
+        cola_nueva->cola = list_create();
+
+        list_add(cola_nueva->cola, hilo);
+        list_add_in_index(colas_multinivel, hilo->PRIORIDAD, cola_nueva);
+    } else {
+        list_add(cola->cola, hilo);
+    }
+}
+
+t_cola_multinivel* buscar_cola_multinivel(int prioridad) {
+    // RETORNA UN NULL SI NO HAY NADA
+    t_cola_multinivel* cola_act = list_get(colas_multinivel, prioridad)
+    return cola_act;
+}
+
+void eliminar_hilo_cola_multinivel(t_tcb* hilo) {
+    t_cola_multinivel* cola = buscar_cola_multinivel(hilo->PRIORIDAD);
+    for(int i=0; i < list_size(cola->cola); i++) {
+        t_tcb* hilo_actual = list_get(cola->cola, i);
+        if(hilo_actual->TID == hilo->TID) {
+            list_remove(cola->cola, i);
         }
-        pthread_mutex_unlock(&mutex_cola_ready);
     }
-    return siguiente_hilo;
 }
 
-/*
+// OJO CON ESTA FUNCION YA QUE PUEDE BLOQUEAR TODO KERNEL
 void empezar_quantum(int quantum) {
-    // LOGICA DE CONTEO DE QUANTUM
+    // Espera el tiempo especificado por el quantum
+    usleep(quantum * 1000); // Convertir milisegundos a microsegundos
 
-    if(tiempo_actual >= quantum * 1000) {
-        enviar_interrupcion_cpu(FINALIZACION_QUANTUM, quantum);
-    }
+    enviar_interrupcion_cpu(FINALIZACION_QUANTUM, quantum);
 }
-*/
 
 // ENTRADA Y SALIDA ====================
 
@@ -665,7 +712,11 @@ void io(t_pcb* pcb, uint32_t tid, int milisegundos) {
 
     tcb->ESTADO = READY;
     pthread_mutex_lock(&mutex_cola_ready);
-    list_add(cola_ready, tcb);
+    if(strcmp(ALGORITMO_PLANIFICACION, "CMN") == 0) {
+        agregar_hilo_a_cola(tcb);
+    } else {
+        list_add(cola_ready, tcb);
+    }
     pthread_mutex_unlock(&mutex_cola_ready);
 
     log_info(LOGGER_KERNEL, "(<%d>:<%d>) Finalizó IO y pasa a READY", tcb->PID_PADRE, tcb->TID);

@@ -1,15 +1,18 @@
 #ifndef PLANIFICADOR_H_
 #define PLANIFICADOR_H_
 
+typedef struct {
+    int nro;
+    t_list* cola;
+} t_cola_multinivel;
+
 // COLAS QUE EN LAS CUALES SE GUARDARAN LOS PROCESOS
 extern t_list* cola_new;
 extern t_list* cola_ready;
 extern t_list* cola_exec;
 extern t_list* cola_blocked;
 extern t_list* cola_exit;
-extern t_list* cola_nivel_1;
-extern t_list* cola_nivel_2;
-extern t_list* cola_nivel_3;
+extern t_list* colas_multinivel;
 
 extern t_list* tabla_paths;
 extern t_list* tabla_procesos;
@@ -69,6 +72,10 @@ t_tcb* seleccionar_hilo_por_algoritmo();
 t_tcb* obtener_hilo_fifo();
 t_tcb* obtener_hilo_x_prioridad();
 t_tcb* seleccionar_hilo_multinivel();
+void agregar_hilo_a_cola(t_tcb*);
+t_cola_multinivel* buscar_cola_multinivel(int);
+void eliminar_hilo_cola_multinivel(t_tcb*);
+void empezar_quantum(int);
 void ejecutar_hilo(t_tcb*);
 
 // ENTRADA SALIDA
