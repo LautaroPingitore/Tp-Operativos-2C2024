@@ -41,7 +41,7 @@ int main(int argc, char* argv[]) {
     strcpy(pseudo_path, "/home/utnso/scripts-pruebas/");
     strcat(pseudo_path, argv[2]);
 
-    int tamanio_proceso = 32;//atoi(argv[3]);
+    int tamanio_proceso = atoi(argv[3]);
     //lista_recursos recursos_globales;
 
     // INICIAR CONFIGURACION DE KERNEL
@@ -72,11 +72,14 @@ int main(int argc, char* argv[]) {
     pthread_join(hilo_com_dispatch, NULL);
     pthread_join(hilo_com_interrupt, NULL);
 
+    log_warning(LOGGER_KERNEL, "A PUNTO DE TERMINAR");
+
     int sockets[] = {socket_kernel_memoria, socket_kernel_cpu_dispatch, socket_kernel_cpu_interrupt, -1};
     terminar_programa(CONFIG_KERNEL, LOGGER_KERNEL, sockets);
 
-    return 0;
+    printf("TERMINADO");
 
+    return 0;
 }
 
 void inicializar_config(char* arg){
@@ -184,9 +187,7 @@ void manejar_comunicaciones(int socket, const char* nombre_modulo) {
                     if (tcb->motivo_desalojo == INTERRUPCION_BLOQUEO) {
                         list_remove(cola_exec, 0);
 
-                        pthread_mutex_lock(&mutex_cola_ready);
-                        list_add(cola_ready, tcb);
-                        pthread_mutex_unlock(&mutex_cola_ready);
+                        mover_hilo_a_ready(tcb);
 
                         intentar_mover_a_execute();
                     }

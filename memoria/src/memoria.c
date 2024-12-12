@@ -179,6 +179,8 @@ void* procesar_conexion_memoria(void *void_args){
             break;
         }
 
+        usleep(RETARDO_RESPUESTA * 1000);
+
         switch (cod) {
             case HANDSHAKE_kernel: // Simplemente avisa que se conecta a kernel 
                 log_info(LOGGER_MEMORIA, "## KERNEL Conectado - FD del socket: <%d>", cliente_socket);

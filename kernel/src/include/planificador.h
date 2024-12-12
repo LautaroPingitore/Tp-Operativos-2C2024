@@ -47,6 +47,7 @@ void crear_proceso(char*, int, int);
 t_contexto_ejecucion* inicializar_contexto();
 void inicializar_proceso(t_pcb*, char*);
 void mover_a_ready(t_pcb*);
+void mover_hilo_a_ready(t_tcb*);
 void mover_a_exit(t_pcb*);
 void intentar_inicializar_proceso_de_new();
 void serializar_paquete_para_memoria(t_paquete*, int, char*);

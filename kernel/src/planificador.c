@@ -140,13 +140,7 @@ t_pcb* crear_pcb(uint32_t pid, int tamanio, t_contexto_ejecucion* contexto_ejecu
 
     t_tcb* hilo_principal = crear_tcb(pid, asignar_tid(pcb), archivo, 0, NEW);
 
-    pthread_mutex_lock(&mutex_cola_ready);
-    if(strcmp(ALGORITMO_PLANIFICACION, "CMN") == 0) {
-        agregar_hilo_a_cola(hilo_principal);
-    } else {
-        list_add(cola_ready, hilo_principal);
-    }
-    pthread_mutex_unlock(&mutex_cola_ready);
+    mover_hilo_a_ready(hilo_principal);
 
     list_add(pcb->TIDS, hilo_principal);
 
@@ -235,6 +229,16 @@ void mover_a_ready(t_pcb* pcb) {
     pthread_mutex_unlock(&mutex_cola_new);
 
     pcb->ESTADO = READY;
+}
+
+void mover_hilo_a_ready(t_tcb* hilo) {
+    pthread_mutex_lock(&mutex_cola_ready);
+    if(strcmp(ALGORITMO_PLANIFICACION, "CMN") == 0) {
+        agregar_hilo_a_cola(hilo);
+    } else {
+        list_add(cola_ready, hilo);
+    }
+    pthread_mutex_unlock(&mutex_cola_ready);
 }
 
 void eliminar_pcb_lista(t_list* lista, uint32_t pid) {
@@ -340,13 +344,8 @@ void thread_create(t_pcb *pcb, char* archivo_pseudocodigo, int prioridad) {
 
     // MUEVE EL HILO A LA COLA DE READY SI PUEDE
     nuevo_tcb->ESTADO = READY;
-    pthread_mutex_lock(&mutex_cola_ready);
-    if(strcmp(ALGORITMO_PLANIFICACION, "CMN") == 0) {
-        agregar_hilo_a_cola(nuevo_tcb);
-    } else {
-        list_add(cola_ready, nuevo_tcb);
-    }
-    pthread_mutex_unlock(&mutex_cola_ready);
+    
+    mover_hilo_a_ready(nuevo_tcb);
 
     log_info(LOGGER_KERNEL, "(<%d>:<%d>) Se crea el Hilo - Estado: READY", nuevo_tcb->PID_PADRE, nuevo_tcb->TID);
 }
@@ -369,13 +368,7 @@ void thread_join(t_pcb* pcb, uint32_t tid_actual, uint32_t tid_esperado) {
     if (tcb_esperado->ESTADO == EXIT) {
         log_info(LOGGER_KERNEL, "El hilo %d ya terminado, no es necesario hacer el join", tid_esperado);
 
-        pthread_mutex_lock(&mutex_cola_ready);
-        if(strcmp(ALGORITMO_PLANIFICACION, "CMN") == 0) {
-            agregar_hilo_a_cola(tcb_actual);
-        } else {
-            list_add(cola_ready, tcb_actual);
-        }
-        pthread_mutex_unlock(&mutex_cola_ready);
+        mover_hilo_a_ready(tcb_actual);
 
         return;
     }
@@ -413,95 +406,10 @@ void tiene_algun_hilo_bloqueado(uint32_t tid_terminado) {
 void desbloquear_hilo_bloqueado(t_tcb* hilo_a_desbloquear) {
     hilo_a_desbloquear->ESTADO = READY;
 
-    pthread_mutex_lock(&mutex_cola_ready);
-    if(strcmp(ALGORITMO_PLANIFICACION, "CMN") == 0) {
-        agregar_hilo_a_cola(hilo_a_desbloquear);
-    } else {
-        list_add(cola_ready, hilo_a_desbloquear);
-    }
-    pthread_mutex_unlock(&mutex_cola_ready);
+    mover_hilo_a_ready(hilo_a_desbloquear);
+
     log_info(LOGGER_KERNEL, "Hilo %d desbloqueado del PTHREAD_JOIN", hilo_a_desbloquear->TID);
 }
-
-// void thread_join(t_pcb* pcb, uint32_t tid_actual, uint32_t tid_esperado) {
-
-//     // BUSCA EL HILO ESPERADO EN EL PCB
-//     t_tcb* tcb_esperado = buscar_hilo_por_tid(pcb, tid_esperado);
-//     if (tcb_esperado == NULL) {
-//         log_error(LOGGER_KERNEL, "Error: TID %d no encontrado en el proceso %d", tid_esperado, pcb->PID);
-//         return;
-//     }
-
-//     t_tcb* tcb_actual = buscar_hilo_por_tid(pcb, tid_actual);
-//     if (tcb_actual == NULL) {
-//         log_info(LOGGER_KERNEL, "Error: No se encontro el hilo actual  %d", tid_actual);
-//         return;
-//     }
-
-//     // VE SI EL HILO ESTA EJECUTANDOSE O EN READY, EN DICHO CASO BLOQUEA EL HILO ACTUAL
-//     if (tcb_esperado->ESTADO == EXIT) {
-//         log_info(LOGGER_KERNEL, "El hilo %d ya terminado, no es necesario hacer el join", tid_esperado);
-
-//         pthread_mutex_lock(&mutex_cola_ready);
-//         if(strcmp(ALGORITMO_PLANIFICACION, "CMN") == 0) {
-//             agregar_hilo_a_cola(tcb_actual);
-//         } else {
-//             list_add(cola_ready, tcb_actual);
-//         }
-//         pthread_mutex_unlock(&mutex_cola_ready);
-
-//         return;
-//     }
-
-//     log_info(LOGGER_KERNEL, "EL hilo %d esperara al hilo %d", tid_actual, tid_esperado);
-
-//     esperar_a_que_termine(tcb_esperado, tcb_actual);
-// }
-
-// void esperar_a_que_termine(t_tcb* esperado,  t_tcb* actual) {
-//     pthread_mutex_lock(&mutex_estado);
-
-//     actual->ESTADO = BLOCK_PTHREAD_JOIN;
-    
-//     pthread_mutex_lock(&mutex_cola_blocked);
-//     list_add(cola_blocked, actual);
-//     pthread_mutex_unlock(&mutex_cola_blocked);
-
-//     while (esperado->ESTADO != EXIT) {
-//         pthread_cond_wait(&cond_estado, &mutex_estado);
-//     }
-
-//     desbloquear_hilo_actual(actual);
-
-//     pthread_mutex_unlock(&mutex_estado);
-// }
-
-// void desbloquear_hilo_actual(t_tcb* actual) {
-
-//     pthread_mutex_lock(&mutex_estado);
-
-//     // Cambiar el estado del hilo a READY
-//     actual->ESTADO = READY;
-//     pthread_mutex_lock(&mutex_cola_blocked);
-//     eliminar_tcb_lista(cola_blocked, actual->TID);
-//     pthread_mutex_unlock(&mutex_cola_blocked);
-
-//     pthread_mutex_lock(&mutex_cola_ready);
-//     if(strcmp(ALGORITMO_PLANIFICACION, "CMN") == 0) {
-//             agregar_hilo_a_cola(actual);
-//     } else {
-//         list_add(cola_ready, actual);
-//     }
-//     pthread_mutex_unlock(&mutex_cola_ready);
-
-//     log_info(LOGGER_KERNEL, "Hilo %d desbloqueado.", actual->TID);
-
-//     // Enviar señal para despertar a todos los hilos bloqueados en esta condición
-//     // FUNCION RARA
-//     pthread_cond_broadcast(&cond_estado);
-
-//     pthread_mutex_unlock(&mutex_estado);
-// }
 
 t_tcb* buscar_hilo_por_tid(t_pcb* pcb, uint32_t tid) {
     for (int i=0; i < list_size(pcb->TIDS); i++) {
@@ -636,13 +544,7 @@ void intentar_mover_a_execute() {
         hilo_a_ejecutar->ESTADO = READY;
         pcb_padre->ESTADO = READY;
         cpu_libre = true;
-        pthread_mutex_lock(&mutex_cola_ready);
-        if(strcmp(ALGORITMO_PLANIFICACION, "CMN") == 0) {
-            agregar_hilo_a_cola(hilo_a_ejecutar);
-        } else {
-            list_add(cola_ready, hilo_a_ejecutar);
-        }
-        pthread_mutex_lock(&mutex_cola_ready);
+        mover_hilo_a_ready(hilo_a_ejecutar);
     }
 
     log_info(LOGGER_KERNEL, "(<%d>:<%d>) Movido a Excecute", hilo_a_ejecutar->PID_PADRE, hilo_a_ejecutar->TID);
@@ -774,13 +676,7 @@ void io(t_pcb* pcb, uint32_t tid, int milisegundos) {
     usleep(milisegundos * 1000);
 
     tcb->ESTADO = READY;
-    pthread_mutex_lock(&mutex_cola_ready);
-    if(strcmp(ALGORITMO_PLANIFICACION, "CMN") == 0) {
-        agregar_hilo_a_cola(tcb);
-    } else {
-        list_add(cola_ready, tcb);
-    }
-    pthread_mutex_unlock(&mutex_cola_ready);
+    mover_hilo_a_ready(tcb);
 
     log_info(LOGGER_KERNEL, "(<%d>:<%d>) Finalizó IO y pasa a READY", tcb->PID_PADRE, tcb->TID);
 }
