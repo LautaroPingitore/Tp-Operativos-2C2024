@@ -81,6 +81,10 @@ void inicializar_kernel() {
     cola_blocked = list_create();
 
     colas_multinivel = list_create();
+    t_cola_multinivel* cola_cero = malloc(sizeof(t_cola_multinivel));
+    cola_cero->nro = 0;
+    cola_cero->cola = list_create();
+    list_add_in_index(colas_multinivel, 0, cola_cero);
 
     tabla_paths = list_create();
     tabla_procesos = list_create();
@@ -484,20 +488,20 @@ void intentar_mover_a_execute() {
     if(strcmp(ALGORITMO_PLANIFICACION, "CMN") == 0) {
         for(int i=0; i < list_size(colas_multinivel); i++) {
             t_cola_multinivel* cola_act = list_get(colas_multinivel, i);
-            if(list_size(cola_act->cola) != 0) {
+            if(list_size(cola_act->cola) > 0) {
                 break;
             }
+
+            log_info(LOGGER_KERNEL, "No hay hilos en READY para mover a EXECUTE");
+            log_info(LOGGER_KERNEL, "Se termina la ejecucion del programa");
+            pthread_mutex_unlock(&mutex_cola_ready);
+            return;
         }
-        log_info(LOGGER_KERNEL, "No hay hilos en READY para mover a EXECUTE");
-        log_info(LOGGER_KERNEL, "Se termina la ejecucion del programa");
-        pthread_mutex_unlock(&mutex_cola_ready);
-        exit(SUCCES);
     } else {
         if (list_is_empty(cola_ready)) {
             log_info(LOGGER_KERNEL, "No hay hilos en READY para mover a EXECUTE");
             log_info(LOGGER_KERNEL, "Se termina la ejecucion del programa");
             pthread_mutex_unlock(&mutex_cola_ready);
-            exit(SUCCES);
             return;
         }
     }
@@ -514,11 +518,11 @@ void intentar_mover_a_execute() {
     // Obtener el proximo hilo a ejecutar en base al planificador
     t_tcb* hilo_a_ejecutar = seleccionar_hilo_por_algoritmo();
 
-    if(strcmp(ALGORITMO_PLANIFICACION, "CMN") == 0) {
-        eliminar_hilo_cola_multinivel(hilo_a_ejecutar);
-    } else {
-        eliminar_tcb_lista(cola_ready, hilo_a_ejecutar->TID);
-    }
+    // if(strcmp(ALGORITMO_PLANIFICACION, "CMN") == 0) {
+    //     eliminar_hilo_cola_multinivel(hilo_a_ejecutar);
+    // } else {
+    //     eliminar_tcb_lista(cola_ready, hilo_a_ejecutar->TID);
+    // }
 
     t_pcb* pcb_padre = obtener_pcb_padre_de_hilo(hilo_a_ejecutar->PID_PADRE);
 
@@ -548,6 +552,7 @@ void intentar_mover_a_execute() {
     }
 
     log_info(LOGGER_KERNEL, "(<%d>:<%d>) Movido a Excecute", hilo_a_ejecutar->PID_PADRE, hilo_a_ejecutar->TID);
+    empezar_quantum(QUANTUM);
 }
 
 // PLANIFICADOR A CORTO PLAZO ===============
@@ -604,13 +609,13 @@ t_tcb* obtener_hilo_x_prioridad() {
     return hilo_a_ejecutar;
 }
 
-// COLAS MULTINIVEL ===============
+// COLAS MULTINIVEL (LOS HILOS DE CADA COLA SE EJECUTAN USANDO FIFO) ===============
 
 t_tcb* seleccionar_hilo_multinivel() {
     pthread_mutex_lock(&mutex_cola_ready);
     for(int i=0; i < list_size(colas_multinivel); i++) {
         t_cola_multinivel* cola_act = list_get(colas_multinivel, i);
-        if(list_size(cola_act->cola) > 0) {
+        if(list_size(cola_act->cola) > 0) { //verifica que la cola no esté vacía
             t_tcb* hilo_a_ejecutar = list_remove(cola_act->cola, 0);
             pthread_mutex_unlock(&mutex_cola_ready);
             return hilo_a_ejecutar;
@@ -621,17 +626,21 @@ t_tcb* seleccionar_hilo_multinivel() {
 }
 
 void agregar_hilo_a_cola(t_tcb* hilo) {
-    t_cola_multinivel* cola = buscar_cola_multinivel(hilo->PRIORIDAD);
+    t_cola_multinivel* cola_multinivel = buscar_cola_multinivel(hilo->PRIORIDAD);
 
-    if(cola == NULL) {
+    if(cola_multinivel == NULL) {
+        log_warning(LOGGER_KERNEL, " LA COLA NO EXISTE");
         t_cola_multinivel* cola_nueva = malloc(sizeof(t_cola_multinivel));
         cola_nueva->nro = hilo->PRIORIDAD;
         cola_nueva->cola = list_create();
+        log_warning(LOGGER_KERNEL," SE CREO LA STRUCT");
 
         list_add(cola_nueva->cola, hilo);
+        log_warning(LOGGER_KERNEL,"SE AGREGO AEL HILO A LA COLA");
         list_add_in_index(colas_multinivel, hilo->PRIORIDAD, cola_nueva);
+        log_warning(LOGGER_KERNEL,"SE AGREGO COLA A COLA");
     } else {
-        list_add(cola->cola, hilo);
+        list_add(cola_multinivel->cola, hilo);
     }
 }
 
@@ -641,22 +650,12 @@ t_cola_multinivel* buscar_cola_multinivel(int prioridad) {
     return cola_act;
 }
 
-void eliminar_hilo_cola_multinivel(t_tcb* hilo) {
-    t_cola_multinivel* cola = buscar_cola_multinivel(hilo->PRIORIDAD);
-    for(int i=0; i < list_size(cola->cola); i++) {
-        t_tcb* hilo_actual = list_get(cola->cola, i);
-        if(hilo_actual->TID == hilo->TID) {
-            list_remove(cola->cola, i);
-        }
-    }
-}
-
 // OJO CON ESTA FUNCION YA QUE PUEDE BLOQUEAR TODO KERNEL
 void empezar_quantum(int quantum) {
     // Espera el tiempo especificado por el quantum
     usleep(quantum * 1000); // Convertir milisegundos a microsegundos
 
-    enviar_interrupcion_cpu(FINALIZACION_QUANTUM, quantum);
+    enviar_interrupcion_cpu(FINALIZACION_QUANTUM);
 }
 
 // ENTRADA Y SALIDA ====================

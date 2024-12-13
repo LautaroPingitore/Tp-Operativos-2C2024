@@ -354,10 +354,6 @@ void* procesar_conexion_memoria(void *void_args){
                 }
                 break;
 
-            case ERROROPCODE:
-                log_error(LOGGER_MEMORIA, "Cliente desconectado de %s... con cod_op -1", server_name);
-                break;
-
             default:
                 log_error(LOGGER_MEMORIA, "Codigo desconocido en el servidor de %s, Cod OP: %d", server_name, cod);
                 break;

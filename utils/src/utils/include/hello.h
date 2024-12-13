@@ -53,7 +53,6 @@ typedef enum{
     HANDSHAKE_cpu,
     HANDSHAKE_interrupt,
     HANDSHAKE_dispatch,
-    ERROROPCODE,
     PEDIR_VALOR_MEMORIA,
     ESCRIBIR_VALOR_MEMORIA,
     ACTUALIZAR_CONTEXTO,

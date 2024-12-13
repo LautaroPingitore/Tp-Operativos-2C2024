@@ -206,6 +206,11 @@ void devolver_control_al_kernel() {
 
     paquete->buffer->size = sizeof(uint32_t) * 3 + sizeof(int) + sizeof(t_estado);
     paquete->buffer->stream = malloc(paquete->buffer->size);
+    if (!paquete->buffer->stream) {
+        log_error(LOGGER_CPU, "Fallo en la asignación de memoria para el stream del paquete.");
+        eliminar_paquete(paquete);
+        return;
+    }
     int desplazamiento = 0;
 
     memcpy(paquete->buffer->stream + desplazamiento, &(hilo_actual->TID), sizeof(uint32_t));
@@ -221,12 +226,12 @@ void devolver_control_al_kernel() {
     desplazamiento += sizeof(t_estado);
 
     memcpy(paquete->buffer->stream + desplazamiento, &(hilo_actual->PC), sizeof(uint32_t));
-    
-    enviar_paquete(paquete, socket_cpu_interrupt_kernel); 
+
+    if(enviar_paquete(paquete, socket_cpu_interrupt_kernel + 2) != 0) {
+        log_error(LOGGER_CPU, "NO SE ENVIO EL PAQUETE");
+    }
 
     eliminar_paquete(paquete);
-
-    log_info(LOGGER_CPU, "Control devuelto al Kernel.");
 }
 
 // FUNCIONES INSTRUCCIONES

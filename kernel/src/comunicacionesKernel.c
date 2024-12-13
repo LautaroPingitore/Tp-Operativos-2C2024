@@ -163,25 +163,26 @@ void enviar_memory_dump(t_pcb* pcb, uint32_t tid) {
 
 // REVISAR SI PUEDE HABER MAS DE UNA INTERRUPCION
 // ACA SOLO ESTA PUESTA LA DE FIN DE QUANTUM
-void enviar_interrupcion_cpu(op_code interrupcion, int quantum) {
-    t_paquete* paquete = crear_paquete_con_codigo_de_operacion(interrupcion);
-    bool hay_interrupcion = true;
-    int desplazamiento = 0;
+void enviar_interrupcion_cpu(op_code interrupcion) {
+    t_paquete *paquete = malloc(sizeof(t_paquete));
+	
+    paquete->codigo_operacion = interrupcion;
+    paquete->buffer = malloc(sizeof(t_buffer));
+    paquete->buffer->size = 0;
+    paquete->buffer->stream = NULL;
 
-    paquete->buffer->size = sizeof(int) + sizeof(bool);
-    paquete->buffer->stream = malloc(paquete->buffer->size);
+    void *a_enviar = malloc(sizeof(op_code) + sizeof(uint32_t));
+    int offset = 0;
 
-    memcpy(paquete->buffer->stream + desplazamiento, &(quantum), sizeof(int));
-    desplazamiento += sizeof(int);
+    memcpy(a_enviar + offset, &(paquete->codigo_operacion), sizeof(op_code));
+    offset += sizeof(op_code);
+    memcpy(a_enviar + offset, &(paquete->buffer->size), sizeof(uint32_t));
 
-    memcpy(paquete->buffer->stream + desplazamiento, &(hay_interrupcion), sizeof(bool));
-
-    if(enviar_paquete(paquete, socket_kernel_cpu_interrupt) == -1) {
-        log_error(LOGGER_KERNEL, "Error al enviar la interrupcion");
-        // reiniciar_quantum()
-        eliminar_paquete(paquete);
-        return;
+    if (send(socket_kernel_cpu_interrupt, a_enviar, offset, 0) == -1) {
+        perror("Error al enviar la interrupcion");
     }
+
+    free(a_enviar);
     eliminar_paquete(paquete);
 }
 

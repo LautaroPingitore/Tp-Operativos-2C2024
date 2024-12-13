@@ -2,8 +2,8 @@
 #define PLANIFICADOR_H_
 
 typedef struct {
-    int nro;
-    t_list* cola;
+    int nro; // Numero de prioridad de la cola
+    t_list* cola; // Hilos t_tcb*
 } t_cola_multinivel;
 
 typedef struct {

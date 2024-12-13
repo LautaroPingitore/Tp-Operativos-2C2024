@@ -33,6 +33,9 @@ void ejecutar_ciclo_instruccion() {
         
         // Verifica si se necesita realizar un check_interrupt
         check_interrupt();
+        if(hay_interrupcion) {
+            return;
+        }
 
         liberar_instruccion(instruccion);
 
@@ -60,7 +63,7 @@ t_instruccion *fetch(uint32_t pid, uint32_t tid, uint32_t pc) {
         return NULL;
     }
 
-    log_info(LOGGER_CPU, "“## TID: <%d> - FETCH - Program Counter: <%d>”", tid, pc);
+    log_info(LOGGER_CPU, "## TID: <%d> - FETCH - Program Counter: <%d>", tid, pc);
 
     return inst;
 }
