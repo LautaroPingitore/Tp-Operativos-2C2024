@@ -182,15 +182,15 @@ void manejar_comunicaciones(int socket, const char* nombre_modulo) {
             
 
             case DEVOLVER_CONTROL_KERNEL: 
-                if (strcmp(nombre_modulo, "CPU_INTERRUPT") == 0) {
-                    t_tcb* tcb = recibir_hilo(socket);
-                    if (tcb->motivo_desalojo == INTERRUPCION_BLOQUEO) {
-                        list_remove(cola_exec, 0);
+                log_warning(LOGGER_KERNEL, "ENTRO A DEVCOK");
+                t_tcb* tcb = recibir_hilo(socket);
+                if (tcb->motivo_desalojo == INTERRUPCION_BLOQUEO) {
+                    t_tcb* tcb_interrumpido = list_remove(cola_exec, 0);
 
-                        mover_hilo_a_ready(tcb);
+                    mover_hilo_a_ready(tcb_interrumpido);
+                    free(tcb);
 
-                        intentar_mover_a_execute();
-                    }
+                    intentar_mover_a_execute();
                 }
                 break;
             
