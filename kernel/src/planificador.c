@@ -485,10 +485,13 @@ void intentar_mover_a_execute() {
 
     pthread_mutex_lock(&mutex_cola_ready);
 
+    log_error(LOGGER_KERNEL, "TAMANIO COLA GENERAL = %d", list_size(colas_multinivel));
+
     if(strcmp(ALGORITMO_PLANIFICACION, "CMN") == 0) {
         for(int i=0; i < list_size(colas_multinivel); i++) {
             t_cola_multinivel* cola_act = list_get(colas_multinivel, i);
-            if(list_size(cola_act->cola) > 0) {
+            log_warning(LOGGER_KERNEL, "TAMANIO COLA %d = %d", cola_act->nro, list_size(cola_act->cola));
+            if(list_size(cola_act->cola) > 0) { 
                 break;
             }
 
@@ -518,12 +521,6 @@ void intentar_mover_a_execute() {
     // Obtener el proximo hilo a ejecutar en base al planificador
     t_tcb* hilo_a_ejecutar = seleccionar_hilo_por_algoritmo();
 
-    // if(strcmp(ALGORITMO_PLANIFICACION, "CMN") == 0) {
-    //     eliminar_hilo_cola_multinivel(hilo_a_ejecutar);
-    // } else {
-    //     eliminar_tcb_lista(cola_ready, hilo_a_ejecutar->TID);
-    // }
-
     t_pcb* pcb_padre = obtener_pcb_padre_de_hilo(hilo_a_ejecutar->PID_PADRE);
 
     hilo_a_ejecutar->ESTADO = EXECUTE;
@@ -552,7 +549,9 @@ void intentar_mover_a_execute() {
     }
 
     log_info(LOGGER_KERNEL, "(<%d>:<%d>) Movido a Excecute", hilo_a_ejecutar->PID_PADRE, hilo_a_ejecutar->TID);
-    empezar_quantum(QUANTUM);
+    if(strcmp(ALGORITMO_PLANIFICACION, "CMN") == 0) {
+        empezar_quantum(QUANTUM);
+    }
 }
 
 // PLANIFICADOR A CORTO PLAZO ===============
@@ -626,33 +625,36 @@ t_tcb* seleccionar_hilo_multinivel() {
 }
 
 void agregar_hilo_a_cola(t_tcb* hilo) {
-    log_warning(LOGGER_KERNEL, "ENTRA A AGREGAR HILO");
-    t_cola_multinivel* cola_multinivel = buscar_cola_multinivel(hilo->PRIORIDAD);
-    log_warning(LOGGER_KERNEL, "SE ENCONTRO O NO LA COLA");
-
-    if(cola_multinivel == NULL) {
-        log_warning(LOGGER_KERNEL, "LA COLA NO EXISTE");
-        t_cola_multinivel* cola_nueva = malloc(sizeof(t_cola_multinivel));
-        cola_nueva->nro = hilo->PRIORIDAD;
-        cola_nueva->cola = list_create();
-        log_warning(LOGGER_KERNEL, "SE CREO LA STRUCT");
-
-        list_add(cola_nueva->cola, hilo);
-        log_warning(LOGGER_KERNEL, "SE AGREGO AEL HILO A LA COLA");
-        list_add_in_index(colas_multinivel, hilo->PRIORIDAD, cola_nueva);
-        log_warning(LOGGER_KERNEL, "SE AGREGO COLA A COLA");
-    } else {
-        log_warning(LOGGER_KERNEL, "EXISTE Y SE AGREAGA");
-        list_add(cola_multinivel->cola, hilo);
+    if(list_size(colas_multinivel) - 1 < hilo->PRIORIDAD) {
+        log_warning(LOGGER_KERNEL, "SE VA A REALIZAR LA EXPLANSIONSAD");
+        expandir_lista_hasta_indice(hilo->PRIORIDAD);
+        log_warning(LOGGER_KERNEL, "SE A EXPANDIDO");
     }
+
+    t_cola_multinivel* cola_multinivel = buscar_cola_multinivel(hilo->PRIORIDAD);
+
+    list_add(cola_multinivel->cola, hilo);
+    log_warning(LOGGER_KERNEL, "SE AGREGO HILO %d A COLA %d", hilo->TID, cola_multinivel->nro);
 }
 
 t_cola_multinivel* buscar_cola_multinivel(int prioridad) {
     // RETORNA UN NULL SI NO HAY NADA
-    log_warning(LOGGER_KERNEL, "ENTRO A BUSCAR COLA");
     t_cola_multinivel* cola_act = list_get(colas_multinivel, prioridad);
-    log_warning(LOGGER_KERNEL, "HIZO EL GET");
     return cola_act;
+}
+
+void expandir_lista_hasta_indice(int indice) {
+    int contador = list_size(colas_multinivel);
+    while(indice >= contador) {
+        log_warning(LOGGER_KERNEL,"Contador = %d", contador);
+        t_cola_multinivel* cola_nueva = malloc(sizeof(t_cola_multinivel));
+        cola_nueva->nro = contador;
+        cola_nueva->cola = list_create();
+        list_add(colas_multinivel, cola_nueva);
+
+        contador ++;
+        log_warning(LOGGER_KERNEL, "SE CREO COLA %d", cola_nueva->nro);
+    }
 }
 
 // OJO CON ESTA FUNCION YA QUE PUEDE BLOQUEAR TODO KERNEL

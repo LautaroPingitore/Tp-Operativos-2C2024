@@ -81,6 +81,7 @@ t_tcb* seleccionar_hilo_multinivel();
 void agregar_hilo_a_cola(t_tcb*);
 t_cola_multinivel* buscar_cola_multinivel(int);
 void eliminar_hilo_cola_multinivel(t_tcb*);
+void expandir_lista_hasta_indice(int);
 void empezar_quantum(int);
 void ejecutar_hilo(t_tcb*);
 
