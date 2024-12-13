@@ -32,6 +32,7 @@ extern pthread_mutex_t mutex_cola_blocked;
 extern pthread_mutex_t mutex_pid;
 extern pthread_mutex_t mutex_tid;
 extern pthread_mutex_t mutex_estado;
+extern pthread_mutex_t mutex_cola_multinivel;
 extern pthread_cond_t cond_estado;
 
 // VARIABLES DE CONTROL

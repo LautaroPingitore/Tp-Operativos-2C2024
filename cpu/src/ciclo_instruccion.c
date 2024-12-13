@@ -31,6 +31,15 @@ void ejecutar_ciclo_instruccion() {
         // Aquí se llama a decode, pero por simplicidad se omite en este ejemplo
         execute(instruccion, socket_cpu_dispatch_kernel, hilo_actual);
         
+        pthread_mutex_lock(&mutex_syscall);
+        if(hay_syscall) {
+            actualizar_listas_cpu(pcb_actual, hilo_actual);
+            pthread_mutex_unlock(&mutex_syscall);
+            liberar_instruccion(instruccion);
+            return;
+        }
+        pthread_mutex_unlock(&mutex_syscall);
+
         // Verifica si se necesita realizar un check_interrupt
         check_interrupt();
         if(hay_interrupcion) {
@@ -39,13 +48,6 @@ void ejecutar_ciclo_instruccion() {
 
         liberar_instruccion(instruccion);
 
-        pthread_mutex_lock(&mutex_syscall);
-        if(hay_syscall) {
-            actualizar_listas_cpu(pcb_actual, hilo_actual);
-            pthread_mutex_unlock(&mutex_syscall);
-            return;
-        }
-        pthread_mutex_unlock(&mutex_syscall);
     }
 }
 

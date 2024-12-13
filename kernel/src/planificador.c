@@ -65,6 +65,7 @@ pthread_mutex_t mutex_pid;
 pthread_mutex_t mutex_tid;
 pthread_mutex_t mutex_estado;
 pthread_mutex_t mutex_join;
+pthread_mutex_t mutex_cola_multinivel;
 pthread_cond_t cond_estado = PTHREAD_COND_INITIALIZER;
 
 
@@ -75,16 +76,15 @@ bool cpu_libre = true;
 
 void inicializar_kernel() {
     cola_new = list_create();
-    cola_ready = list_create();
     cola_exec = list_create();
     cola_exit = list_create();
     cola_blocked = list_create();
 
-    colas_multinivel = list_create();
-    t_cola_multinivel* cola_cero = malloc(sizeof(t_cola_multinivel));
-    cola_cero->nro = 0;
-    cola_cero->cola = list_create();
-    list_add_in_index(colas_multinivel, 0, cola_cero);
+    if(strcmp(ALGORITMO_PLANIFICACION, "CMN") == 0) {
+        colas_multinivel = list_create();
+    } else {
+        cola_ready = list_create();
+    }
 
     tabla_paths = list_create();
     tabla_procesos = list_create();
@@ -98,6 +98,7 @@ void inicializar_kernel() {
     pthread_mutex_init(&mutex_cola_blocked, NULL);
     pthread_mutex_init(&mutex_process_create, NULL);
     pthread_mutex_init(&mutex_cola_exec, NULL);
+    pthread_mutex_init(&mutex_cola_multinivel, NULL);
     pthread_mutex_init(&mutex_join, NULL);
 
     sem_init(&sem_process_create, 0, 0);
@@ -485,12 +486,9 @@ void intentar_mover_a_execute() {
 
     pthread_mutex_lock(&mutex_cola_ready);
 
-    log_error(LOGGER_KERNEL, "TAMANIO COLA GENERAL = %d", list_size(colas_multinivel));
-
     if(strcmp(ALGORITMO_PLANIFICACION, "CMN") == 0) {
         for(int i=0; i < list_size(colas_multinivel); i++) {
             t_cola_multinivel* cola_act = list_get(colas_multinivel, i);
-            log_warning(LOGGER_KERNEL, "TAMANIO COLA %d = %d", cola_act->nro, list_size(cola_act->cola));
             if(list_size(cola_act->cola) > 0) { 
                 break;
             }
@@ -625,9 +623,11 @@ t_tcb* seleccionar_hilo_multinivel() {
 }
 
 void agregar_hilo_a_cola(t_tcb* hilo) {
-    if(hilo->PRIORIDAD != 0 && list_size(colas_multinivel) - 1 < hilo->PRIORIDAD) {
-        log_warning(LOGGER_KERNEL, "SE VA A REALIZAR LA EXPLANSIONSAD");
+    if(list_size(colas_multinivel) - 1 < hilo->PRIORIDAD) {
+        log_warning(LOGGER_KERNEL, "SE VA A REALIZAR LA EXPLANSIONSAD HASTA COLA %d", hilo->PRIORIDAD);
+        pthread_mutex_lock(&mutex_cola_multinivel);
         expandir_lista_hasta_indice(hilo->PRIORIDAD);
+        pthread_mutex_unlock(&mutex_cola_multinivel);
         log_warning(LOGGER_KERNEL, "SE A EXPANDIDO");
     }
 
@@ -638,31 +638,48 @@ void agregar_hilo_a_cola(t_tcb* hilo) {
 }
 
 t_cola_multinivel* buscar_cola_multinivel(int prioridad) {
-    // RETORNA UN NULL SI NO HAY NADA
-    t_cola_multinivel* cola_act = list_get(colas_multinivel, prioridad);
-    return cola_act;
+    if (prioridad >= list_size(colas_multinivel)) {
+        log_error(LOGGER_KERNEL, "Índice fuera de rango en colas_multinivel: %d", prioridad);
+        return NULL;
+    }
+    return list_get(colas_multinivel, prioridad);
 }
 
 void expandir_lista_hasta_indice(int indice) {
+    if (!colas_multinivel) {
+        log_error(LOGGER_KERNEL, "colas_multinivel no está inicializada");
+        return;
+    }
+
     int contador = list_size(colas_multinivel);
-    while(indice >= contador) {
-        log_warning(LOGGER_KERNEL,"Contador = %d", contador);
+
+    while (indice >= contador) {
         t_cola_multinivel* cola_nueva = malloc(sizeof(t_cola_multinivel));
+        if (!cola_nueva) {
+            log_error(LOGGER_KERNEL, "Error al asignar espacio a la cola");
+            return;
+        }
+
         cola_nueva->nro = contador;
         cola_nueva->cola = list_create();
-        list_add(colas_multinivel, cola_nueva);
+        if (!cola_nueva->cola) {
+            log_error(LOGGER_KERNEL, "Error al crear lista dentro de cola_multinivel");
+            free(cola_nueva);
+            return;
+        }
 
-        contador ++;
-        log_warning(LOGGER_KERNEL, "SE CREO COLA %d", cola_nueva->nro);
+        list_add(colas_multinivel, cola_nueva);
+        contador++;
     }
+
 }
 
 // OJO CON ESTA FUNCION YA QUE PUEDE BLOQUEAR TODO KERNEL
 void empezar_quantum(int quantum) {
     // Espera el tiempo especificado por el quantum
     usleep(quantum * 1000); // Convertir milisegundos a microsegundos
-
     enviar_interrupcion_cpu(FINALIZACION_QUANTUM);
+
 }
 
 // ENTRADA Y SALIDA ====================
