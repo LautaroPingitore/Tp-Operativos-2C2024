@@ -26,8 +26,8 @@ t_tcb* deserializar_paquete_tcb(t_buffer* buffer) {
     memcpy(&tcb->PID_PADRE, stream + desplazamiento, sizeof(uint32_t));
     desplazamiento += sizeof(uint32_t);
 
-    memcpy(&tcb->ESTADO, stream + desplazamiento, sizeof(t_estado));
-	desplazamiento += sizeof(t_estado);
+    memcpy(&tcb->motivo_desalojo, stream + desplazamiento, sizeof(motivo_desalojo));
+	desplazamiento += sizeof(motivo_desalojo);
 
 	memcpy(&tcb->PC, stream + desplazamiento, sizeof(uint32_t));
 

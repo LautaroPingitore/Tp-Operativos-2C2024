@@ -97,9 +97,9 @@ void envio_hilo_crear(int socket_cliente, t_tcb* tcb, op_code codigo) {
     memcpy(paquete->buffer->stream + desplazamiento, tcb->archivo, tamanio_archivo);
 
     if (enviar_paquete(paquete, socket_cliente) == -1) {
-        log_error(LOGGER_KERNEL, "Error al enviar el proceso a memoria");
+        log_error(LOGGER_KERNEL, "Error al enviar el hilo a memoria");
     } else {
-        log_info(LOGGER_KERNEL,"Proceso enviado correctamente a memoria");
+        log_info(LOGGER_KERNEL, "Hilo enviado correctamente a memoria");
     }
 
     eliminar_paquete(paquete);
@@ -109,7 +109,7 @@ void envio_hilo_crear(int socket_cliente, t_tcb* tcb, op_code codigo) {
 int enviar_hilo_a_cpu(t_tcb* hilo) {
     t_paquete* paquete = crear_paquete_con_codigo_de_operacion(HILO);
 
-    paquete->buffer->size = sizeof(uint32_t) * 3 + sizeof(int) + sizeof(t_estado);
+    paquete->buffer->size = sizeof(uint32_t) * 3 + sizeof(int) + sizeof(motivo_desalojo);
     paquete->buffer->stream = malloc(paquete->buffer->size);
     int desplazamiento = 0;
 
@@ -122,8 +122,8 @@ int enviar_hilo_a_cpu(t_tcb* hilo) {
     memcpy(paquete->buffer->stream + desplazamiento, &(hilo->PID_PADRE), sizeof(uint32_t));
     desplazamiento += sizeof(uint32_t);
 
-    memcpy(paquete->buffer->stream + desplazamiento, &(hilo->ESTADO), sizeof(t_estado));
-    desplazamiento += sizeof(t_estado);
+    memcpy(paquete->buffer->stream + desplazamiento, &(hilo->motivo_desalojo), sizeof(motivo_desalojo));
+    desplazamiento += sizeof(motivo_desalojo);
 
     memcpy(paquete->buffer->stream + desplazamiento, &(hilo->PC), sizeof(uint32_t));
 

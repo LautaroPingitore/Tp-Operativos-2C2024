@@ -204,7 +204,7 @@ void devolver_control_al_kernel() {
     t_paquete *paquete = crear_paquete_con_codigo_de_operacion(DEVOLVER_CONTROL_KERNEL);
     hilo_actual->motivo_desalojo = INTERRUPCION_BLOQUEO;
 
-    paquete->buffer->size = sizeof(uint32_t) * 3 + sizeof(int) + sizeof(t_estado);
+    paquete->buffer->size = sizeof(uint32_t) * 3 + sizeof(int) + sizeof(motivo_desalojo);
     paquete->buffer->stream = malloc(paquete->buffer->size);
     if (!paquete->buffer->stream) {
         log_error(LOGGER_CPU, "Fallo en la asignación de memoria para el stream del paquete.");
@@ -222,8 +222,8 @@ void devolver_control_al_kernel() {
     memcpy(paquete->buffer->stream + desplazamiento, &(hilo_actual->PID_PADRE), sizeof(uint32_t));
     desplazamiento += sizeof(uint32_t);
 
-    memcpy(paquete->buffer->stream + desplazamiento, &(hilo_actual->ESTADO), sizeof(t_estado));
-    desplazamiento += sizeof(t_estado);
+    memcpy(paquete->buffer->stream + desplazamiento, &(hilo_actual->motivo_desalojo), sizeof(motivo_desalojo));
+    desplazamiento += sizeof(motivo_desalojo);
 
     memcpy(paquete->buffer->stream + desplazamiento, &(hilo_actual->PC), sizeof(uint32_t));
 

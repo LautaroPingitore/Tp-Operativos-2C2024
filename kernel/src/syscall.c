@@ -34,10 +34,6 @@ void syscall_thread_create(t_tcb* hilo_actual, uint32_t pid, char* archivo_pseud
 
     log_info(LOGGER_KERNEL, "Syscall THREAD_CREATE ejecutada en proceso %d con prioridad %d", pcb->PID, prioridad);
     thread_create(pcb, archivo_pseudocodigo, prioridad);
-
-    pthread_mutex_lock(&mutex_cola_ready);
-    list_add(cola_ready, hilo_actual);
-    pthread_mutex_unlock(&mutex_cola_ready);
 }
 
 void syscall_thread_join(uint32_t pid, uint32_t tid_actual, uint32_t tid_esperado) {
