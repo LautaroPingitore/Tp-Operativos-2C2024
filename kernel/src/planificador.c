@@ -615,7 +615,7 @@ t_tcb* seleccionar_hilo_multinivel() {
     pthread_mutex_lock(&mutex_cola_ready);
     for(int i=0; i < list_size(colas_multinivel); i++) {
         t_cola_multinivel* cola_act = list_get(colas_multinivel, i);
-        if(list_size(cola_act->cola) > 0) { //verifica que la cola no esté vacía
+        if(cola_act != NULL && list_size(cola_act->cola) > 0) { //verifica que la cola no esté vacía
             t_tcb* hilo_a_ejecutar = list_remove(cola_act->cola, 0);
             pthread_mutex_unlock(&mutex_cola_ready);
             return hilo_a_ejecutar;
@@ -626,27 +626,32 @@ t_tcb* seleccionar_hilo_multinivel() {
 }
 
 void agregar_hilo_a_cola(t_tcb* hilo) {
+    log_warning(LOGGER_KERNEL, "ENTRA A AGREGAR HILO");
     t_cola_multinivel* cola_multinivel = buscar_cola_multinivel(hilo->PRIORIDAD);
+    log_warning(LOGGER_KERNEL, "SE ENCONTRO O NO LA COLA");
 
     if(cola_multinivel == NULL) {
-        log_warning(LOGGER_KERNEL, " LA COLA NO EXISTE");
+        log_warning(LOGGER_KERNEL, "LA COLA NO EXISTE");
         t_cola_multinivel* cola_nueva = malloc(sizeof(t_cola_multinivel));
         cola_nueva->nro = hilo->PRIORIDAD;
         cola_nueva->cola = list_create();
-        log_warning(LOGGER_KERNEL," SE CREO LA STRUCT");
+        log_warning(LOGGER_KERNEL, "SE CREO LA STRUCT");
 
         list_add(cola_nueva->cola, hilo);
-        log_warning(LOGGER_KERNEL,"SE AGREGO AEL HILO A LA COLA");
+        log_warning(LOGGER_KERNEL, "SE AGREGO AEL HILO A LA COLA");
         list_add_in_index(colas_multinivel, hilo->PRIORIDAD, cola_nueva);
-        log_warning(LOGGER_KERNEL,"SE AGREGO COLA A COLA");
+        log_warning(LOGGER_KERNEL, "SE AGREGO COLA A COLA");
     } else {
+        log_warning(LOGGER_KERNEL, "EXISTE Y SE AGREAGA");
         list_add(cola_multinivel->cola, hilo);
     }
 }
 
 t_cola_multinivel* buscar_cola_multinivel(int prioridad) {
     // RETORNA UN NULL SI NO HAY NADA
+    log_warning(LOGGER_KERNEL, "ENTRO A BUSCAR COLA");
     t_cola_multinivel* cola_act = list_get(colas_multinivel, prioridad);
+    log_warning(LOGGER_KERNEL, "HIZO EL GET");
     return cola_act;
 }
 
