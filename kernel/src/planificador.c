@@ -486,19 +486,7 @@ void intentar_mover_a_execute() {
 
     pthread_mutex_lock(&mutex_cola_ready);
 
-    if(strcmp(ALGORITMO_PLANIFICACION, "CMN") == 0) {
-        for(int i=0; i < list_size(colas_multinivel); i++) {
-            t_cola_multinivel* cola_act = list_get(colas_multinivel, i);
-            if(list_size(cola_act->cola) > 0) { 
-                break;
-            }
-
-            log_info(LOGGER_KERNEL, "No hay hilos en READY para mover a EXECUTE");
-            log_info(LOGGER_KERNEL, "Se termina la ejecucion del programa");
-            pthread_mutex_unlock(&mutex_cola_ready);
-            return;
-        }
-    } else {
+    if(strcmp(ALGORITMO_PLANIFICACION, "CMN") != 0) {
         if (list_is_empty(cola_ready)) {
             log_info(LOGGER_KERNEL, "No hay hilos en READY para mover a EXECUTE");
             log_info(LOGGER_KERNEL, "Se termina la ejecucion del programa");
@@ -518,6 +506,11 @@ void intentar_mover_a_execute() {
     
     // Obtener el proximo hilo a ejecutar en base al planificador
     t_tcb* hilo_a_ejecutar = seleccionar_hilo_por_algoritmo();
+    if(hilo_a_ejecutar == NULL) {
+        log_info(LOGGER_KERNEL, "No hay hilos en READY para mover a EXECUTE");
+        log_info(LOGGER_KERNEL, "Se termina la ejecucion del programa");
+        return;
+    }
 
     t_pcb* pcb_padre = obtener_pcb_padre_de_hilo(hilo_a_ejecutar->PID_PADRE);
 
