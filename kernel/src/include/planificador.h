@@ -21,6 +21,7 @@ extern t_list* colas_multinivel;
 
 extern t_list* tabla_paths;
 extern t_list* tabla_procesos;
+extern t_list* recursos_globales;
 // uint32_t pid_actual = 0;
 // uint32_t tid_actual = 0;
 

@@ -99,41 +99,42 @@ void syscall_mutex_create(t_tcb* hilo_actual, uint32_t pid, char* nombre) {
 
 void syscall_mutex_lock(t_tcb* hilo_actual, uint32_t pid, char* nombre) {
     t_pcb* pcb = obtener_pcb_padre_de_hilo(pid);
-    t_recurso* recurso = buscar_recurso_proceso(pcb, nombre);
+    t_recurso* recurso = buscar_recurso(pcb, nombre);
 
-    int resultado = pthread_mutex_trylock(&recurso->mutex);
-    t_tcb* hilo_bloqueado = hilo_actual;
+    if(recurso == NULL) {
+        log_error(LOGGER_KERNEL, "EL mutex %s no se encuentra creado en el proceso %d", nombre, pcb->PID);
+        return;
+    }   
 
-    if(resultado !=0) {
-        // EL MUTEX YA ESTA TOMADO
-        hilo_bloqueado->ESTADO = BLOCK_MUTEX;
-        // AGREGO ESTE PORQUE TAL VEZ, CUANDO SE DESBLOQUEE EL HILO
-        // ESTE SEA DISTINTO AL ACTUAL
-        list_add(recurso->hilos_bloqueados, hilo_bloqueado);
+    if(recurso->esta_bloqueado) {
+        hilo_actual->ESTADO = BLOCK_MUTEX;
 
         pthread_mutex_lock(&mutex_cola_blocked);
         list_add(cola_blocked, hilo_actual);
+        list_add(recurso->hilos_bloqueados, hilo_actual);
         pthread_mutex_unlock(&mutex_cola_blocked);
 
-        log_info(LOGGER_KERNEL, "## (<%d>:<%d>) - Bloqueado por <%s>", pid, hilo_bloqueado->TID, recurso->nombre_recurso);
 
-        // ESPERA A QUE SE LIBERE Y EL PRIMER RECURSO QUE SE
-        // BLOQUEO POR EL MUTEX LO TOMA
-        pthread_cond_wait(&recurso->cond_mutex, &recurso->mutex);
-
-        pthread_mutex_lock(&mutex_cola_blocked);
-        eliminar_tcb_lista(recurso->hilos_bloqueados, hilo_bloqueado->TID);
-        pthread_mutex_unlock(&mutex_cola_blocked);
-
-        log_info(LOGGER_KERNEL, "(<%d>:<%d>) Desbloqueado de %s", hilo_bloqueado->PID_PADRE, hilo_bloqueado->TID, recurso->nombre_recurso);
+        log_info(LOGGER_KERNEL, "## (<%d>:<%d>) - Bloqueado por <%s>", pid, hilo_actual->TID, recurso->nombre_recurso);
     } else {
+        recurso->esta_bloqueado = true;
+        recurso->tid_bloqueador = hilo_actual->TID;
         log_info(LOGGER_KERNEL, "Syscall MUTEX_LOCK ejecutada.");
+
+        pthread_mutex_lock(&mutex_cola_ready);
+        mover_hilo_a_ready(hilo_actual);
+        pthread_mutex_unlock(&mutex_cola_ready);
     }
+}
 
-    pthread_mutex_lock(&mutex_cola_ready);
-    list_add(cola_ready, hilo_bloqueado);
-    pthread_mutex_unlock(&mutex_cola_ready);
-
+t_recurso* buscar_recurso(char* nombre) {
+    for(int i=0; i < list_size(recursos_globales); i++) {
+        t_recurso* rec = list_get(recursos_globales, i);
+        if(strcmp(rec->nombre_recurso, nombre) == 0) {
+            return rec;
+        }
+    }
+    return NULL;
 }
 
 void syscall_mutex_unlock(t_tcb* hilo_actual, uint32_t pid, char* nombre) {
@@ -281,18 +282,4 @@ void manejar_syscall(int socket, op_code cod) {
 
 void log_syscall(char* syscall, t_tcb* tcb) {
     log_info(LOGGER_KERNEL, "## (<%d>:<%d>) - Solicitó syscall: <%s>", tcb->PID_PADRE, tcb->TID, syscall);
-}
-
-t_recurso* buscar_recurso_proceso(t_pcb* pcb, char* nombre) {
-    for(int i=0; i < list_size(pcb->MUTEXS); i++) {
-        t_recurso* rec = list_get(pcb->MUTEXS, i);
-        if(strcmp(rec->nombre_recurso, nombre) == 0) {
-            return rec;
-        }
-    }
-    return NULL;
-}
-
-void reiniciar_quantum() {
-    
 }

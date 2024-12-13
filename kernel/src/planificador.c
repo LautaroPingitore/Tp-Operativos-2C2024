@@ -52,6 +52,7 @@ t_list* colas_multinivel;
 
 t_list* tabla_paths;
 t_list* tabla_procesos;
+t_list* recursos_globales;
 // uint32_t pid_actual = 0;
 // uint32_t tid_actual = 0;
 
@@ -88,6 +89,7 @@ void inicializar_kernel() {
 
     tabla_paths = list_create();
     tabla_procesos = list_create();
+    recursos_globales = list_create();
 
     pthread_mutex_init(&mutex_pid, NULL);
     pthread_mutex_init(&mutex_tid,NULL);
@@ -151,7 +153,6 @@ t_pcb* crear_pcb(uint32_t pid, int tamanio, t_contexto_ejecucion* contexto_ejecu
 
     envio_hilo_crear(socket_kernel_memoria, hilo_principal, THREAD_CREATE);
 
-
     return pcb;
 }
 
@@ -179,8 +180,10 @@ void crear_proceso(char* path_proceso, int tamanio_proceso, int prioridad){
 
     t_pcb* pcb = crear_pcb(asignar_pid(), tamanio_proceso, inicializar_contexto(), NEW, path_proceso);
 
+    log_warning(LOGGER_KERNEL, "C1ASD");
     obtener_recursos_del_proceso(archivo, pcb);
-
+    log_warning(LOGGER_KERNEL, "se obtuvieron los recursos del proceso");
+    
     // EN LA LISTA DE NEW, READY, ETC TENDRIAN QUE SER HILOS, NO PROCESOS
     pthread_mutex_lock(&mutex_cola_new);
     list_add(cola_new, pcb);
@@ -486,16 +489,6 @@ void intentar_mover_a_execute() {
 
     pthread_mutex_lock(&mutex_cola_ready);
 
-    if(strcmp(ALGORITMO_PLANIFICACION, "CMN") != 0) {
-        if (list_is_empty(cola_ready)) {
-            log_info(LOGGER_KERNEL, "No hay hilos en READY para mover a EXECUTE");
-            log_info(LOGGER_KERNEL, "Se termina la ejecucion del programa");
-            pthread_mutex_unlock(&mutex_cola_ready);
-            return;
-        }
-    }
-
-
     if (!cpu_libre) {
         log_info(LOGGER_KERNEL, "CPU ocupada, no se puede mover un proceso a EXECUTE");
         pthread_mutex_unlock(&mutex_cola_ready);
@@ -617,17 +610,14 @@ t_tcb* seleccionar_hilo_multinivel() {
 
 void agregar_hilo_a_cola(t_tcb* hilo) {
     if(list_size(colas_multinivel) - 1 < hilo->PRIORIDAD) {
-        log_warning(LOGGER_KERNEL, "SE VA A REALIZAR LA EXPLANSIONSAD HASTA COLA %d", hilo->PRIORIDAD);
         pthread_mutex_lock(&mutex_cola_multinivel);
         expandir_lista_hasta_indice(hilo->PRIORIDAD);
         pthread_mutex_unlock(&mutex_cola_multinivel);
-        log_warning(LOGGER_KERNEL, "SE A EXPANDIDO");
     }
 
     t_cola_multinivel* cola_multinivel = buscar_cola_multinivel(hilo->PRIORIDAD);
 
     list_add(cola_multinivel->cola, hilo);
-    log_warning(LOGGER_KERNEL, "SE AGREGO HILO %d A COLA %d", hilo->TID, cola_multinivel->nro);
 }
 
 t_cola_multinivel* buscar_cola_multinivel(int prioridad) {

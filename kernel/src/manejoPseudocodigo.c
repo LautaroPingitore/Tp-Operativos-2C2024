@@ -48,57 +48,49 @@ archivo_pseudocodigo* leer_archivo_pseudocodigo(char* path_proceso) {
 }
 
 void asignar_mutex_a_proceso(t_pcb* pcb, char* nombre_recurso) {
-    // VERIFICA SI EL RECURSO YA ESTA ASIGNADO AL PROCESO
-    for (int i = 0; i < list_size(pcb->MUTEXS); i++) {
-        if (strcmp(nombre_recurso, list_get(pcb->MUTEXS,i)) == 0) {
-            log_warning(LOGGER_KERNEL, "El recurso %s ya está asignado al proceso %d", nombre_recurso, pcb->PID);
-            return;
-        }
-    }
-
     char* nuevo_recurso = strdup(nombre_recurso);
     list_add(pcb->MUTEXS, nuevo_recurso);
 }
 
 // MODIFICAR LA FUNCION DE CREAR_PCB
 void obtener_recursos_del_proceso(archivo_pseudocodigo* archivo, t_pcb* pcb) {
-
     for(int i=0; i < list_size(archivo->instrucciones); i++) {
         t_instruccion* inst = list_get(archivo->instrucciones, i);
 
         if(strcmp(inst->nombre, "MUTEX_CREATE") == 0) {
-            bool existe_en_pcb = false; // VERIFICA SI EL RECURSO YA ESTA EN LA LISTA
-            for (int i=0; i < list_size(pcb->MUTEXS); i++) {
-                if(strcmp(inst->parametro1, list_get(pcb->MUTEXS, i)) == 0) {
-                    existe_en_pcb = true;
+            bool existe_en_proceso = false;
+            for(int j=0; j < list_size(pcb->MUTEXS); j++) {
+                char* nombre_mutex = list_get(pcb->MUTEXS, j);
+                if(strcmp(nombre_mutex, inst->parametro1) == 0) {
+                    existe_en_proceso = true;
                     break;
                 }
             }
 
-            if (!existe_en_pcb) {  
+            if(!existe_en_proceso) {
                 asignar_mutex_a_proceso(pcb, inst->parametro1);
 
-                // VERIFICA SI EL RERSO YA SE INICIALIZO POR OTRO PROCESO
-                bool existe_en_globales = false;
-                for(int j=0; j < list_size(recursos_globales.recursos); j++) {
-                    t_recurso* actual = list_get(recursos_globales.recursos,j);
-                    if(strcmp(inst->parametro1, actual->nombre_recurso) == 0) {
-                        existe_en_globales = true;
+                bool esta_en_globales = false;
+                for(int k=0; k < list_size(recursos_globales); k++) {
+                    t_recurso* recurso = list_get(recursos_globales, k);
+                    if(strcmp(recurso->nombre_recurso, inst->parametro1) == 0) {
+                        esta_en_globales = true;
                         break;
                     }
                 }
-                if(!existe_en_globales) {
+
+                if(!esta_en_globales) {
                     t_recurso* recurso_nuevo = malloc(sizeof(t_recurso));
-                    strcpy(recurso_nuevo->nombre_recurso, inst->parametro1);
-                    pthread_mutex_init(&recurso_nuevo->mutex, NULL);
-                    list_add(recursos_globales.recursos, recurso_nuevo); // USAR UNA VARIABLE GLOBAL PARA MANEJAR LA CANTIDAD DE RECURSOS TOTALES
+                    uint32_t tamanio_nombre = strlen(inst->parametro1) + 1;
+                    memcpy(recurso_nuevo->nombre_recurso, inst->parametro1, tamanio_nombre);
+                    recurso_nuevo->esta_bloqueado = false;
+                    recurso_nuevo->tid_bloqueador = NULL;
+                    recurso_nuevo->hilos_bloqueados = list_create();
+
+                    list_add(recursos_globales, recurso_nuevo);
+                    log_info(LOGGER_KERNEL, "Recurso %s creado globalmente y agregado a la lista de recursos.", recurso_nuevo->nombre_recurso);
                 }
             }
         }
     }
-}
-
-// HACER ESTA FUNCION
-void procesar_archivo(archivo_pseudocodigo archivo) {
-    // OBTIENE LA INSTRUCCION Y LA EJECUTA USANDO LA FUNCION EXCECUTE DE CPU O USANDO CICLO INSTRUCCION
 }

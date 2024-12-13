@@ -175,14 +175,10 @@ typedef struct {
 
 typedef struct {
     char* nombre_recurso;
-    pthread_mutex_t mutex;
+    bool esta_bloqueado;
+    uint32_t tid_bloqueador;
     t_list* hilos_bloqueados; // Cantidad de hilos bloqueados en este recurso
-    pthread_cond_t cond_mutex;
 } t_recurso;
-
-typedef struct {
-    t_list* recursos; // t_recurso
-} lista_recursos;
 
 typedef struct {
 	uint32_t PID;
@@ -190,7 +186,7 @@ typedef struct {
     int TAMANIO;
 	t_contexto_ejecucion* CONTEXTO;
 	t_estado ESTADO;
-	t_list* MUTEXS; // t_recurso
+	t_list* MUTEXS; // char*
 } t_pcb;
 
 t_tcb* recibir_hilo(int);
