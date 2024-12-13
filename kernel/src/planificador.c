@@ -3,7 +3,7 @@
 /*
 === PASO A PASO DE LA EJECUCION === 
 1) Al iniciar kernel se crea un proceso inicial y un hilo principal para dicho proceso
-donde el archivo de pseudocodigo del hilo 0 es el mismo que del proceso
+donde el archivo de pseudocodigo del hilo 0 es el mismo que del proceso 
 2) Al crearce un proceso este pasa a la cola NEW y se le manda un pedido a memoria para
 inicializar el mismo, en caso de que no haya espacio, este se queda en esta cola
 3) Al inicializarce un proceso, este pasa a la cola READY y se elige el hilo a ejecutar
@@ -625,7 +625,7 @@ t_tcb* seleccionar_hilo_multinivel() {
 }
 
 void agregar_hilo_a_cola(t_tcb* hilo) {
-    if(list_size(colas_multinivel) - 1 < hilo->PRIORIDAD) {
+    if(hilo->PRIORIDAD != 0 && list_size(colas_multinivel) - 1 < hilo->PRIORIDAD) {
         log_warning(LOGGER_KERNEL, "SE VA A REALIZAR LA EXPLANSIONSAD");
         expandir_lista_hasta_indice(hilo->PRIORIDAD);
         log_warning(LOGGER_KERNEL, "SE A EXPANDIDO");
