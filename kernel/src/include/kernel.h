@@ -25,7 +25,6 @@ extern pthread_t hilo_com_memoria;
 extern pthread_t hilo_com_dispatch;
 extern pthread_t hilo_com_interrupt;
 
-extern lista_recursos recursos_globales;
 extern bool se_pudo_asignar;
 
 extern sem_t sem_process_create;

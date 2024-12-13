@@ -19,7 +19,6 @@ int socket_kernel_cpu_interrupt;
 
 pthread_t hilo_com_memoria, hilo_com_dispatch, hilo_com_interrupt;
 
-lista_recursos recursos_globales;
 bool se_pudo_asignar=false;
 
 pthread_mutex_t mutex_process_create;
@@ -42,7 +41,6 @@ int main(int argc, char* argv[]) {
     strcat(pseudo_path, argv[2]);
 
     int tamanio_proceso = atoi(argv[3]);
-    //lista_recursos recursos_globales;
 
     // INICIAR CONFIGURACION DE KERNEL
     inicializar_config(config);
