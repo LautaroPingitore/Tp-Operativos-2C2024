@@ -29,14 +29,15 @@ void syscall_thread_create(t_tcb*, uint32_t, char*, int);
 void syscall_thread_join(uint32_t, uint32_t, uint32_t);
 void syscall_thread_cancel(uint32_t, uint32_t);
 void syscall_thread_exit(uint32_t, uint32_t);
-void syscall_mutex_create(t_tcb*, uint32_t, char*);
-void syscall_mutex_lock(t_tcb*, uint32_t, char*);
-void syscall_mutex_unlock(t_tcb*, uint32_t, char*);
+void syscall_mutex_create(t_tcb*, char*);
+void syscall_mutex_lock(t_tcb*, char*);
+void syscall_mutex_unlock(t_tcb*, char*);
 void syscall_dump_memory(uint32_t, uint32_t);
 void syscall_io(uint32_t, uint32_t, int);
-void manejar_syscall(int, op_code);
 void log_syscall(char*, t_tcb*);
-t_recurso* buscar_recurso_proceso(t_pcb*, char*);
+char* buscar_recurso_proceso(t_pcb*, char*);
+t_recurso* buscar_recurso_en_global(char*);
+void desbloquear_hilo_bloqueado_mutex(t_recurso*);
 void reiniciar_quantum();
 
 #endif /* SYSCALL_H_ */
