@@ -121,11 +121,11 @@ void execute(t_instruccion *instruccion, int socket, t_tcb* tcb) {
             break;
         case READ_MEM:
             loguear_y_sumar_pc(instruccion);
-            read_mem(instruccion->parametro1, instruccion->parametro2, socket);
+            read_mem(instruccion->parametro1, instruccion->parametro2);
             break;
         case WRITE_MEM:
             loguear_y_sumar_pc(instruccion);
-            write_mem(instruccion->parametro1, instruccion->parametro2, socket);
+            write_mem(instruccion->parametro1, instruccion->parametro2);
             break;
         case JNZ:
             loguear_y_sumar_pc(instruccion);

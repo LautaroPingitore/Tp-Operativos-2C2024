@@ -64,7 +64,6 @@ typedef enum{
     PCB,
     PROCESS_CREATE,
     PROCESS_EXIT,
-    INTERRUPCION,
     CONTEXTO,
     INSTRUCCION,
     PEDIDO_INSTRUCCION,
@@ -195,5 +194,6 @@ t_tcb* deserializar_paquete_tcb(t_buffer*);
 t_instruccion* deserializar_instruccion(t_buffer*);
 char* deserializar_mensaje(t_buffer*);
 uint32_t recibir_pid(int);
+uint32_t recibir_uint_memoria(int);
 
 #endif

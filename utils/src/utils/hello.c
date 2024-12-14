@@ -123,6 +123,14 @@ uint32_t recibir_pid(int socket) {
     return pid;
 }
 
+uint32_t recibir_uint_memoria(int socket) {
+    t_paquete* paquete = recibir_paquete(socket);
+    uint32_t valor;
+    memcpy(&valor, paquete->buffer->stream, sizeof(uint32_t));
+    eliminar_paquete(paquete);
+    return valor;
+}
+
 // SERVIDORES.C
 t_log *logger_recibido;
 

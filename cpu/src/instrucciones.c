@@ -46,7 +46,7 @@ void set_registro(char* registro, char *valor) {
 //Lee el valor de memoria correspondiente a
 //la Direccion Logica que se encuentra en el Registro Direccion
 //y lo almacena en el Registro Datos.
-void read_mem(char* reg_datos, char* reg_direccion, int socket) {
+void read_mem(char* reg_datos, char* reg_direccion) {
     uint32_t *registro_datos = obtener_registro(reg_datos);
     uint32_t *registro_direccion = obtener_registro(reg_direccion);
 
@@ -57,16 +57,14 @@ void read_mem(char* reg_datos, char* reg_direccion, int socket) {
 
     uint32_t direccion_fisica = traducir_direccion(*registro_direccion, pcb_actual->PID);
     if (direccion_fisica == SEGMENTATION_FAULT) {
-        enviar_interrupcion_segfault(pcb_actual->PID, socket);
+        enviar_interrupcion_segfault(pcb_actual->PID, socket_cpu_memoria);
         return;
     }
 
-    enviar_solicitud_valor_memoria(socket, direccion_fisica);
+    enviar_solicitud_valor_memoria(socket_cpu_memoria, direccion_fisica);
     sem_wait(&sem_valor_memoria); // Bloquea hasta que se reciba el valor
 
-    sem_wait(&sem_mutex_globales);
     *registro_datos = valor_memoria;
-    sem_post(&sem_mutex_globales);
 
     log_info(LOGGER_CPU, "## TID: <%d> - Accion: <LEER> - Direccion Fisica: <%d>", hilo_actual->TID, direccion_fisica);
 }
@@ -74,7 +72,7 @@ void read_mem(char* reg_datos, char* reg_direccion, int socket) {
 //Lee el valor del Registro Datos y lo escribe en la 
 //direccion fisica de memoria obtenida a partir de la 
 //Direccion Logica almacenada en el Registro Direccion.
-void write_mem(char* reg_direccion, char* reg_datos, int socket) {
+void write_mem(char* reg_direccion, char* reg_datos) {
     uint32_t *reg_dire = obtener_registro(reg_direccion);
     uint32_t *reg_dat = obtener_registro(reg_datos);
 
@@ -85,11 +83,11 @@ void write_mem(char* reg_direccion, char* reg_datos, int socket) {
 
     uint32_t direccion_fisica = traducir_direccion(*reg_dire, pcb_actual->PID);
     if (direccion_fisica == SEGMENTATION_FAULT) {
-        enviar_interrupcion_segfault(pcb_actual->PID, socket);
+        enviar_interrupcion_segfault(pcb_actual->PID, socket_cpu_memoria);
         return;
     }
 
-    enviar_valor_a_memoria(socket, direccion_fisica, reg_dat);
+    enviar_valor_a_memoria(socket_cpu_memoria, direccion_fisica, reg_dat);
 
     log_info(LOGGER_CPU, "## TID: <%d> - Accion: <ESCRIBIR> - Direccion Fisica: <%d>", hilo_actual->TID, direccion_fisica);
 }

@@ -305,7 +305,7 @@ void manejar_comunicaciones(int socket, const char* nombre_modulo) {
                 break;
 
             default:
-                log_warning(LOGGER_KERNEL, "Operación desconocida recibida desde %s.", nombre_modulo);
+                log_warning(LOGGER_KERNEL, "Operación %d esconocida recibida desde %s.", cod, nombre_modulo);
                 break;
         }
     }

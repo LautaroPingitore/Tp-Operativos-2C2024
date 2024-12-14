@@ -758,8 +758,6 @@ int enviar_valor_uint_cpu(int socket, uint32_t valor, op_code codigo) {
     paquete->buffer->stream = malloc(paquete->buffer->size);    
 
     memcpy(paquete->buffer->stream , &valor, sizeof(uint32_t));
-       
-    
 
     int resultado = enviar_paquete(paquete, socket);
     if(resultado==-1){

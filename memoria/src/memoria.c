@@ -337,7 +337,7 @@ void* procesar_conexion_memoria(void *void_args){
                 t_proceso_memoria* pcb_bm = obtener_proceso_memoria(pid_bm);
                 int resultado_bm = enviar_valor_uint_cpu(cliente_socket, pcb_bm->base, SOLICITUD_BASE_MEMORIA);
                 if(resultado_bm == 0) {
-                    log_info(LOGGER_MEMORIA, "Paquete enviado correctamente");
+                    log_info(LOGGER_MEMORIA, "Base enviada");
                 } else {
                     log_error(LOGGER_MEMORIA, "Error al enviar el paquete");
                 }
@@ -348,7 +348,7 @@ void* procesar_conexion_memoria(void *void_args){
                 t_proceso_memoria* pcb_lm = obtener_proceso_memoria(pid_lm);
                 int resultado_lm = enviar_valor_uint_cpu(cliente_socket, pcb_lm->limite, SOLICITUD_LIMITE_MEMORIA);
                 if(resultado_lm == 0) {
-                    log_info(LOGGER_MEMORIA, "Paquete enviado correctamente");
+                    log_info(LOGGER_MEMORIA, "Limite enviado");
                 } else {
                     log_error(LOGGER_MEMORIA, "Error al enviar el paquete");
                 }

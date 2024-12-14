@@ -10,8 +10,8 @@ char* IP_CPU;
 t_log *LOGGER_CPU;
 t_config *CONFIG_CPU;
 
-int socket_cpu_dispatch;
-int socket_cpu_interrupt;
+int socket_servidor_dispatch;
+int socket_servidor_interrupt;
 int socket_cpu_dispatch_kernel;
 int socket_cpu_interrupt_kernel;
 int socket_cpu_memoria;
@@ -29,7 +29,6 @@ uint32_t valor_memoria = 0;
 t_instruccion* instruccion_actual = NULL;
 
 sem_t sem_base, sem_limite, sem_valor_memoria, sem_instruccion;
-sem_t sem_mutex_globales;
 sem_t sem_proceso_actual;
 
 int main() {
@@ -73,15 +72,15 @@ void inicializar_config(char* arg){
 
 void iniciar_conexiones() {
     // Servidor CPU Dispatch
-    socket_cpu_dispatch = iniciar_servidor(PUERTO_ESCUCHA_DISPATCH, LOGGER_CPU, IP_CPU, "CPU_DISPATCH");
-    if (socket_cpu_dispatch == -1) {
+    socket_servidor_dispatch = iniciar_servidor(PUERTO_ESCUCHA_DISPATCH, LOGGER_CPU, IP_CPU, "CPU_DISPATCH");
+    if (socket_servidor_dispatch == -1) {
         log_error(LOGGER_CPU, "No se pudo iniciar el servidor CPU_DISPATCH.");
         exit(EXIT_FAILURE);
     }
 
-    // Servidor CPU Interrupt
-    socket_cpu_interrupt = iniciar_servidor(PUERTO_ESCUCHA_INTERRUPT, LOGGER_CPU, IP_CPU, "CPU_INTERRUPT");
-    if (socket_cpu_interrupt == -1) {
+    // Servidor CPU Interrupt 
+    socket_servidor_interrupt = iniciar_servidor(PUERTO_ESCUCHA_INTERRUPT, LOGGER_CPU, IP_CPU, "CPU_INTERRUPT");
+    if (socket_servidor_interrupt == -1) {
         log_error(LOGGER_CPU, "No se pudo iniciar el servidor CPU_INTERRUPT.");
         exit(EXIT_FAILURE);
     }
@@ -108,7 +107,7 @@ void iniciar_conexiones() {
 
 void* escuchar_cpu_dispatch() {
     log_info(LOGGER_CPU, "El hilo de escucha para CPU_DISPATCH ha iniciado.");
-    while (server_escuchar("CPU_DISPATCH", socket_cpu_dispatch, hilo_servidor_dispatch)) {
+    while (server_escuchar("CPU_DISPATCH", socket_servidor_dispatch, hilo_servidor_dispatch)) {
         log_info(LOGGER_CPU, "Conexión procesada en CPU_DISPATCH.");
     }
     log_warning(LOGGER_CPU, "El servidor de CPU_DISPATCH terminó inesperadamente.");
@@ -117,7 +116,7 @@ void* escuchar_cpu_dispatch() {
 
 void* escuchar_cpu_interrupt() {
     log_info(LOGGER_CPU, "El hilo de escucha para CPU_INTERRUPT ha iniciado.");
-    while (server_escuchar("CPU_INTERRUPT", socket_cpu_interrupt, hilo_servidor_interrupt)) {
+    while (server_escuchar("CPU_INTERRUPT", socket_servidor_interrupt, hilo_servidor_interrupt)) {
         log_info(LOGGER_CPU, "Conexión procesada en CPU_INTERRUPT.");
     }
     log_warning(LOGGER_CPU, "El servidor de CPU_INTERRUPT terminó inesperadamente.");
@@ -130,6 +129,16 @@ int server_escuchar(char *server_name, int server_socket, pthread_t hilo_servido
         if (cliente_socket == -1) {
             log_warning(LOGGER_CPU, "[%s] Error al aceptar conexión. Reintentando...", server_name);
             continue;
+        }
+        
+        if(server_socket == socket_servidor_dispatch) {
+            socket_cpu_dispatch_kernel = cliente_socket;
+        }
+        else if(server_socket == socket_servidor_interrupt){
+            socket_cpu_interrupt_kernel = cliente_socket;
+        }
+        else{
+            log_error(LOGGER_CPU,"SOCKET DESCONOCIDO");
         }
 
         t_procesar_conexion_args *args = malloc(sizeof(t_procesar_conexion_args));
@@ -185,34 +194,27 @@ void* procesar_conexion_memoria(void*) {
                 break;
 
             case SOLICITUD_BASE_MEMORIA: 
-                uint32_t pid_bm = recibir_pid(socket_cpu_memoria);
-                uint32_t base = consultar_base_particion(pid_bm);
+                uint32_t base = recibir_uint_memoria(socket_cpu_memoria);
 
-                sem_wait(&sem_mutex_globales);
                 base_pedida = base;
-                sem_post(&sem_mutex_globales);
 
-                log_info(LOGGER_CPU, "Base recibida: %d para PID: %d", base, pid_bm);
+                log_info(LOGGER_CPU, "Base recibida: %d para PID: %d", base, hilo_actual->PID_PADRE);
                 sem_post(&sem_base); // Desbloquea al hilo que espera
                 break;
 
             case SOLICITUD_LIMITE_MEMORIA: 
-                uint32_t pid_lm = recibir_pid(socket_cpu_memoria);
-                uint32_t limite = consultar_limite_particion(pid_lm);
+                uint32_t limite = recibir_uint_memoria(socket_cpu_memoria);
 
-                sem_wait(&sem_mutex_globales);
                 limite_pedido = limite;
-                sem_post(&sem_mutex_globales);
 
-                log_info(LOGGER_CPU, "Límite recibido: %d para PID: %d", limite, pid_lm);
+                log_info(LOGGER_CPU, "Límite recibido: %d para PID: %d", limite, hilo_actual->PID_PADRE);
                 sem_post(&sem_limite); // Desbloquea al hilo que espera
                 break;
             
             case PEDIDO_READ_MEM:
                 uint32_t valor = recibir_valor_de_memoria(socket_cpu_memoria); // Función para recibir el valor
-                sem_wait(&sem_mutex_globales);
+                
                 valor_memoria = valor;
-                sem_post(&sem_mutex_globales);
 
                 log_info(LOGGER_CPU, "Valor recibido: %d", valor_memoria);
                 sem_post(&sem_valor_memoria);
@@ -250,7 +252,6 @@ void* procesar_conexion_cpu(void* void_args) {
         switch(cod) {
             case HANDSHAKE_dispatch:
                 log_info(LOGGER_CPU, "## KERNEL_DIPATCH Conectado - FD del socket: <%d>", socket);
-                socket_cpu_dispatch_kernel = socket;
                 break;
 
             case HILO:
@@ -289,7 +290,6 @@ void* procesar_conexion_cpu(void* void_args) {
 
             case HANDSHAKE_interrupt:
                 log_info(LOGGER_CPU, "## KERNEL_INTERRUPT Conectado - FD del socket: <%d>", socket);
-                socket_cpu_interrupt_kernel = socket;
                 break;
 
             case FINALIZACION_QUANTUM:
@@ -315,7 +315,6 @@ void inicializar_cpu() {
     sem_init(&sem_valor_memoria, 0, 0);
     sem_init(&sem_instruccion, 0, 0);
     sem_init(&sem_proceso_actual, 0, 0);
-    sem_init(&sem_mutex_globales, 0, 1);
     pthread_mutex_init(&mutex_syscall, NULL);
 
     hilos_ejecutados = list_create();
@@ -327,5 +326,4 @@ void destruir_semaforos() {
     sem_destroy(&sem_limite);
     sem_destroy(&sem_valor_memoria);
     sem_destroy(&sem_instruccion);
-    sem_destroy(&sem_mutex_globales);  
 }

@@ -3,8 +3,8 @@
 
 //instrucciones
 void set_registro(char*, char*);
-void read_mem(char*, char*, int);
-void write_mem(char*, char*, int);
+void read_mem(char*, char*);
+void write_mem(char*, char*);
 void sum_registros(char*, char*);
 void sub_registros(char*, char*);
 void jnz_pc(char*, char*);
