@@ -256,7 +256,6 @@ void* procesar_conexion_cpu(void* void_args) {
 
             case HILO:
                 t_tcb* hilo_recibido = recibir_hilo(socket);
-                log_warning(LOGGER_CPU, "ILO RESIVIDO %d:%d", hilo_recibido->PID_PADRE, hilo_recibido->PID_PADRE);
 
                 t_tcb* hilo_lista = esta_hilo_guardado(hilo_recibido);
                 if(hilo_lista == NULL) {
@@ -277,7 +276,6 @@ void* procesar_conexion_cpu(void* void_args) {
 
             case SOLICITUD_PROCESO:
                 t_proceso_cpu* proceso_recibido = recibir_proceso(socket);
-                log_warning(LOGGER_CPU, "PROSEZO RESIVIDO %d", proceso_recibido->PID);
 
                 t_proceso_cpu* proceso_lista = esta_proceso_guardado(proceso_recibido);
                 if(proceso_lista == NULL) {
