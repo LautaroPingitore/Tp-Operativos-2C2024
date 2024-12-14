@@ -276,8 +276,7 @@ void manejar_comunicaciones(int socket, const char* nombre_modulo) {
                 t_tcb* hilo_ml = list_remove(cola_exec, 0);
                 cpu_libre = true;
                 t_instruccion* inst_ml = recibir_instruccion(socket);
-                //log_syscall("MUTEX_LOCK", hilo_ml);
-                log_warning(LOGGER_KERNEL, "(%d:%d) SOLICITO MUTEX_LOCK", hilo_ml->PID_PADRE, hilo_ml->TID);
+                log_syscall("MUTEX_LOCK", hilo_ml);
                 syscall_mutex_lock(hilo_ml, inst_ml->parametro1);
                 intentar_mover_a_execute();
                 break;
@@ -285,8 +284,7 @@ void manejar_comunicaciones(int socket, const char* nombre_modulo) {
                 t_tcb* hilo_mu = list_remove(cola_exec, 0);
                 cpu_libre = true;
                 t_instruccion* inst_mu = recibir_instruccion(socket);
-                // log_syscall("MUTEX_UNLOCK", hilo_mu);
-                log_warning(LOGGER_KERNEL, "(%d:%d) SOLICITO MUTEX_UNLOCK", hilo_mu->PID_PADRE, hilo_mu->TID);
+                log_syscall("MUTEX_UNLOCK", hilo_mu);
                 syscall_mutex_unlock(hilo_mu, inst_mu->parametro1);
                 break;
             case DUMP_MEMORY:
