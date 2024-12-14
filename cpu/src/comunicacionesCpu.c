@@ -188,7 +188,7 @@ void enviar_syscall_kernel(t_instruccion* instruccion, op_code syscall) {
 
     memcpy(paquete->buffer->stream + desplazamiento, &(instruccion->parametro3), sizeof(int)); 
     
-    if(enviar_paquete(paquete, 8) == 0) {
+    if(enviar_paquete(paquete, socket_cpu_interrupt_kernel) == 0) {
         log_info(LOGGER_CPU, "Syscall notificada a KERNEL");
     } else {
         eliminar_paquete(paquete);
@@ -227,7 +227,7 @@ void devolver_control_al_kernel() {
 
     memcpy(paquete->buffer->stream + desplazamiento, &(hilo_actual->PC), sizeof(uint32_t));
 
-    if(enviar_paquete(paquete, socket_cpu_interrupt_kernel + 2) != 0) {
+    if(enviar_paquete(paquete, socket_cpu_interrupt_kernel) != 0) {
         log_error(LOGGER_CPU, "NO SE ENVIO EL PAQUETE");
     }
 

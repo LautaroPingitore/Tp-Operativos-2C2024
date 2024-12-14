@@ -177,6 +177,7 @@ typedef struct {
     char* nombre_recurso;
     bool esta_bloqueado;
     uint32_t tid_bloqueador;
+    uint32_t pid_hilo;
     t_list* hilos_bloqueados; // Cantidad de hilos bloqueados en este recurso
 } t_recurso;
 

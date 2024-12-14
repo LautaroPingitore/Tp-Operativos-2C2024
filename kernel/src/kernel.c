@@ -268,7 +268,7 @@ void manejar_comunicaciones(int socket, const char* nombre_modulo) {
                 cpu_libre = true;
                 t_instruccion* inst_mc = recibir_instruccion(socket);
                 log_syscall("MUTEX_CREATE", hilo_mc);
-                syscall_mutex_create(hilo_mc, hilo_mc->PID_PADRE, inst_mc->parametro1);
+                syscall_mutex_create(hilo_mc, inst_mc->parametro1);
                 intentar_mover_a_execute();
                 break;
             case MUTEX_LOCK:
@@ -276,7 +276,7 @@ void manejar_comunicaciones(int socket, const char* nombre_modulo) {
                 cpu_libre = true;
                 t_instruccion* inst_ml = recibir_instruccion(socket);
                 log_syscall("MUTEX_LOCK", hilo_ml);
-                syscall_mutex_lock(hilo_ml, hilo_ml->PID_PADRE, inst_ml->parametro1);
+                syscall_mutex_lock(hilo_ml, inst_ml->parametro1);
                 intentar_mover_a_execute();
                 break;
             case MUTEX_UNLOCK:
@@ -284,8 +284,7 @@ void manejar_comunicaciones(int socket, const char* nombre_modulo) {
                 cpu_libre = true;
                 t_instruccion* inst_mu = recibir_instruccion(socket);
                 log_syscall("MUTEX_UNLOCK", hilo_mu);
-                syscall_mutex_unlock(hilo_mu, hilo_mu->PID_PADRE, inst_mu->parametro1);
-                intentar_mover_a_execute();
+                syscall_mutex_unlock(hilo_mu, inst_mu->parametro1);
                 break;
             case DUMP_MEMORY:
                 t_tcb* hilo_dm = list_remove(cola_exec, 0);

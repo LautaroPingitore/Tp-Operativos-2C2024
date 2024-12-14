@@ -8,6 +8,7 @@ typedef struct {
 
 typedef struct {
     uint32_t tid_esperado;
+    uint32_t pid_hilo;
     t_tcb* hilo_bloqueado;
 } t_join;
 
@@ -15,7 +16,8 @@ typedef struct {
 extern t_list* cola_new;
 extern t_list* cola_ready;
 extern t_list* cola_exec;
-extern t_list* cola_blocked;
+extern t_list* cola_blocked_join;
+extern t_list* cola_blocked_mutex;
 extern t_list* cola_exit;
 extern t_list* colas_multinivel;
 
@@ -94,7 +96,7 @@ extern t_pcb* obtener_pcb_padre_de_hilo(uint32_t);
 void eliminar_pcb_lista(t_list*, uint32_t);
 void eliminar_tcb_lista(t_list*, uint32_t);
 void agregar_hilo_a_bloqueados(uint32_t, t_tcb*);
-void tiene_algun_hilo_bloqueado(uint32_t);
-void desbloquear_hilo_bloqueado(t_tcb*);
+void tiene_algun_hilo_bloqueado_join(uint32_t, uint32_t);
+void desbloquear_hilo_bloqueado_join(t_tcb*);
 
 #endif /* PLANIFICADOR_H_ */

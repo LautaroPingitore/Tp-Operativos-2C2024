@@ -46,7 +46,8 @@ al hilo ejectandose y devolver el control al kernel para que este vuelva a plani
 t_list* cola_new;
 t_list* cola_ready;
 t_list* cola_exec;
-t_list* cola_blocked;
+t_list* cola_blocked_join;
+t_list* cola_blocked_mutex;
 t_list* cola_exit;
 t_list* colas_multinivel;
 
@@ -79,7 +80,8 @@ void inicializar_kernel() {
     cola_new = list_create();
     cola_exec = list_create();
     cola_exit = list_create();
-    cola_blocked = list_create();
+    cola_blocked_join = list_create();
+    cola_blocked_mutex = list_create();
 
     if(strcmp(ALGORITMO_PLANIFICACION, "CMN") == 0) {
         colas_multinivel = list_create();
@@ -117,9 +119,7 @@ uint32_t asignar_pid() {
 
 uint32_t asignar_tid(t_pcb* pcb) {
     pthread_mutex_lock(&mutex_tid); 
-    //uint32_t nuevo_tid = list_size(pcb->TIDS);
-    uint32_t nuevo_tid = contador_tid;
-    contador_tid++;
+    uint32_t nuevo_tid = list_size(pcb->TIDS);
     pthread_mutex_unlock(&mutex_tid);
 
     return nuevo_tid;
@@ -176,13 +176,11 @@ t_tcb* crear_tcb(uint32_t pid_padre, uint32_t tid, char* archivo_pseudocodigo, i
 
 // FUNCION QUE CREA UN PROCESO Y LO METE A LA COLA DE NEW
 void crear_proceso(char* path_proceso, int tamanio_proceso, int prioridad){
-    archivo_pseudocodigo* archivo = leer_archivo_pseudocodigo(path_proceso);
+    //archivo_pseudocodigo* archivo = leer_archivo_pseudocodigo(path_proceso);
 
     t_pcb* pcb = crear_pcb(asignar_pid(), tamanio_proceso, inicializar_contexto(), NEW, path_proceso);
 
-    log_warning(LOGGER_KERNEL, "C1ASD");
-    obtener_recursos_del_proceso(archivo, pcb);
-    log_warning(LOGGER_KERNEL, "se obtuvieron los recursos del proceso");
+    //obtener_recursos_del_proceso(archivo, pcb);
     
     // EN LA LISTA DE NEW, READY, ETC TENDRIAN QUE SER HILOS, NO PROCESOS
     pthread_mutex_lock(&mutex_cola_new);
@@ -390,28 +388,29 @@ void agregar_hilo_a_bloqueados(uint32_t tid_esperado, t_tcb* hilo_a_bloquear) {
 
     t_join* hilo_bloqueado = malloc(sizeof(t_join));
     hilo_bloqueado->tid_esperado = tid_esperado;
+    hilo_bloqueado->pid_hilo = hilo_a_bloquear->PID_PADRE;
     hilo_bloqueado->hilo_bloqueado = hilo_a_bloquear;
 
     pthread_mutex_lock(&mutex_cola_blocked);
-    list_add(cola_blocked, hilo_bloqueado);
+    list_add(cola_blocked_join, hilo_bloqueado);
     pthread_mutex_unlock(&mutex_cola_blocked);
 }
 
-void tiene_algun_hilo_bloqueado(uint32_t tid_terminado) {
+void tiene_algun_hilo_bloqueado_join(uint32_t tid_terminado, uint32_t pid_hilo) {
     pthread_mutex_lock(&mutex_cola_blocked);
-    for(int i=0; i < list_size(cola_blocked); i ++) {
-        t_join* act = list_get(cola_blocked, i);
-        if(act->tid_esperado == tid_terminado) {
-            list_remove(cola_blocked, i);
+    for(int i=0; i < list_size(cola_blocked_join); i ++) {
+        t_join* act = list_get(cola_blocked_join, i);
+        if(act->tid_esperado == tid_terminado && act->pid_hilo == pid_hilo) {
+            list_remove(cola_blocked_join, i);
             i--;
-            desbloquear_hilo_bloqueado(act->hilo_bloqueado);
+            desbloquear_hilo_bloqueado_join(act->hilo_bloqueado);
             free(act);
         }
     }
     pthread_mutex_unlock(&mutex_cola_blocked);
 }
 
-void desbloquear_hilo_bloqueado(t_tcb* hilo_a_desbloquear) {
+void desbloquear_hilo_bloqueado_join(t_tcb* hilo_a_desbloquear) {
     hilo_a_desbloquear->ESTADO = READY;
 
     mover_hilo_a_ready(hilo_a_desbloquear);
@@ -451,7 +450,7 @@ void thread_cancel(t_pcb* pcb, uint32_t tid) {
 
     // CAMBIA EL ESTADO DEL TCB Y LIBERA LOS RECURSOS
     tcb->ESTADO = EXIT;
-    tiene_algun_hilo_bloqueado(tcb->TID);
+    tiene_algun_hilo_bloqueado_join(tcb->TID, tcb->PID_PADRE);
     log_info(LOGGER_KERNEL, "Hilo %d cancelado en el proceso %d", tid, pcb->PID);
     //liberar_recursos_hilo(pcb,tcb);
 }
@@ -479,7 +478,7 @@ void thread_exit(t_pcb* pcb, uint32_t tid) {
 
     // MARCA EL HILO COMO FINALIZADO
     tcb->ESTADO = EXIT;
-    tiene_algun_hilo_bloqueado(tcb->TID);
+    tiene_algun_hilo_bloqueado_join(tcb->TID,tcb->PID_PADRE);
     log_info(LOGGER_KERNEL, "(<%d>:<%d>) Finaliza el Hilo", tcb->PID_PADRE, tcb->TID);
     //liberar_recursos_hilo(pcb, tcb);
 }
@@ -505,6 +504,10 @@ void intentar_mover_a_execute() {
         return;
     }
 
+    ejecutar_hilo(hilo_a_ejecutar);
+}
+
+void ejecutar_hilo(t_tcb* hilo_a_ejecutar) {
     t_pcb* pcb_padre = obtener_pcb_padre_de_hilo(hilo_a_ejecutar->PID_PADRE);
 
     hilo_a_ejecutar->ESTADO = EXECUTE;

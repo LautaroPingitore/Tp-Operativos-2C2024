@@ -73,15 +73,15 @@ void inicializar_config(char* arg){
 
 void iniciar_conexiones() {
     // Servidor CPU Dispatch
-    socket_cpu_dispatch_kernel = iniciar_servidor(PUERTO_ESCUCHA_DISPATCH, LOGGER_CPU, IP_CPU, "CPU_DISPATCH");
-    if (socket_cpu_dispatch_kernel == -1) {
+    socket_cpu_dispatch = iniciar_servidor(PUERTO_ESCUCHA_DISPATCH, LOGGER_CPU, IP_CPU, "CPU_DISPATCH");
+    if (socket_cpu_dispatch == -1) {
         log_error(LOGGER_CPU, "No se pudo iniciar el servidor CPU_DISPATCH.");
         exit(EXIT_FAILURE);
     }
 
     // Servidor CPU Interrupt
-    socket_cpu_interrupt_kernel = iniciar_servidor(PUERTO_ESCUCHA_INTERRUPT, LOGGER_CPU, IP_CPU, "CPU_INTERRUPT");
-    if (socket_cpu_interrupt_kernel == -1) {
+    socket_cpu_interrupt = iniciar_servidor(PUERTO_ESCUCHA_INTERRUPT, LOGGER_CPU, IP_CPU, "CPU_INTERRUPT");
+    if (socket_cpu_interrupt == -1) {
         log_error(LOGGER_CPU, "No se pudo iniciar el servidor CPU_INTERRUPT.");
         exit(EXIT_FAILURE);
     }
@@ -108,7 +108,7 @@ void iniciar_conexiones() {
 
 void* escuchar_cpu_dispatch() {
     log_info(LOGGER_CPU, "El hilo de escucha para CPU_DISPATCH ha iniciado.");
-    while (server_escuchar("CPU_DISPATCH", socket_cpu_dispatch_kernel, hilo_servidor_dispatch)) {
+    while (server_escuchar("CPU_DISPATCH", socket_cpu_dispatch, hilo_servidor_dispatch)) {
         log_info(LOGGER_CPU, "Conexión procesada en CPU_DISPATCH.");
     }
     log_warning(LOGGER_CPU, "El servidor de CPU_DISPATCH terminó inesperadamente.");
@@ -117,7 +117,7 @@ void* escuchar_cpu_dispatch() {
 
 void* escuchar_cpu_interrupt() {
     log_info(LOGGER_CPU, "El hilo de escucha para CPU_INTERRUPT ha iniciado.");
-    while (server_escuchar("CPU_INTERRUPT", socket_cpu_interrupt_kernel, hilo_servidor_interrupt)) {
+    while (server_escuchar("CPU_INTERRUPT", socket_cpu_interrupt, hilo_servidor_interrupt)) {
         log_info(LOGGER_CPU, "Conexión procesada en CPU_INTERRUPT.");
     }
     log_warning(LOGGER_CPU, "El servidor de CPU_INTERRUPT terminó inesperadamente.");
@@ -250,6 +250,7 @@ void* procesar_conexion_cpu(void* void_args) {
         switch(cod) {
             case HANDSHAKE_dispatch:
                 log_info(LOGGER_CPU, "## KERNEL_DIPATCH Conectado - FD del socket: <%d>", socket);
+                socket_cpu_dispatch_kernel = socket;
                 break;
 
             case HILO:
@@ -288,6 +289,7 @@ void* procesar_conexion_cpu(void* void_args) {
 
             case HANDSHAKE_interrupt:
                 log_info(LOGGER_CPU, "## KERNEL_INTERRUPT Conectado - FD del socket: <%d>", socket);
+                socket_cpu_interrupt_kernel = socket;
                 break;
 
             case FINALIZACION_QUANTUM:
