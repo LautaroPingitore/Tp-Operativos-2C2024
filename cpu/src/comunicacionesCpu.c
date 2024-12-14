@@ -262,7 +262,7 @@ void enviar_interrupcion_segfault(uint32_t pid, int socket) {
 }
 
 void enviar_valor_a_memoria(int socket, uint32_t dire_fisica, uint32_t* valor) {
-    t_paquete *paquete = crear_paquete_con_codigo_de_operacion(ESCRIBIR_VALOR_MEMORIA);
+    t_paquete *paquete = crear_paquete_con_codigo_de_operacion(PEDIDO_WRITE_MEM);
     
     paquete->buffer->size = sizeof(uint32_t) * 4;
     paquete->buffer->stream = malloc(paquete->buffer->size);
@@ -289,7 +289,7 @@ void enviar_valor_a_memoria(int socket, uint32_t dire_fisica, uint32_t* valor) {
 }
 
 void enviar_solicitud_valor_memoria(int socket, uint32_t direccion_fisica) {
-    t_paquete *paquete = crear_paquete_con_codigo_de_operacion(PEDIR_VALOR_MEMORIA);
+    t_paquete *paquete = crear_paquete_con_codigo_de_operacion(PEDIDO_READ_MEM);
 
     paquete->buffer->size = sizeof(uint32_t) * 3;
     paquete->buffer->stream = malloc(paquete->buffer->size);

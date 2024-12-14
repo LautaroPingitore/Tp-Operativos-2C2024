@@ -65,7 +65,7 @@ t_instruccion *fetch(uint32_t pid, uint32_t tid, uint32_t pc) {
         return NULL;
     }
 
-    log_info(LOGGER_CPU, "## TID: <%d> - FETCH - Program Counter: <%d>", tid, pc);
+    log_info(LOGGER_CPU, "## (<%d> : <%d>) - FETCH - Program Counter: <%d>", pid, tid, pc);
 
     return inst;
 }

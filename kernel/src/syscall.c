@@ -8,9 +8,7 @@ void syscall_process_create(t_tcb* hilo_actual, char* path_proceso, int tamanio_
     crear_proceso(path_proceso, tamanio_proceso, prioridad);
     log_info(LOGGER_KERNEL, "Syscall PROCESS_CREATE ejecutada para %s con tamanio %d y prioridad %d", path_proceso, tamanio_proceso, prioridad);
 
-    pthread_mutex_lock(&mutex_cola_ready);
-    list_add(cola_ready, hilo_actual);
-    pthread_mutex_unlock(&mutex_cola_ready);
+    mover_hilo_a_ready(hilo_actual);
 }
 
 void syscall_process_exit(uint32_t pid) {
@@ -113,13 +111,13 @@ void syscall_mutex_lock(t_tcb* hilo_actual, char* nombre) {
         list_add(recurso->hilos_bloqueados, hilo_actual);
         pthread_mutex_unlock(&mutex_cola_blocked);
 
-        log_info(LOGGER_KERNEL, "## (<%d>:<%d>) - Bloqueado por <%s>", hilo_actual->PID_PADRE, hilo_actual->TID, recurso->nombre_recurso);
+        log_warning(LOGGER_KERNEL, "## (<%d>:<%d>) - Bloqueado por <%s>", hilo_actual->PID_PADRE, hilo_actual->TID, recurso->nombre_recurso);
     } else {
         recurso->esta_bloqueado = true;
         recurso->tid_bloqueador = hilo_actual->TID;
         recurso->pid_hilo = hilo_actual->PID_PADRE;
 
-        log_info(LOGGER_KERNEL, "Mutex %s tomado por (<%d> : <%d >)",recurso->nombre_recurso, recurso->pid_hilo, recurso->tid_bloqueador);
+        log_warning(LOGGER_KERNEL, "Mutex %s tomado por (<%d> : <%d>)",recurso->nombre_recurso, recurso->pid_hilo, recurso->tid_bloqueador);
 
         mover_hilo_a_ready(hilo_actual);
     }

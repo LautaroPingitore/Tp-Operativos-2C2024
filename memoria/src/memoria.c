@@ -174,7 +174,7 @@ void* procesar_conexion_memoria(void *void_args){
     while (cliente_socket != -1) {
         // Recibir código de operación
         ssize_t bytes_recibidos = recv(cliente_socket, &cod, sizeof(op_code), MSG_WAITALL);
-        if (bytes_recibidos != sizeof(op_code)) {
+        if (bytes_recibidos != sizeof(op_code) || bytes_recibidos == 0) {
             log_error(LOGGER_MEMORIA, "Error al recibir código de operación, bytes recibidos: %zd", bytes_recibidos);
             break;
         }
@@ -238,7 +238,7 @@ void* procesar_conexion_memoria(void *void_args){
                     break;
                 }
                 agregar_instrucciones_a_lista(hilo_a_crear->tid, hilo_a_crear->archivo);
-                log_info(LOGGER_MEMORIA, "## Hilo <Creado> - (PID:TID) - (<%d>:<%d>)", hilo_a_crear->pid_padre, hilo_a_crear->tid);
+                log_info(LOGGER_MEMORIA, "## Hilo <Creado> - (<%d>:<%d>)", hilo_a_crear->pid_padre, hilo_a_crear->tid);
                 break;
 
             case THREAD_EXIT:
@@ -248,7 +248,7 @@ void* procesar_conexion_memoria(void *void_args){
                     break;
                 }
 
-                log_info(LOGGER_MEMORIA, "## Hilo <Destruido> - (PID:TID) - (<%d>:<%d>)", hilo_a_eliminar->pid_padre, hilo_a_eliminar->tid);
+                log_info(LOGGER_MEMORIA, "## Hilo <Destruido> - (<%d>:<%d>)", hilo_a_eliminar->pid_padre, hilo_a_eliminar->tid);
 
                 eliminar_espacio_hilo(hilo_a_eliminar);
                 break;
@@ -260,7 +260,7 @@ void* procesar_conexion_memoria(void *void_args){
                     enviar_mensaje("ERROR", cliente_socket);
                 } 
                 if (solicitar_archivo_filesystem(ident_dm->pid, ident_dm->tid) == 0) {
-                    log_info(LOGGER_MEMORIA, "## Memory Dump solicitado - (PID:TID) - (<%d>:<%d>)",
+                    log_info(LOGGER_MEMORIA, "## Memory Dump solicitado - (<%d>:<%d>)",
                              ident_dm->pid, ident_dm->tid);
                     enviar_mensaje("OK", cliente_socket);
                 } else {
@@ -294,7 +294,7 @@ void* procesar_conexion_memoria(void *void_args){
                 t_write_mem* wri_mem = recibir_write_mem(cliente_socket);
                 escribir_memoria(wri_mem->dire_fisica_wm, wri_mem->valor_escribido);
                 uint32_t tam_valor_escribido = sizeof(wri_mem->valor_escribido);
-                log_info(LOGGER_MEMORIA, "## <Escritura> - (PID:TID) - (<%d>:<%d>) - Dir. Física: <%d> - Tamaño: <%d>",
+                log_info(LOGGER_MEMORIA, "## <Escritura> - (<%d>:<%d>) - Dir. Física: <%d> - Tamaño: <%d>",
                          wri_mem->pid, wri_mem->tid, wri_mem->dire_fisica_wm, tam_valor_escribido);
                 free(wri_mem);
                 break;
@@ -305,7 +305,7 @@ void* procesar_conexion_memoria(void *void_args){
                 if (valor_leido != SEGF_FAULT) {
                     enviar_valor_leido_cpu(cliente_socket, read_mem->direccion_fisica, valor_leido);
                     uint32_t tam = sizeof(valor_leido);
-                    log_info(LOGGER_MEMORIA, "## <Lectura> - (PID:TID) - (<%d>:<%d>) - Dir. Física: <%d> - Tamaño: <%d>",
+                    log_info(LOGGER_MEMORIA, "## <Lectura> - (<%d>:<%d>) - Dir. Física: <%d> - Tamaño: <%d>",
                              read_mem->pid, read_mem->tid, read_mem->direccion_fisica, tam);
                 } else {
                     enviar_mensaje("SEGMENTATION_FAULT", cliente_socket);
@@ -320,10 +320,10 @@ void* procesar_conexion_memoria(void *void_args){
 
                 if(enviar_instruccion(cliente_socket, inst) == 0) {
                     if(inst->parametro3 == -1) {
-                        log_info(LOGGER_MEMORIA, "## Obtener instrucción - (PID:TID) - (<%d>:<%d>) - Instrucción: <%s> <%s> <%s>",
+                        log_info(LOGGER_MEMORIA, "## Obtener instrucción - (<%d>:<%d>) - Instrucción: %s %s %s",
                                 ped_inst->pid, ped_inst->tid, inst->nombre, inst->parametro1, inst->parametro2);
                     } else {
-                        log_info(LOGGER_MEMORIA, "## Obtener instrucción - (PID:TID) - (<%d>:<%d>) - Instrucción: <%s> <%s> <%s> <%d>",
+                        log_info(LOGGER_MEMORIA, "## Obtener instrucción - (<%d>:<%d>) - Instrucción: %s %s %s %d",
                                 ped_inst->pid, ped_inst->tid, inst->nombre, inst->parametro1, inst->parametro2, inst->parametro3);
                     }
                 } else {

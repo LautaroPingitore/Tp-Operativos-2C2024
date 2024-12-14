@@ -139,5 +139,5 @@ void log_registro(char* registro) {
         return;
     }
 
-    log_info(LOGGER_CPU, "LOG - Registro %s: %d (PID: %d, PC: %d)", registro, *reg, pcb_actual->PID, hilo_actual->PC);
+    log_warning(LOGGER_CPU, "LOG - Registro %s: %d (PID: %d, PC: %d)", registro, *reg, pcb_actual->PID, hilo_actual->PC);
 }

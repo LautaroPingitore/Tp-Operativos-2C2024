@@ -519,7 +519,7 @@ void procesar_solicitud_contexto(int socket_cliente, uint32_t pid, uint32_t tid)
         if (proceso->pid == pid) {
             int resultado = enviar_contexto_cpu(proceso);
             if(resultado == 0) {
-                log_info(LOGGER_MEMORIA, "## Contexto <Solicitado> - (PID:TID) - (<%d>:<%d>)", pid, tid);
+                log_info(LOGGER_MEMORIA, "## Contexto <Solicitado> - (<%d>:<%d>)", pid, tid);
                 return;
             } else {
                 break;
@@ -556,7 +556,7 @@ void procesar_actualizacion_contexto(int socket_cliente, uint32_t pid, uint32_t 
         t_proceso_memoria* proceso = list_get(lista_procesos, i);
         if (proceso->pid == pid) {
             memcpy(proceso->contexto, nuevo_contexto, sizeof(t_registros));
-            log_info(LOGGER_MEMORIA, "## Contexto <Actualizado> - (PID:TID) - (<%d>:<%d)", pid, tid);
+            log_info(LOGGER_MEMORIA, "## Contexto <Actualizado> - (<%d>:<%d)", pid, tid);
 
             return;
         }
@@ -653,12 +653,10 @@ void escribir_memoria(uint32_t direccion_fisica, uint32_t valor) {
         log_error(LOGGER_MEMORIA, "Error de segmentación: Dirección física %d fuera de los límites de memoria de usuario", direccion_fisica);
         return;
     }
-
-
-    // Escribir los 4 bytes de `valor` a partir de `direccion_fisica`
-    *(uint32_t*)(uintptr_t)direccion_fisica = valor;
+    
+    memcpy(&direccion_fisica, &valor, sizeof(uint32_t));
    
-    enviar_mensaje("OK", socket_memoria_cpu);  // Responder OK al cliente
+    //enviar_mensaje("OK", socket_memoria_cpu);  // Responder OK al cliente
 }
 
 
@@ -700,14 +698,8 @@ uint32_t leer_memoria(uint32_t direccion_fisica) {
         return 0;  // Retornar 0 o algún valor de error para indicar fallo de segmentación
     }
 
-
-    // Leer los primeros 4 bytes a partir de la dirección física
-    uint32_t valor = *(uint32_t*)(uintptr_t)direccion_fisica;
-
-
-    // Log de éxito
-    log_info(LOGGER_MEMORIA, "Lectura exitosa: Dirección física %d, Valor %d", direccion_fisica, valor);
-
+    uint32_t valor;
+    memcpy(&valor, &direccion_fisica, sizeof(uint32_t));
 
     return valor;
 }
