@@ -526,6 +526,7 @@ void ejecutar_hilo(t_tcb* hilo_a_ejecutar) {
     enviar_proceso_cpu(socket_kernel_cpu_dispatch, pcb_padre);
     
     int resultado = enviar_hilo_a_cpu(hilo_a_ejecutar);
+    log_warning(LOGGER_KERNEL, "HILO %d:%d ENviado", hilo_a_ejecutar->PID_PADRE, hilo_a_ejecutar->TID);
 
     if (resultado != 0) {
         log_error(LOGGER_KERNEL, "Error al enviar el hilo %d a la CPU", hilo_a_ejecutar->TID);

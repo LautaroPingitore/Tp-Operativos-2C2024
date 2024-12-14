@@ -237,7 +237,7 @@ void* procesar_conexion_memoria(void *void_args){
                     enviar_mensaje("ERROR", cliente_socket);
                     break;
                 }
-                agregar_instrucciones_a_lista(hilo_a_crear->tid, hilo_a_crear->archivo);
+                agregar_instrucciones_a_lista(hilo_a_crear->pid_padre, hilo_a_crear->tid, hilo_a_crear->archivo);
                 log_info(LOGGER_MEMORIA, "## Hilo <Creado> - (<%d>:<%d>)", hilo_a_crear->pid_padre, hilo_a_crear->tid);
                 break;
 
@@ -316,7 +316,7 @@ void* procesar_conexion_memoria(void *void_args){
             case PEDIDO_INSTRUCCION:
                 t_pedido_instruccion* ped_inst = recibir_pedido_instruccion(cliente_socket);
 
-                t_instruccion* inst = obtener_instruccion(ped_inst->tid, ped_inst->pc);
+                t_instruccion* inst = obtener_instruccion(ped_inst->pid,ped_inst->tid, ped_inst->pc);
 
                 if(enviar_instruccion(cliente_socket, inst) == 0) {
                     if(inst->parametro3 == -1) {

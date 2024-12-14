@@ -7,7 +7,7 @@ extern t_list* lista_instrucciones; // TIPO t_hilo_instrucciones
 extern pthread_mutex_t mutex_procesos;
 extern pthread_mutex_t mutex_instrucciones;
 
-t_instruccion* obtener_instruccion(uint32_t, uint32_t);
+t_instruccion* obtener_instruccion(uint32_t,uint32_t, uint32_t);
 
 void recibir_log(char [256], int);
 
@@ -31,6 +31,7 @@ typedef struct {
 
 typedef struct {
     uint32_t tid;
+    uint32_t pid;
     t_list* instrucciones; // tipo t_instrucciones
 } t_hilo_instrucciones;
 
@@ -100,12 +101,12 @@ void inicializar_datos();
 //void recibir_creacion_hilo(int);
 //void recibir_finalizacion_hilo(int);
 t_registros* obtener_contexto(uint32_t);
-void eliminar_instrucciones_hilo(uint32_t);
+void eliminar_instrucciones_hilo(uint32_t,uint32_t);
 int solicitar_archivo_filesystem(uint32_t, uint32_t);
 void recibir_solicitud_instruccion(int);
 char* obtener_contenido_proceso(uint32_t, uint32_t);
-t_list* obtener_lista_instrucciones_por_tid(uint32_t);
-void agregar_instrucciones_a_lista(uint32_t, char*);
+t_list* obtener_lista_instrucciones_por_tid(uint32_t, uint32_t);
+void agregar_instrucciones_a_lista(uint32_t, uint32_t, char*);
 uint32_t leer_memoria(uint32_t direccion_fisica);
 void escribir_memoria(uint32_t, uint32_t);
 

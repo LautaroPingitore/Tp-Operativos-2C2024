@@ -130,7 +130,7 @@ t_hilo_memoria* deserializar_hilo_memoria(t_buffer* buffer) {
 }
 
 
-void agregar_instrucciones_a_lista(uint32_t tid, char* archivo) {
+void agregar_instrucciones_a_lista(uint32_t pid, uint32_t tid, char* archivo) {
     FILE *file = fopen(archivo, "r");
     if (file == NULL) {
         log_error(LOGGER_MEMORIA, "Error al abrir el archivo de pseudocódigo: %s", archivo);
@@ -168,6 +168,7 @@ void agregar_instrucciones_a_lista(uint32_t tid, char* archivo) {
 
     t_hilo_instrucciones* instrucciones_hilo = malloc(sizeof(t_hilo_instrucciones));
     instrucciones_hilo->tid = tid;
+    instrucciones_hilo->pid = pid;
     instrucciones_hilo->instrucciones = lst_instrucciones;
 
     list_add(lista_instrucciones, instrucciones_hilo);
@@ -178,7 +179,7 @@ void agregar_instrucciones_a_lista(uint32_t tid, char* archivo) {
 //FINALIZACION DE HILO|
 //--------------------|
 void eliminar_espacio_hilo(t_hilo_memoria* hilo) {
-    eliminar_instrucciones_hilo(hilo->tid);
+    eliminar_instrucciones_hilo(hilo->pid_padre,hilo->tid);
     log_info(LOGGER_MEMORIA, "Hilo finalizado - PID: %d, TID: %d", hilo->pid_padre, hilo->tid);
     free(hilo->archivo);
     free(hilo);
@@ -196,11 +197,11 @@ t_registros* obtener_contexto(uint32_t pid) {
 }
 
 
-void eliminar_instrucciones_hilo(uint32_t tid) {
+void eliminar_instrucciones_hilo(uint32_t pid, uint32_t tid) {
     // lista_instrucciones es de tipo t_hilo_instrucciones*
     for(int i = 0; i < list_size(lista_instrucciones); i++) {
         t_hilo_instrucciones* instruccion_actual = list_get(lista_instrucciones, i);
-        if(instruccion_actual->tid == tid) {
+        if(instruccion_actual->tid == tid && instruccion_actual->pid == pid) {
             list_remove(lista_instrucciones, i);
             liberar_instrucciones(instruccion_actual->instrucciones);
             free(instruccion_actual);
@@ -367,10 +368,10 @@ t_list* convertir_registros_a_char(t_registros* registros) {
 }
 
 
-t_list* obtener_lista_instrucciones_por_tid(uint32_t tid) {
+t_list* obtener_lista_instrucciones_por_tid(uint32_t pid, uint32_t tid) {
     for (int i = 0; i < list_size(lista_instrucciones); i++) {
         t_hilo_instrucciones* hilo_instrucciones = list_get(lista_instrucciones, i);
-        if (hilo_instrucciones->tid == tid) {
+        if (hilo_instrucciones->tid == tid && hilo_instrucciones->pid == pid) {
             return hilo_instrucciones->instrucciones;
         }
     }
@@ -502,10 +503,10 @@ void enviar_valor_leido_cpu(int socket, uint32_t dire_fisica, uint32_t valor) {
 
 
 // Lista de instrucciones es de tipo t_proceso_instruccion
-t_instruccion* obtener_instruccion(uint32_t tid, uint32_t pc) {
+t_instruccion* obtener_instruccion(uint32_t pid, uint32_t tid, uint32_t pc) {
     for(int i = 0; i < list_size(lista_instrucciones); i++) {
         t_hilo_instrucciones* instruccion_actual = list_get(lista_instrucciones, i);
-        if(instruccion_actual->tid == tid) {
+        if(instruccion_actual->tid == tid && instruccion_actual->pid == pid) {
             return (list_get(instruccion_actual->instrucciones, pc));
         }
     }
@@ -591,22 +592,6 @@ int mandar_solicitud_dump_memory(char* nombre_archivo, char* contenido_proceso, 
    
     return resultado;
 }
-
-
-void agregar_instrucciones(uint32_t tid, t_instruccion** instrucciones, size_t cantidad) {
-    t_hilo_instrucciones* hilo_instrucciones = malloc(sizeof(t_hilo_instrucciones));
-    hilo_instrucciones->tid = tid;
-    hilo_instrucciones->instrucciones = list_create();
-
-
-    for (size_t i = 0; i < cantidad; i++) {
-        list_add(hilo_instrucciones->instrucciones, instrucciones[i]);
-    }
-
-
-    list_add(lista_instrucciones, hilo_instrucciones);
-}
-
 
 // =========|
 // WRITE MEM|

@@ -217,7 +217,9 @@ void execute(t_instruccion *instruccion, int socket, t_tcb* tcb) {
             enviar_syscall_kernel(instruccion, MUTEX_CREATE);
             break;
         case INST_MUTEX_LOCK:
-            loguear_y_sumar_pc(instruccion);
+            //loguear_y_sumar_pc(instruccion);
+            log_warning(LOGGER_CPU, "SOLICITO %d:%d MUTEX LOCK", hilo_actual->PID_PADRE, hilo_actual->TID);
+            hilo_actual->PC ++;
             actualizar_contexto_memoria();
             
             pthread_mutex_lock(&mutex_syscall);
@@ -309,7 +311,7 @@ void actualizar_contexto_memoria() {
 t_tcb* esta_hilo_guardado(t_tcb* tcb) {
     for(int i=0; i < list_size(hilos_ejecutados); i++) {
         t_tcb* tcb_act = list_get(hilos_ejecutados, i);
-        if(tcb->TID == tcb_act->TID) {
+        if(tcb->TID == tcb_act->TID && tcb->PID_PADRE == tcb_act->PID_PADRE) {
             return tcb_act;
         }
     }
@@ -336,7 +338,7 @@ void actualizar_listas_cpu(t_proceso_cpu* pcb, t_tcb* tcb) {
 
     for(int j=0; j < list_size(hilos_ejecutados); j++) {
         t_tcb* tcb_act = list_get(hilos_ejecutados, j);
-        if(tcb->TID == tcb_act->TID) {
+        if(tcb->TID == tcb_act->TID && tcb_act->PID_PADRE == tcb->PID_PADRE) {
             list_replace(hilos_ejecutados, j, tcb);
         }
     }
