@@ -219,12 +219,10 @@ void* procesar_conexion_memoria(void *void_args){
             
                 liberar_espacio_memoria(proceso_a_eliminar->pid);
                 pthread_mutex_lock(&mutex_procesos);
-                log_warning(LOGGER_MEMORIA, "A PUNTO DE BORARRA");
                 eliminar_proceso_de_lista(proceso_a_eliminar->pid);
-                log_warning(LOGGER_MEMORIA, "SE BORRO");
                 pthread_mutex_unlock(&mutex_procesos);
 
-                log_info(LOGGER_MEMORIA, "## Proceso <Destruido> -  PID: <%d> - Tamaño: <%d>", proceso_nuevo->pid, proceso_nuevo->limite);
+                log_info(LOGGER_MEMORIA, "## Proceso <Destruido> -  PID: <%d> - Tamaño: <%d>", proceso_a_eliminar->pid, proceso_a_eliminar->limite);
                 free(proceso_a_eliminar->contexto);
                 free(proceso_a_eliminar);
                 break;

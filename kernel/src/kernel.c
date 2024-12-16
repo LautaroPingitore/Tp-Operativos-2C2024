@@ -167,7 +167,7 @@ void manejar_comunicaciones(int socket, const char* nombre_modulo) {
                 log_info(LOGGER_KERNEL, "Handshake recibido de %s.", nombre_modulo);
                 break;
 
-            case MENSAJE: 
+            case MENSAJE:
                 char* respuesta = recibir_mensaje(socket);
                 if (respuesta && strcmp(respuesta, "OK") == 0) {
                     pthread_mutex_lock(&mutex_process_create);

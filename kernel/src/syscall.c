@@ -198,13 +198,9 @@ void syscall_dump_memory(uint32_t pid, uint32_t tid) {
         log_info(LOGGER_KERNEL, "DUMP_MEMORY completado correctamente para proceso %d, hilo %d", pcb->PID, tid);
 
         // Mover el hilo a READY
-        pthread_mutex_lock(&mutex_cola_ready);
         t_tcb* hilo = buscar_hilo_por_tid(pcb, tid);
-        if (hilo) {
-            hilo->ESTADO = READY;
-            list_add(cola_ready, hilo);
-        }
-        pthread_mutex_unlock(&mutex_cola_ready);
+        mover_hilo_a_ready(hilo);
+        
     } else {
         log_error(LOGGER_KERNEL, "Error reportado por el módulo de memoria durante el DUMP_MEMORY");
         // Mover el proceso a EXIT en caso de error

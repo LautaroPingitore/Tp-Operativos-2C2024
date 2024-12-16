@@ -68,7 +68,6 @@ pthread_mutex_t mutex_tid;
 pthread_mutex_t mutex_estado;
 pthread_mutex_t mutex_join;
 pthread_mutex_t mutex_cola_multinivel;
-pthread_cond_t cond_estado = PTHREAD_COND_INITIALIZER;
 
 
 // VARIABLES DE CONTROL
@@ -215,9 +214,9 @@ void inicializar_proceso(t_pcb* pcb, char* path_proceso) {
     pthread_mutex_lock(&mutex_process_create);
 
     if (se_pudo_asignar) {
-        log_info(LOGGER_KERNEL, "Proceso %d inicializado y movido a READY", pcb->PID);
         se_pudo_asignar = false;
         pthread_mutex_unlock(&mutex_process_create);
+        log_info(LOGGER_KERNEL, "Proceso %d inicializado y movido a READY", pcb->PID);
         mover_a_ready(pcb);
         t_tcb* hilo_cero = list_get(pcb->TIDS, 0);
         mover_hilo_a_ready(hilo_cero);
@@ -283,7 +282,7 @@ void intentar_inicializar_proceso_de_new() {
         t_pcb* pcb = list_remove(cola_new, 0); // Guarda con lo que retorna list_remove
         log_warning(LOGGER_KERNEL, "SE VA A INICIALIZAR EL PROCESO %d", pcb->PID);
 
-        char* path_proceso= obtener_path(pcb->PID);
+        char* path_proceso = list_get(tabla_paths, pcb->PID);
 
         if (path_proceso == NULL) {
             log_error(LOGGER_KERNEL, "Error: No se encontró el path para el proceso %d", pcb->PID);
@@ -301,9 +300,9 @@ void intentar_inicializar_proceso_de_new() {
         // SOLO MUEVE EL PROCESO A READY SI PUEDE
         // NO TRATA DE EJECUTAR EL PROXIMO
 
+        pthread_mutex_unlock(&mutex_cola_new);
         inicializar_proceso(pcb, path_proceso);
     }
-    pthread_mutex_unlock(&mutex_cola_new);
 
     intentar_mover_a_execute();
 }
@@ -487,15 +486,10 @@ void thread_exit(t_pcb* pcb, uint32_t tid) {
 // A CHEQUEAR PARA TEMA DE MULTINIVEL
 void intentar_mover_a_execute() {
 
-    pthread_mutex_lock(&mutex_cola_ready);
-
     if (!cpu_libre) {
         log_info(LOGGER_KERNEL, "CPU ocupada, no se puede mover un proceso a EXECUTE");
-        pthread_mutex_unlock(&mutex_cola_ready);
         return;
     }
-
-    pthread_mutex_unlock(&mutex_cola_ready);
     
     // Obtener el proximo hilo a ejecutar en base al planificador
     t_tcb* hilo_a_ejecutar = seleccionar_hilo_por_algoritmo();
@@ -692,16 +686,27 @@ void io(t_pcb* pcb, uint32_t tid, int milisegundos) {
 }
 
 // MANEJO DE TABLA PATHS
+//void agregar_path(uint32_t pid, char* archivo) {
+//    char* path_copiado = strdup(archivo);
+//    list_add_in_index(tabla_paths, pid, path_copiado);
+//}
+
 void agregar_path(uint32_t pid, char* archivo) {
     char* path_copiado = strdup(archivo);
-    list_add_in_index(tabla_paths, pid, path_copiado);
+    while (list_size(tabla_paths) <= pid) {
+        list_add(tabla_paths, NULL);
+    }
+    list_replace(tabla_paths, pid, path_copiado);
 }
+
+
 
 char* obtener_path(uint32_t pid) {
     return (char*) list_get(tabla_paths, pid);
 }
 
 void eliminar_path(uint32_t pid) {
-    char* path = list_remove(tabla_paths, pid);
-    if (path) free(path);
+    char* archivo = list_get(tabla_paths, pid);
+    free(archivo);
+    list_replace(tabla_paths, pid, NULL);
 }
