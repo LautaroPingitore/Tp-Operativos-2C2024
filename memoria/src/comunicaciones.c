@@ -69,15 +69,15 @@ t_proceso_memoria* deserializar_proceso(t_buffer* buffer) {
 
 
 void eliminar_proceso_de_lista(uint32_t pid) {
-    pthread_mutex_lock(&mutex_procesos);
     for (int i = 0; i < list_size(lista_procesos); i++) {
         t_proceso_memoria* proceso_actual = list_get(lista_procesos, i);
         if (pid == proceso_actual->pid) {
-            list_remove_and_destroy_element(lista_procesos, i, (void *)liberar_espacio_memoria);
+            free(proceso_actual->contexto);
+            free(proceso_actual);
+            list_remove(lista_procesos, i);
             break;
         }
     }
-    pthread_mutex_unlock(&mutex_procesos);
 }
 
 

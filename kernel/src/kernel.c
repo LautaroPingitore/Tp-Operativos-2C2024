@@ -173,6 +173,10 @@ void manejar_comunicaciones(int socket, const char* nombre_modulo) {
                     pthread_mutex_lock(&mutex_process_create);
                     se_pudo_asignar = true;
                     pthread_mutex_unlock(&mutex_process_create);
+                } else {
+                    pthread_mutex_lock(&mutex_process_create);
+                    se_pudo_asignar = false;
+                    pthread_mutex_unlock(&mutex_process_create);
                 }
                 sem_post(&sem_process_create);
                 free(respuesta);

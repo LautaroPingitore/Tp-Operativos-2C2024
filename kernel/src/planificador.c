@@ -147,10 +147,8 @@ t_pcb* crear_pcb(uint32_t pid, int tamanio, t_contexto_ejecucion* contexto_ejecu
 
     t_tcb* hilo_principal = crear_tcb(pid, asignar_tid(pcb), archivo, 0, NEW);
 
-    mover_hilo_a_ready(hilo_principal);
-
     list_add(pcb->TIDS, hilo_principal);
-
+    // mover_hilo_a_ready(hilo_principal);
     envio_hilo_crear(socket_kernel_memoria, hilo_principal, THREAD_CREATE);
 
     return pcb;
@@ -212,7 +210,6 @@ t_contexto_ejecucion* inicializar_contexto() {
 // ENVIA EL PROCECSO A MEMORIA E INTENTA INICIALIZARLO
 void inicializar_proceso(t_pcb* pcb, char* path_proceso) {
     enviar_proceso_memoria(socket_kernel_memoria, pcb, PROCESS_CREATE); 
-
     sem_wait(&sem_process_create);
     
     pthread_mutex_lock(&mutex_process_create);
@@ -222,10 +219,12 @@ void inicializar_proceso(t_pcb* pcb, char* path_proceso) {
         se_pudo_asignar = false;
         pthread_mutex_unlock(&mutex_process_create);
         mover_a_ready(pcb);
+        t_tcb* hilo_cero = list_get(pcb->TIDS, 0);
+        mover_hilo_a_ready(hilo_cero);
     } else {
-        log_warning(LOGGER_KERNEL, "No hay espacio en memoria, se mantiene en new");
         pthread_mutex_unlock(&mutex_process_create);
     }
+    
 }
 
 void mover_a_ready(t_pcb* pcb) {
@@ -282,6 +281,7 @@ void intentar_inicializar_proceso_de_new() {
     pthread_mutex_lock(&mutex_cola_new);
     if (!list_is_empty(cola_new)) {
         t_pcb* pcb = list_remove(cola_new, 0); // Guarda con lo que retorna list_remove
+        log_warning(LOGGER_KERNEL, "SE VA A INICIALIZAR EL PROCESO %d", pcb->PID);
 
         char* path_proceso= obtener_path(pcb->PID);
 
@@ -300,6 +300,7 @@ void intentar_inicializar_proceso_de_new() {
 
         // SOLO MUEVE EL PROCESO A READY SI PUEDE
         // NO TRATA DE EJECUTAR EL PROXIMO
+
         inicializar_proceso(pcb, path_proceso);
     }
     pthread_mutex_unlock(&mutex_cola_new);
@@ -680,9 +681,9 @@ void io(t_pcb* pcb, uint32_t tid, int milisegundos) {
     tcb->ESTADO = BLOCK_IO;
     log_info(LOGGER_KERNEL, "## (<%d>:<%d>) - Bloqueado por <IO> durante %d", tid, pcb->PID, milisegundos);
 
-    intentar_mover_a_execute();
+    usleep(milisegundos); //* 1000);
 
-    usleep(milisegundos * 1000);
+    intentar_mover_a_execute();
 
     tcb->ESTADO = READY;
     mover_hilo_a_ready(tcb);

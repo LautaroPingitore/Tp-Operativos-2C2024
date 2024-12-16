@@ -191,28 +191,25 @@ void* procesar_conexion_memoria(void *void_args){
 
             case PROCESS_CREATE:
                 t_proceso_memoria* proceso_nuevo = recibir_proceso(cliente_socket);
-
                 if(proceso_nuevo == NULL) {
                     enviar_mensaje("ERROR",cliente_socket);
                     break;
                 }
                 
                 if (asignar_espacio_memoria(proceso_nuevo, ALGORITMO_BUSQUEDA) == -1) {
-                    enviar_mensaje("ERROR: No se pudo asignar memoria", cliente_socket);
+                    enviar_mensaje("ERROR", cliente_socket);
                     free(proceso_nuevo->contexto);
                     free(proceso_nuevo);
                 } else {
                     pthread_mutex_lock(&mutex_procesos);
                     list_add(lista_procesos, proceso_nuevo);
                     pthread_mutex_unlock(&mutex_procesos);
-
                     enviar_mensaje("OK", cliente_socket);
-                    log_info(LOGGER_MEMORIA, "## Proceso <Creado> -  PID: <%d> - Tamaño: <%d>", proceso_nuevo->pid, proceso_nuevo->limite);
+                    log_warning(LOGGER_MEMORIA, "## Proceso <Creado> -  PID: <%d> - Tamaño: <%d>", proceso_nuevo->pid, proceso_nuevo->limite);
                 }
-                break;
+                break ;
 
-            case PROCESS_EXIT: // TERMINADO
-                
+            case PROCESS_EXIT:
                 t_proceso_memoria* proceso_a_eliminar = recibir_proceso(cliente_socket);
 
                 if (proceso_a_eliminar == NULL) {
@@ -222,7 +219,9 @@ void* procesar_conexion_memoria(void *void_args){
             
                 liberar_espacio_memoria(proceso_a_eliminar->pid);
                 pthread_mutex_lock(&mutex_procesos);
+                log_warning(LOGGER_MEMORIA, "A PUNTO DE BORARRA");
                 eliminar_proceso_de_lista(proceso_a_eliminar->pid);
+                log_warning(LOGGER_MEMORIA, "SE BORRO");
                 pthread_mutex_unlock(&mutex_procesos);
 
                 log_info(LOGGER_MEMORIA, "## Proceso <Destruido> -  PID: <%d> - Tamaño: <%d>", proceso_nuevo->pid, proceso_nuevo->limite);
@@ -231,7 +230,6 @@ void* procesar_conexion_memoria(void *void_args){
                 break;
 
             case THREAD_CREATE:
-
                 t_hilo_memoria* hilo_a_crear = recibir_hilo_memoria(cliente_socket);
                 if(!hilo_a_crear) {
                     enviar_mensaje("ERROR", cliente_socket);

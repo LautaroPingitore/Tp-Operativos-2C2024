@@ -53,7 +53,7 @@ t_particion* buscar_hueco_first_fit(uint32_t tamano_requerido) {
             return particion;
         }
     }
-    log_warning(LOGGER_MEMORIA, "No se encontró espacio suficiente usando First Fit.");
+    
     return NULL; // No hay espacio
 }
 
@@ -71,9 +71,6 @@ t_particion* buscar_hueco_best_fit(uint32_t tamano_requerido) {
                 tamano_minimo = espacio_sobrante;
             }
         }
-    }
-    if (!mejor_particion) {
-        log_warning(LOGGER_MEMORIA, "No se encontró espacio suficiente usando Best Fit.");
     }
     return mejor_particion;
 }
@@ -93,9 +90,7 @@ t_particion* buscar_hueco_worst_fit(uint32_t tamano_requerido) {
             }
         }
     }
-    if (!peor_particion) {
-        log_warning(LOGGER_MEMORIA, "No se encontró espacio suficiente usando Worst Fit.");
-    }
+
     return peor_particion;
 }
 
@@ -103,10 +98,16 @@ t_particion* buscar_hueco_worst_fit(uint32_t tamano_requerido) {
 int asignar_espacio_memoria(t_proceso_memoria* proceso, const char* algoritmo) {
     t_particion* particion = buscar_hueco(proceso->limite, algoritmo);
 
-    if (particion->tamano < proceso->limite) {
-        log_error(LOGGER_MEMORIA, "No se pudo asignar memoria para el proceso PID %d", proceso->pid);
+    if(particion == NULL){
+        log_warning(LOGGER_MEMORIA, "No se encontró espacio suficiente usando el algoritmo: %s", algoritmo);
         return -1;
     }
+    
+    if (particion->tamano < proceso->limite) {
+        log_error(LOGGER_MEMORIA, "ERROR CON LA PARTICION DEL proceso PID %d", proceso->pid);
+        return -1;
+    }
+
 
     particion->libre = false;  
     proceso->base = particion->inicio;
