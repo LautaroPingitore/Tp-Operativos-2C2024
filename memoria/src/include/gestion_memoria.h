@@ -18,5 +18,7 @@ t_particion* buscar_hueco_worst_fit(uint32_t);
 int asignar_espacio_memoria(t_proceso_memoria*, const char*);
 void liberar_espacio_memoria(uint32_t);
 void consolidar_particiones_libres();
+t_particion* asignar_hueco_dinamico(uint32_t);
+
 
 #endif

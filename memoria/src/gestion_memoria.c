@@ -36,7 +36,9 @@ void inicializar_lista_particiones(char* esquema, t_list* particiones_fijas) {
 
 // Función general para buscar hueco usando un algoritmo especificado
 t_particion* buscar_hueco(uint32_t tamano_requerido, const char* algoritmo) {
-    if (strcmp(algoritmo, "FIRST") == 0) {
+    if (strcmp(ESQUEMA, "DINAMICAS") == 0) {
+        return asignar_hueco_dinamico(tamano_requerido);
+    } else if (strcmp(algoritmo, "FIRST") == 0) {
         return buscar_hueco_first_fit(tamano_requerido);
     } else if (strcmp(algoritmo, "BEST") == 0) {
         return buscar_hueco_best_fit(tamano_requerido);
@@ -44,6 +46,39 @@ t_particion* buscar_hueco(uint32_t tamano_requerido, const char* algoritmo) {
         return buscar_hueco_worst_fit(tamano_requerido);
     }
     return NULL;
+}
+
+t_particion* asignar_hueco_dinamico(uint32_t tamanio) {
+    pthread_mutex_lock(&mutex_particiones);
+
+    for(int i=0; i < list_size(lista_particiones); i++) {
+        t_particion* particion = list_get(lista_particiones, i);
+
+        if (particion->libre && particion->tamano >= tamanio) {
+            // Si sobra espacio, dividir la partición en dos
+            if (particion->tamano > tamanio) {
+                t_particion* nueva_particion = malloc(sizeof(t_particion));
+                nueva_particion->inicio = particion->inicio + tamanio;
+                nueva_particion->tamano = particion->tamano - tamanio;
+                nueva_particion->libre = true;
+
+                // Reducir tamaño de la partición original
+                particion->tamano = tamanio;
+                particion->libre = false;
+
+                // Insertar la nueva partición en la lista
+                list_add_in_index(lista_particiones, i + 1, nueva_particion);
+            } else {
+                particion->libre = false; // Marcar partición como ocupada
+            }
+
+            pthread_mutex_unlock(&mutex_particiones);
+            return particion; // Retornar la partición asignada
+        }
+    }
+    pthread_mutex_unlock(&mutex_particiones);
+    log_warning(LOGGER_MEMORIA, "No se encontró hueco dinámico suficiente para %u bytes", tamanio);
+    return NULL; // No se encontró un hueco libre
 }
 
 // First Fit: Encuentra el primer hueco que cumpla con el tamaño requerido
@@ -152,9 +187,13 @@ void liberar_espacio_memoria(uint32_t pid) {
             particion_encontrada = true;
 
             if (strcmp(ESQUEMA, "FIJAS") == 0) {
+                pthread_mutex_unlock(&mutex_particiones);
+
                 log_info(LOGGER_MEMORIA, "Memoria liberada para PID %u en la dirección %u (Esquema Fijas)", 
                          proceso->pid, proceso->base);
-            } else if (strcmp(ESQUEMA, "DINAMICA") == 0) {
+            } else if (strcmp(ESQUEMA, "DINAMICAS") == 0) {
+                pthread_mutex_unlock(&mutex_particiones);
+
                 consolidar_particiones_libres();
                 log_info(LOGGER_MEMORIA, "Memoria liberada para PID %u en la dirección %u (Esquema Dinámicas)", 
                          proceso->pid, proceso->base);
@@ -165,9 +204,9 @@ void liberar_espacio_memoria(uint32_t pid) {
     }
 
     if (!particion_encontrada) {
+        pthread_mutex_unlock(&mutex_particiones);
+
         log_error(LOGGER_MEMORIA, "No se encontró la partición para PID %u al intentar liberar memoria (Base: %u)", 
                   proceso->pid, proceso->base);
     }
-    
-    pthread_mutex_unlock(&mutex_particiones);
 }

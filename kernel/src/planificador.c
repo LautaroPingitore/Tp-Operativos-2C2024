@@ -704,8 +704,6 @@ void agregar_path(uint32_t pid, char* archivo) {
     list_replace(tabla_paths, pid, path_copiado);
 }
 
-
-
 char* obtener_path(uint32_t pid) {
     return (char*) list_get(tabla_paths, pid);
 }
