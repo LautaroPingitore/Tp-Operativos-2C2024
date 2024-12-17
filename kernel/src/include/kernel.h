@@ -37,4 +37,8 @@ void* manejar_comunicaciones_memoria(void*);
 void* manejar_comunicaciones_dispatch(void*);
 void* manejar_comunicaciones_interrupt(void*);
 
+void terminar_kernel();
+void destruir_mutex_semaforos();
+void destruir_colas();
+
 #endif /* KERNEL_H_ */

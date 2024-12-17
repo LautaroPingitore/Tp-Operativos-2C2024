@@ -29,5 +29,8 @@ void* escuchar_memoria();
 int server_escuchar(t_log*, char*, int);
 void* procesar_conexion_memoria(void *);
 
+void terminar_memoria();
+void destruir_listas();
+void destruir_mutexs();
 
 #endif /* MEMORIA_H_ */

@@ -37,11 +37,11 @@ extern t_list* recursos_globales;
 // SEMAFOFOS QUE PROTEGEN EL ACCESO A CADA COLA
 extern pthread_mutex_t mutex_cola_new;
 extern pthread_mutex_t mutex_cola_ready;
+extern pthread_mutex_t mutex_cola_exec;
 extern pthread_mutex_t mutex_cola_exit;
 extern pthread_mutex_t mutex_cola_blocked;
 extern pthread_mutex_t mutex_pid;
 extern pthread_mutex_t mutex_tid;
-extern pthread_mutex_t mutex_estado;
 extern pthread_mutex_t mutex_cola_multinivel;
 extern pthread_cond_t cond_estado;
 
@@ -112,5 +112,6 @@ void eliminar_tcb_lista(t_list*, uint32_t);
 void agregar_hilo_a_bloqueados(uint32_t, t_tcb*);
 void tiene_algun_hilo_bloqueado_join(uint32_t, uint32_t);
 void desbloquear_hilo_bloqueado_join(t_tcb*);
+
 
 #endif /* PLANIFICADOR_H_ */

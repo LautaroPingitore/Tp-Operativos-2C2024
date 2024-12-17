@@ -107,6 +107,6 @@ char* obtener_contenido_proceso(uint32_t, uint32_t);
 t_list* obtener_lista_instrucciones_por_tid(uint32_t, uint32_t);
 void agregar_instrucciones_a_lista(uint32_t, uint32_t, char*);
 uint32_t leer_memoria(uint32_t direccion_fisica);
-void escribir_memoria(uint32_t, uint32_t);
+int escribir_memoria(uint32_t, uint32_t);
 
 #endif //COMUNICACIONES_H_

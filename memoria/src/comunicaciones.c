@@ -9,15 +9,8 @@ pthread_mutex_t mutex_instrucciones;
 
 
 void inicializar_datos(){
-    pthread_mutex_lock(&mutex_procesos);
     lista_procesos = list_create();
-    pthread_mutex_unlock(&mutex_procesos);
-
-
-    pthread_mutex_lock(&mutex_instrucciones);
     lista_instrucciones = list_create();
-    pthread_mutex_unlock(&mutex_instrucciones);
-
 
     pthread_mutex_init(&mutex_procesos, NULL);
     pthread_mutex_init(&mutex_instrucciones, NULL);
@@ -626,16 +619,16 @@ t_write_mem* deserializar_write_mem(t_buffer* buffer) {
 }
 
 
-void escribir_memoria(uint32_t direccion_fisica, uint32_t valor) {
+int escribir_memoria(uint32_t direccion_fisica, uint32_t valor) {
     // Verificar que la dirección física esté dentro de los límites de la memoria de usuario
     if (direccion_fisica + sizeof(uint32_t) > TAM_MEMORIA) {
         log_error(LOGGER_MEMORIA, "Error de segmentación: Dirección física %d fuera de los límites de memoria de usuario", direccion_fisica);
-        return;
+        return -1;
     }
     
-    memcpy(&direccion_fisica, &valor, sizeof(uint32_t));
+    memcpy((uint32_t*)memoria_usuario + direccion_fisica, &valor, sizeof(uint32_t));
    
-    //enviar_mensaje("OK", socket_memoria_cpu);  // Responder OK al cliente
+    return 1;
 }
 
 
@@ -678,7 +671,7 @@ uint32_t leer_memoria(uint32_t direccion_fisica) {
     }
 
     uint32_t valor;
-    memcpy(&valor, &direccion_fisica, sizeof(uint32_t));
+    memcpy(&valor, (uint32_t*) memoria_usuario + direccion_fisica, sizeof(uint32_t));
 
     return valor;
 }

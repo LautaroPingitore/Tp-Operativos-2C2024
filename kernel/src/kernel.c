@@ -70,13 +70,6 @@ int main(int argc, char* argv[]) {
     pthread_join(hilo_com_dispatch, NULL);
     pthread_join(hilo_com_interrupt, NULL);
 
-    log_warning(LOGGER_KERNEL, "A PUNTO DE TERMINAR");
-
-    int sockets[] = {socket_kernel_memoria, socket_kernel_cpu_dispatch, socket_kernel_cpu_interrupt, -1};
-    terminar_programa(CONFIG_KERNEL, LOGGER_KERNEL, sockets);
-
-    printf("TERMINADO");
-
     return 0;
 }
 
@@ -316,4 +309,48 @@ void manejar_comunicaciones(int socket, const char* nombre_modulo) {
     }
     log_info(LOGGER_KERNEL, "Finalizando conexión con el módulo %s.", nombre_modulo);
     close(socket);
+}
+
+// ====================|
+// TERMINAR EL PROGRAMA|
+// ====================|
+
+void terminar_kernel() {
+    destruir_mutex_semaforos();
+    destruir_colas();
+
+    int sockets[] = {socket_kernel_memoria, socket_kernel_cpu_dispatch, socket_kernel_cpu_interrupt, -1};
+    terminar_programa(CONFIG_KERNEL, LOGGER_KERNEL, sockets); 
+}
+
+void destruir_mutex_semaforos() {
+    pthread_mutex_destroy(&mutex_pid);
+    pthread_mutex_destroy(&mutex_tid);
+    pthread_mutex_destroy(&mutex_cola_new);
+    pthread_mutex_destroy(&mutex_cola_ready);
+    pthread_mutex_destroy(&mutex_cola_exit);
+    pthread_mutex_destroy(&mutex_cola_blocked);
+    pthread_mutex_destroy(&mutex_mensaje);
+    pthread_mutex_destroy(&mutex_cola_exec);
+    pthread_mutex_destroy(&mutex_cola_multinivel);
+
+    sem_destroy(&sem_mensaje);
+    sem_destroy(&sem_io);
+}
+
+void destruir_colas() {
+    list_destroy(cola_new);
+    list_destroy(cola_exec);
+    list_destroy_and_destroy_elements(cola_exit, free);
+    list_destroy(cola_blocked_join);
+    list_destroy(cola_blocked_mutex);
+    list_destroy(cola_blocked_io);
+    if(strcmp(ALGORITMO_PLANIFICACION, "CMN") == 0) {
+        list_destroy(colas_multinivel);
+    } else {
+        list_destroy(cola_ready);
+    }
+    list_destroy(tabla_paths);
+    list_destroy(tabla_procesos);
+    list_destroy(recursos_globales);
 }

@@ -35,10 +35,6 @@ int main(int argc, char* argv[]) {
 
     pthread_exit(NULL); // Evita que el hilo principal finalice y permite que los hilos creados sigan ejecutándose
 
-    // Ejecutar el servidor en un bucle principal, esperando solicitudes y procesando respuestas
-    int sockets[] = {socket_memoria, socket_memoria_cpu, socket_memoria_kernel, socket_memoria_filesystem, -1};
-    terminar_programa(CONFIG_MEMORIA, LOGGER_MEMORIA, sockets);
-
     return 0;
 }
 
@@ -49,6 +45,10 @@ void inicializar_programa() {
     // Inicializar particiones de memoria en base al esquema (fijo o dinámico)
 	t_list* particiones_fijas = obtener_particiones_fijas(PARTICIONES_FIJAS);
     inicializar_lista_particiones(ESQUEMA, particiones_fijas);
+
+    list_destroy_and_destroy_elements(particiones_fijas, free);
+
+    inicializar_memoria_usuario();
 
     // Configurar conexiones de memoria a otros módulos
     log_info(LOGGER_MEMORIA, "Inicializando servidor de memoria en el puerto %s", PUERTO_ESCUCHA);
@@ -174,7 +174,8 @@ void* procesar_conexion_memoria(void *void_args){
         // Recibir código de operación
         ssize_t bytes_recibidos = recv(cliente_socket, &cod, sizeof(op_code), MSG_WAITALL);
         if (bytes_recibidos != sizeof(op_code) || bytes_recibidos == 0) {
-            log_error(LOGGER_MEMORIA, "Error al recibir código de operación, bytes recibidos: %zd", bytes_recibidos);
+            log_error(LOGGER_MEMORIA, "Cliente desconectado");
+            terminar_memoria();
             break;
         }
 
@@ -288,7 +289,12 @@ void* procesar_conexion_memoria(void *void_args){
 
             case PEDIDO_WRITE_MEM:
                 t_write_mem* wri_mem = recibir_write_mem(cliente_socket);
-                escribir_memoria(wri_mem->dire_fisica_wm, wri_mem->valor_escribido);
+                int resultado = escribir_memoria(wri_mem->dire_fisica_wm, wri_mem->valor_escribido);
+                if(resultado == 1) {
+                    enviar_mensaje("OK", cliente_socket);
+                } else {
+                    enviar_mensaje("ERROR", cliente_socket);
+                }
                 uint32_t tam_valor_escribido = sizeof(wri_mem->valor_escribido);
                 log_info(LOGGER_MEMORIA, "## <Escritura> - (<%d>:<%d>) - Dir. Física: <%d> - Tamaño: <%d>",
                          wri_mem->pid, wri_mem->tid, wri_mem->dire_fisica_wm, tam_valor_escribido);
@@ -362,4 +368,45 @@ void* procesar_conexion_memoria(void *void_args){
     free(args->server_name);
 
     return NULL;
+}
+
+void terminar_memoria() {
+    free(memoria_usuario);
+    list_destroy_and_destroy_elements(lista_particiones, free);
+    destruir_listas();
+    destruir_mutexs();
+
+    int sockets[] = {socket_memoria, socket_memoria_filesystem, -1};
+    terminar_programa(CONFIG_MEMORIA, LOGGER_MEMORIA, sockets);
+}
+
+void destruir_listas() {
+    for(int i=0; i < list_size(lista_procesos); i++) {
+        t_proceso_memoria* pACt = list_remove(lista_procesos, i);
+        i--;
+        free(pACt->contexto);
+        free(pACt);
+    }
+    list_destroy(lista_procesos);
+
+    for(int j=0; j < list_size(lista_instrucciones); j++) {
+        t_hilo_instrucciones* hAct = list_remove(lista_instrucciones, j);
+        j--;
+        for(int k=0; k < list_size(hAct->instrucciones); k++) {
+            t_instruccion* inst = list_remove(hAct->instrucciones, k);
+            k--;
+            free(inst->nombre);
+            free(inst->parametro1);
+            free(inst->parametro2);
+            free(inst);
+        }
+        list_destroy(hAct->instrucciones);
+        free(hAct);
+    }
+    list_destroy(lista_instrucciones);
+}
+
+void destruir_mutexs() {
+    pthread_mutex_destroy(&mutex_procesos);
+    pthread_mutex_destroy(&mutex_instrucciones);
 }

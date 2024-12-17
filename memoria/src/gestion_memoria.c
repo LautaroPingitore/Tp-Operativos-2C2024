@@ -1,6 +1,7 @@
 #include "include/gestor.h"
 
 // Variables Globales
+void* memoria_usuario;
 t_list* lista_particiones;
 pthread_mutex_t mutex_particiones = PTHREAD_MUTEX_INITIALIZER;
 
@@ -32,6 +33,16 @@ void inicializar_lista_particiones(char* esquema, t_list* particiones_fijas) {
     pthread_mutex_unlock(&mutex_particiones);
     log_info(LOGGER_MEMORIA, "Lista de particiones inicializada bajo esquema: %s", esquema);
     log_info(LOGGER_MEMORIA, "Bajo el algoritmo de busqueda: %s", ALGORITMO_BUSQUEDA);
+}
+
+void inicializar_memoria_usuario() {
+    memoria_usuario = malloc(TAM_MEMORIA);
+    if (memoria_usuario == NULL) {
+        perror("Error al inicializar la memoria de usuario");
+        exit(EXIT_FAILURE);
+    }
+    memset(memoria_usuario, 0, TAM_MEMORIA);
+    log_info(LOGGER_MEMORIA, "Memoria de Usuario inicializada con tamanio: %d", TAM_MEMORIA);
 }
 
 // Función general para buscar hueco usando un algoritmo especificado
@@ -210,6 +221,6 @@ int liberar_espacio_memoria(uint32_t pid) {
                   proceso->pid, proceso->base);
         return -1;
     }
-    
+
     return 1;
 }

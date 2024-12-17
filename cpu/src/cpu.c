@@ -39,8 +39,7 @@ int main() {
     iniciar_conexiones();
 
     pthread_exit(NULL); // Evita que el hilo principal finalice y permite que los hilos creados sigan ejecutándose
-    int sockets[] = {socket_cpu_dispatch_kernel, socket_cpu_interrupt_kernel, socket_cpu_memoria, -1};
-    terminar_programa(CONFIG_CPU, LOGGER_CPU, sockets);
+
     return 0;
 }
 
@@ -165,6 +164,7 @@ void* procesar_conexion_memoria(void*) {
         ssize_t bytes_recibidos = recv(socket_cpu_memoria, &cod, sizeof(op_code), MSG_WAITALL);
         if (bytes_recibidos != sizeof(op_code)) {
             log_error(LOGGER_CPU, "CLIENTE DESCONECTADO");
+            terminar_cpu();
             break;
         }
 
@@ -188,7 +188,6 @@ void* procesar_conexion_memoria(void*) {
                 break;
 
             case CONTEXTO:
-                log_warning(LOGGER_CPU, "ENT C");
                 t_proceso_cpu* proceso_recibido = recibir_proceso(socket_cpu_memoria);
 
                 t_proceso_cpu* proceso_lista = esta_proceso_guardado(proceso_recibido);
@@ -260,6 +259,7 @@ void* procesar_conexion_cpu(void* void_args) {
             } else {
                 log_error(LOGGER_CPU, "Error al recibir datos.");
             }
+            terminar_cpu();
             break; // Salimos del ciclo si el socket está cerrado o hay error
         }
         
@@ -323,6 +323,26 @@ void inicializar_cpu() {
 
     hilos_ejecutados = list_create();
     procesos_ejecutados = list_create();
+}
+
+void terminar_cpu() {
+    destruir_semaforos();
+    destruir_colas();
+
+    int sockets[] = {socket_servidor_dispatch, socket_servidor_interrupt, socket_cpu_dispatch_kernel, socket_cpu_interrupt_kernel, socket_cpu_memoria, -1};
+    terminar_programa(CONFIG_CPU, LOGGER_CPU, sockets); 
+}
+
+void destruir_colas() {
+    for(int i=0; i < list_size(procesos_ejecutados); i++) {
+        t_proceso_cpu* pAct = list_remove(procesos_ejecutados, i);
+        i--;
+        free(pAct->REGISTROS);
+        free(pAct);
+    }
+    list_destroy(procesos_ejecutados);
+    
+    list_destroy_and_destroy_elements(hilos_ejecutados, free);
 }
 
 void destruir_semaforos() {

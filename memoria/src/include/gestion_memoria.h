@@ -2,6 +2,7 @@
 #define GESTION_MEMORIA_H
 
 extern t_list* lista_particiones;
+extern void* memoria_usuario;
 
 typedef struct {
     uint32_t inicio;
@@ -11,6 +12,7 @@ typedef struct {
 
 // Funciones para manejar particiones y memoria 
 void inicializar_lista_particiones(char*, t_list*);
+void inicializar_memoria_usuario();
 t_particion* buscar_hueco(uint32_t, const char*);
 t_particion* buscar_hueco_first_fit(uint32_t);
 t_particion* buscar_hueco_best_fit(uint32_t);

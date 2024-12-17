@@ -149,29 +149,6 @@ void enviar_contexto_memoria(uint32_t pid, uint32_t tid, t_registros* registros,
     
     memcpy(paquete->buffer->stream + desplazamiento, registros, sizeof(t_registros));
 
-    // memcpy(paquete->buffer->stream + desplazamiento, &(registros->AX), sizeof(uint32_t));
-    // desplazamiento += sizeof(uint32_t);
-
-    // memcpy(paquete->buffer->stream + desplazamiento, &(registros->BX), sizeof(uint32_t));
-    // desplazamiento += sizeof(uint32_t);
-
-    // memcpy(paquete->buffer->stream + desplazamiento, &(registros->CX), sizeof(uint32_t));
-    // desplazamiento += sizeof(uint32_t);
-
-    // memcpy(paquete->buffer->stream + desplazamiento, &(registros->DX), sizeof(uint32_t));
-    // desplazamiento += sizeof(uint32_t);
-
-    // memcpy(paquete->buffer->stream + desplazamiento, &(registros->EX), sizeof(uint32_t));
-    // desplazamiento += sizeof(uint32_t);
-
-    // memcpy(paquete->buffer->stream + desplazamiento, &(registros->FX), sizeof(uint32_t));
-    // desplazamiento += sizeof(uint32_t);
-    
-    // memcpy(paquete->buffer->stream + desplazamiento, &(registros->GX), sizeof(uint32_t));
-    // desplazamiento += sizeof(uint32_t);
-
-    // memcpy(paquete->buffer->stream + desplazamiento, &(registros->HX), sizeof(uint32_t)); 
- 
     enviar_paquete(paquete, socket_memoria);
     eliminar_paquete(paquete);
 }

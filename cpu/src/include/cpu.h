@@ -50,6 +50,8 @@ void* procesar_conexion_cpu_dispatch(void*);
 void* procesar_conexion_cpu(void*);
 
 void inicializar_cpu();
+void terminar_cpu();
+void destruir_colas();
 void destruir_semaforos();
 
 #endif /* CPU_H_ */

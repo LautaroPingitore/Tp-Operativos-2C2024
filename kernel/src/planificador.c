@@ -66,8 +66,6 @@ pthread_mutex_t mutex_cola_blocked;
 pthread_mutex_t mutex_cola_exec;
 pthread_mutex_t mutex_pid;
 pthread_mutex_t mutex_tid;
-pthread_mutex_t mutex_estado;
-pthread_mutex_t mutex_join;
 pthread_mutex_t mutex_cola_multinivel;
 
 sem_t sem_io;
@@ -97,7 +95,6 @@ void inicializar_kernel() {
 
     pthread_mutex_init(&mutex_pid, NULL);
     pthread_mutex_init(&mutex_tid,NULL);
-    pthread_mutex_init(&mutex_estado, NULL);
     pthread_mutex_init(&mutex_cola_new, NULL);
     pthread_mutex_init(&mutex_cola_ready, NULL);
     pthread_mutex_init(&mutex_cola_exit, NULL);
@@ -105,7 +102,6 @@ void inicializar_kernel() {
     pthread_mutex_init(&mutex_mensaje, NULL);
     pthread_mutex_init(&mutex_cola_exec, NULL);
     pthread_mutex_init(&mutex_cola_multinivel, NULL);
-    pthread_mutex_init(&mutex_join, NULL);
 
     sem_init(&sem_mensaje, 0, 0);
     sem_init(&sem_io, 0, 0);
@@ -528,6 +524,7 @@ void intentar_mover_a_execute() {
     if(hilo_a_ejecutar == NULL) {
         log_info(LOGGER_KERNEL, "No hay hilos en READY para mover a EXECUTE");
         log_info(LOGGER_KERNEL, "Se termina la ejecucion del programa");
+        terminar_kernel();
         return;
     }
 
