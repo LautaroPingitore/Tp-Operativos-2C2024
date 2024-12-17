@@ -24,11 +24,11 @@ extern int socket_kernel_cpu_interrupt;
 extern pthread_t hilo_com_memoria;
 extern pthread_t hilo_com_dispatch;
 extern pthread_t hilo_com_interrupt;
+extern pthread_mutex_t mutex_mensaje;
 
-extern bool se_pudo_asignar;
+extern bool mensaje_okey;
 
-extern sem_t sem_process_create;
-extern pthread_mutex_t mutex_process_create;
+extern sem_t sem_mensaje;
 
 void inicializar_config(char*);
 bool iniciar_conexiones();

@@ -5,6 +5,7 @@ extern bool hay_interrupcion;
 
 // CICLO_INSTRUCCION
 t_tcb* recibir_hilo_kernel(int);
+void pedir_contexto_memoria(int, uint32_t, uint32_t);
 void* recibir_interrupcion(void*);
 bool deserializar_interrupcion(void*, int, int, bool);
 void pedir_instruccion_memoria(uint32_t, uint32_t, uint32_t, int);

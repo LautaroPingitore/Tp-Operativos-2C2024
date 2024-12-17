@@ -99,6 +99,23 @@ bool deserializar_interrupcion(void* stream, int size, int quantum, bool interru
     return true;
 }
 
+void pedir_contexto_memoria(int socket, uint32_t pid, uint32_t tid) {
+    t_paquete* paquete = crear_paquete_con_codigo_de_operacion(CONTEXTO);
+
+    paquete->buffer->size = 2 * sizeof(uint32_t);
+    paquete->buffer->stream = malloc(paquete->buffer->size);
+
+    int desplazamiento = 0;
+
+    memcpy(paquete->buffer->stream + desplazamiento, &(pid), sizeof(uint32_t));
+    desplazamiento += sizeof(uint32_t);
+
+    memcpy(paquete->buffer->stream + desplazamiento, &(tid), sizeof(uint32_t));
+
+    enviar_paquete(paquete, socket);
+    eliminar_paquete(paquete);
+}
+
 void pedir_instruccion_memoria(uint32_t pid, uint32_t tid, uint32_t pc, int socket) {
     t_paquete *paquete = crear_paquete_con_codigo_de_operacion(PEDIDO_INSTRUCCION);
     

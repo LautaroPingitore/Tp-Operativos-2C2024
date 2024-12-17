@@ -187,6 +187,21 @@ void* procesar_conexion_memoria(void*) {
                 }
                 break;
 
+            case CONTEXTO:
+                log_warning(LOGGER_CPU, "ENT C");
+                t_proceso_cpu* proceso_recibido = recibir_proceso(socket_cpu_memoria);
+
+                t_proceso_cpu* proceso_lista = esta_proceso_guardado(proceso_recibido);
+                if(proceso_lista == NULL) {
+                    list_add(procesos_ejecutados, proceso_recibido);
+                    pcb_actual = proceso_recibido;
+                } else {
+                    pcb_actual = proceso_lista;
+                }
+
+                sem_post(&sem_proceso_actual);
+                break;
+
             case INSTRUCCION:
                 t_instruccion* inst = recibir_instruccion(socket_cpu_memoria);
                 instruccion_actual = inst;
@@ -265,6 +280,9 @@ void* procesar_conexion_cpu(void* void_args) {
                     hilo_actual = hilo_lista;
                 }
 
+                log_info(LOGGER_CPU, "## TID: <%d> - SOLICITO CONTEXTO EJECUCION", hilo_actual->TID);
+                pedir_contexto_memoria(socket_cpu_memoria, hilo_actual->PID_PADRE, hilo_actual->TID);
+
                 sem_wait(&sem_proceso_actual);
 
                 pthread_mutex_lock(&mutex_syscall);
@@ -272,20 +290,6 @@ void* procesar_conexion_cpu(void* void_args) {
                 pthread_mutex_unlock(&mutex_syscall);
                 
                 ejecutar_ciclo_instruccion();
-                break;
-
-            case SOLICITUD_PROCESO:
-                t_proceso_cpu* proceso_recibido = recibir_proceso(socket);
-
-                t_proceso_cpu* proceso_lista = esta_proceso_guardado(proceso_recibido);
-                if(proceso_lista == NULL) {
-                    list_add(procesos_ejecutados, proceso_recibido);
-                    pcb_actual = proceso_recibido;
-                } else {
-                    pcb_actual = proceso_lista;
-                }
-
-                sem_post(&sem_proceso_actual);
                 break;
 
             case HANDSHAKE_interrupt:

@@ -173,7 +173,7 @@ void consolidar_particiones_libres() {
     log_info(LOGGER_MEMORIA, "Particiones libres consolidadas.");
 }
 
-void liberar_espacio_memoria(uint32_t pid) {
+int liberar_espacio_memoria(uint32_t pid) {
     t_proceso_memoria* proceso = obtener_proceso_memoria(pid);
 
     pthread_mutex_lock(&mutex_particiones);
@@ -208,5 +208,8 @@ void liberar_espacio_memoria(uint32_t pid) {
 
         log_error(LOGGER_MEMORIA, "No se encontró la partición para PID %u al intentar liberar memoria (Base: %u)", 
                   proceso->pid, proceso->base);
+        return -1;
     }
+    
+    return 1;
 }

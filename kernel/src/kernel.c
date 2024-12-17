@@ -19,11 +19,11 @@ int socket_kernel_cpu_interrupt;
 
 pthread_t hilo_com_memoria, hilo_com_dispatch, hilo_com_interrupt;
 
-bool se_pudo_asignar=false;
+bool mensaje_okey = false;
 
-pthread_mutex_t mutex_process_create;
+pthread_mutex_t mutex_mensaje;
 
-sem_t sem_process_create;
+sem_t sem_mensaje;
 
 // EL ARHCIVO DE PSEUDOCODIGO ESTA EN UNA CARPETA DE HOME LLAMADA scripts-pruebas
 int main(int argc, char* argv[]) {
@@ -170,15 +170,15 @@ void manejar_comunicaciones(int socket, const char* nombre_modulo) {
             case MENSAJE:
                 char* respuesta = recibir_mensaje(socket);
                 if (respuesta && strcmp(respuesta, "OK") == 0) {
-                    pthread_mutex_lock(&mutex_process_create);
-                    se_pudo_asignar = true;
-                    pthread_mutex_unlock(&mutex_process_create);
+                    pthread_mutex_lock(&mutex_mensaje);
+                    mensaje_okey = true;
+                    pthread_mutex_unlock(&mutex_mensaje);
                 } else {
-                    pthread_mutex_lock(&mutex_process_create);
-                    se_pudo_asignar = false;
-                    pthread_mutex_unlock(&mutex_process_create);
+                    pthread_mutex_lock(&mutex_mensaje);
+                    mensaje_okey = false;
+                    pthread_mutex_unlock(&mutex_mensaje);
                 }
-                sem_post(&sem_process_create);
+                sem_post(&sem_mensaje);
                 free(respuesta);
                 break;
             

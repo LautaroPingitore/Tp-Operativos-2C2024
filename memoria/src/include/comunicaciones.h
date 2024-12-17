@@ -71,13 +71,12 @@ void eliminar_espacio_hilo(t_hilo_memoria*);
 int enviar_instruccion(int, t_instruccion*);
 void enviar_valor_leido_cpu(int, uint32_t, uint32_t);
 void procesar_solicitud_contexto(int, uint32_t, uint32_t);
-int enviar_contexto_cpu(t_proceso_memoria*);
+void enviar_contexto_cpu(int, t_proceso_memoria*);
 void procesar_actualizacion_contexto(int, uint32_t, uint32_t, t_registros*);
 int  mandar_solicitud_dump_memory(char*, char*, uint32_t);
 void liberar_instrucciones(t_list*);
 t_proceso_memoria* obtener_proceso_memoria(uint32_t);
 t_list* convertir_registros_a_char(t_registros*);
-
 
 t_proceso_memoria* recibir_proceso(int);
 t_proceso_memoria* deserializar_proceso(t_buffer*);

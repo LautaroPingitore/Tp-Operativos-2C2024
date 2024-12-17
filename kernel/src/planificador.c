@@ -102,12 +102,12 @@ void inicializar_kernel() {
     pthread_mutex_init(&mutex_cola_ready, NULL);
     pthread_mutex_init(&mutex_cola_exit, NULL);
     pthread_mutex_init(&mutex_cola_blocked, NULL);
-    pthread_mutex_init(&mutex_process_create, NULL);
+    pthread_mutex_init(&mutex_mensaje, NULL);
     pthread_mutex_init(&mutex_cola_exec, NULL);
     pthread_mutex_init(&mutex_cola_multinivel, NULL);
     pthread_mutex_init(&mutex_join, NULL);
 
-    sem_init(&sem_process_create, 0, 0);
+    sem_init(&sem_mensaje, 0, 0);
     sem_init(&sem_io, 0, 0);
 }
 
@@ -213,20 +213,20 @@ t_contexto_ejecucion* inicializar_contexto() {
 // ENVIA EL PROCECSO A MEMORIA E INTENTA INICIALIZARLO
 int inicializar_proceso(t_pcb* pcb, char* path_proceso) {
     enviar_proceso_memoria(socket_kernel_memoria, pcb, PROCESS_CREATE); 
-    sem_wait(&sem_process_create);
+    sem_wait(&sem_mensaje);
     
-    pthread_mutex_lock(&mutex_process_create);
+    pthread_mutex_lock(&mutex_mensaje);
 
-    if (se_pudo_asignar) {
-        se_pudo_asignar = false;
-        pthread_mutex_unlock(&mutex_process_create);
+    if (mensaje_okey) {
+        mensaje_okey = false;
+        pthread_mutex_unlock(&mutex_mensaje);
         log_info(LOGGER_KERNEL, "Proceso %d inicializado y movido a READY", pcb->PID);
         mover_a_ready(pcb);
         t_tcb* hilo_cero = list_get(pcb->TIDS, 0);
         mover_hilo_a_ready(hilo_cero);
         return 1;
     } else {
-        pthread_mutex_unlock(&mutex_process_create);
+        pthread_mutex_unlock(&mutex_mensaje);
         return -1;
     }
     
@@ -322,6 +322,13 @@ void intentar_inicializar_proceso_de_new() {
 void process_exit(t_pcb* pcb) {
     mover_a_exit(pcb);
     enviar_proceso_memoria(socket_kernel_memoria, pcb, PROCESS_EXIT);
+
+    sem_wait(&sem_mensaje);
+    if(!mensaje_okey) {
+        log_error(LOGGER_KERNEL, "ERROR AL LIBERAR EL PROCESO EN MEMORIA");
+        exit(EXIT_FAILURE);
+    }
+
     eliminar_pcb_lista(tabla_procesos, pcb->PID);
     eliminar_path(pcb->PID);
     liberar_recursos_proceso(pcb);
@@ -543,7 +550,7 @@ void ejecutar_hilo(t_tcb* hilo_a_ejecutar) {
         return;
     }
 
-    enviar_proceso_cpu(socket_kernel_cpu_dispatch, pcb_padre);
+    //enviar_proceso_cpu(socket_kernel_cpu_dispatch, pcb_padre);
     
     int resultado = enviar_hilo_a_cpu(hilo_a_ejecutar);
 

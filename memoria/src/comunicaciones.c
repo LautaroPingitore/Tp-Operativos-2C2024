@@ -518,23 +518,18 @@ void procesar_solicitud_contexto(int socket_cliente, uint32_t pid, uint32_t tid)
         t_proceso_memoria* proceso = list_get(lista_procesos, i);
        
         if (proceso->pid == pid) {
-            int resultado = enviar_contexto_cpu(proceso);
-            if(resultado == 0) {
-                log_info(LOGGER_MEMORIA, "## Contexto <Solicitado> - (<%d>:<%d>)", pid, tid);
-                return;
-            } else {
-                break;
-            }
+            enviar_contexto_cpu(socket_cliente, proceso);
+            log_info(LOGGER_MEMORIA, "## Contexto <Solicitado> - (<%d>:<%d>)", pid, tid);
+            return;
         }
     }
 
-
-    log_error(LOGGER_MEMORIA, "No se encontró contexto para el PID: %d, TID: %d", pid, tid);
+    log_error(LOGGER_MEMORIA, "No se encontró contexto para el PID: %d", pid);
     enviar_mensaje("ERROR", socket_memoria_cpu);
 }
 
 
-int enviar_contexto_cpu(t_proceso_memoria* proceso) {
+void enviar_contexto_cpu(int socket, t_proceso_memoria* proceso) {
     t_paquete* paquete = crear_paquete_con_codigo_de_operacion(CONTEXTO);
    
     paquete->buffer->size = sizeof(uint32_t) + sizeof(t_registros);
@@ -544,11 +539,10 @@ int enviar_contexto_cpu(t_proceso_memoria* proceso) {
 
     memcpy(paquete->buffer->stream + desplazamiento, &(proceso->pid), sizeof(uint32_t));
     desplazamiento += sizeof(uint32_t);
-    memcpy(paquete->buffer->stream + desplazamiento, &(proceso->contexto), sizeof(uint32_t)); // el segundo parametro lleva & o no???
+    memcpy(paquete->buffer->stream + desplazamiento, proceso->contexto, sizeof(t_registros));
    
-    int resultado = enviar_paquete(paquete, socket_memoria_cpu);
+    enviar_paquete(paquete, socket);
     eliminar_paquete(paquete);
-    return resultado;
 }
 
 

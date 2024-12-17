@@ -216,12 +216,16 @@ void* procesar_conexion_memoria(void *void_args){
                     break;
                 }
             
-                liberar_espacio_memoria(proceso_a_eliminar->pid);
-                pthread_mutex_lock(&mutex_procesos);
-                eliminar_proceso_de_lista(proceso_a_eliminar->pid);
-                pthread_mutex_unlock(&mutex_procesos);
+                if(liberar_espacio_memoria(proceso_a_eliminar->pid) == 1) {
+                    pthread_mutex_lock(&mutex_procesos);
+                    eliminar_proceso_de_lista(proceso_a_eliminar->pid);
+                    pthread_mutex_unlock(&mutex_procesos);
 
-                log_info(LOGGER_MEMORIA, "## Proceso <Destruido> -  PID: <%d> - Tamaño: <%d>", proceso_a_eliminar->pid, proceso_a_eliminar->limite);
+                    log_info(LOGGER_MEMORIA, "## Proceso <Destruido> -  PID: <%d> - Tamaño: <%d>", proceso_a_eliminar->pid, proceso_a_eliminar->limite);
+                    enviar_mensaje("OK", cliente_socket);
+                } else {
+                    enviar_mensaje("ERROR", cliente_socket);
+                }
                 free(proceso_a_eliminar->contexto);
                 free(proceso_a_eliminar);
                 break;
@@ -271,9 +275,6 @@ void* procesar_conexion_memoria(void *void_args){
 
             case CONTEXTO:
                 t_pid_tid* ident_cx = recibir_identificadores(cliente_socket);
-                if(!ident_cx) {
-                    enviar_mensaje("ERROR", cliente_socket);
-                } 
                 procesar_solicitud_contexto(cliente_socket, ident_cx->pid, ident_cx->tid);
                 free(ident_cx);
                 break;
