@@ -21,7 +21,7 @@ int main(int argc, char* argv[]) {
         return -1;
     }
 
-    char* config = "planificacion";//argv[1];
+    char* config = argv[1];
     inicializar_config(config);
     iniciar_archivos();
     cargar_bitmap();

@@ -207,7 +207,7 @@ t_contexto_ejecucion* inicializar_contexto() {
 }
 
 // ENVIA EL PROCECSO A MEMORIA E INTENTA INICIALIZARLO
-void inicializar_proceso(t_pcb* pcb, char* path_proceso) {
+int inicializar_proceso(t_pcb* pcb, char* path_proceso) {
     enviar_proceso_memoria(socket_kernel_memoria, pcb, PROCESS_CREATE); 
     sem_wait(&sem_process_create);
     
@@ -220,8 +220,10 @@ void inicializar_proceso(t_pcb* pcb, char* path_proceso) {
         mover_a_ready(pcb);
         t_tcb* hilo_cero = list_get(pcb->TIDS, 0);
         mover_hilo_a_ready(hilo_cero);
+        return 1;
     } else {
         pthread_mutex_unlock(&mutex_process_create);
+        return -1;
     }
     
 }
@@ -280,7 +282,6 @@ void intentar_inicializar_proceso_de_new() {
     pthread_mutex_lock(&mutex_cola_new);
     if (!list_is_empty(cola_new)) {
         t_pcb* pcb = list_remove(cola_new, 0); // Guarda con lo que retorna list_remove
-        log_warning(LOGGER_KERNEL, "SE VA A INICIALIZAR EL PROCESO %d", pcb->PID);
 
         char* path_proceso = list_get(tabla_paths, pcb->PID);
 
@@ -301,7 +302,13 @@ void intentar_inicializar_proceso_de_new() {
         // NO TRATA DE EJECUTAR EL PROXIMO
 
         pthread_mutex_unlock(&mutex_cola_new);
-        inicializar_proceso(pcb, path_proceso);
+        if(inicializar_proceso(pcb, path_proceso) == -1) {
+            pthread_mutex_lock(&mutex_cola_new);
+            list_add(cola_new, pcb);
+            pthread_mutex_unlock(&mutex_cola_new);
+        }
+    } else {
+        pthread_mutex_unlock(&mutex_cola_new);
     }
 
     intentar_mover_a_execute();
@@ -673,16 +680,14 @@ void io(t_pcb* pcb, uint32_t tid, int milisegundos) {
     }
 
     tcb->ESTADO = BLOCK_IO;
-    log_info(LOGGER_KERNEL, "## (<%d>:<%d>) - Bloqueado por <IO> durante %d", tid, pcb->PID, milisegundos);
+    log_info(LOGGER_KERNEL, "## (<%d>:<%d>) - Bloqueado por <IO> durante %d", pcb->PID, tid, milisegundos);
 
-    usleep(milisegundos); //* 1000);
-
-    intentar_mover_a_execute();
+    usleep(milisegundos * 100); // tiene que ser por mil esto
+    log_info(LOGGER_KERNEL, "(<%d>:<%d>) Finalizó IO y pasa a READY", tcb->PID_PADRE, tcb->TID);
 
     tcb->ESTADO = READY;
     mover_hilo_a_ready(tcb);
-
-    log_info(LOGGER_KERNEL, "(<%d>:<%d>) Finalizó IO y pasa a READY", tcb->PID_PADRE, tcb->TID);
+    intentar_mover_a_execute();
 }
 
 // MANEJO DE TABLA PATHS

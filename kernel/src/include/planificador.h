@@ -49,7 +49,7 @@ t_pcb* crear_pcb(uint32_t, int, t_contexto_ejecucion*, t_estado, char*);
 t_tcb* crear_tcb(uint32_t, uint32_t, char*, int, t_estado);
 void crear_proceso(char*, int, int);
 t_contexto_ejecucion* inicializar_contexto();
-void inicializar_proceso(t_pcb*, char*);
+int inicializar_proceso(t_pcb*, char*);
 void mover_a_ready(t_pcb*);
 void mover_hilo_a_ready(t_tcb*);
 void mover_a_exit(t_pcb*);

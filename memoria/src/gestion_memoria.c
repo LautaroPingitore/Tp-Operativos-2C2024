@@ -31,6 +31,7 @@ void inicializar_lista_particiones(char* esquema, t_list* particiones_fijas) {
 
     pthread_mutex_unlock(&mutex_particiones);
     log_info(LOGGER_MEMORIA, "Lista de particiones inicializada bajo esquema: %s", esquema);
+    log_info(LOGGER_MEMORIA, "Bajo el algoritmo de busqueda: %s", ALGORITMO_BUSQUEDA);
 }
 
 // Función general para buscar hueco usando un algoritmo especificado
@@ -99,7 +100,7 @@ int asignar_espacio_memoria(t_proceso_memoria* proceso, const char* algoritmo) {
     t_particion* particion = buscar_hueco(proceso->limite, algoritmo);
 
     if(particion == NULL){
-        log_warning(LOGGER_MEMORIA, "No se encontró espacio suficiente usando el algoritmo: %s", algoritmo);
+        log_warning(LOGGER_MEMORIA, "No se encontró espacio suficiente para inicializar el proceso %d usando el algoritmo: %s", proceso->pid, algoritmo);
         return -1;
     }
     

@@ -74,7 +74,6 @@ void inicializar_config(char *arg) {
 	TAM_MEMORIA = config_get_int_value(CONFIG_MEMORIA, "TAM_MEMORIA");
 	PATH_INSTRUCCIONES = config_get_string_value(CONFIG_MEMORIA, "PATH_INSTRUCCIONES");
 	RETARDO_RESPUESTA = config_get_int_value(CONFIG_MEMORIA, "RETARDO_RESPUESTA");
-
     ESQUEMA = config_get_string_value(CONFIG_MEMORIA,"ESQUEMA");
 	ALGORITMO_BUSQUEDA = config_get_string_value(CONFIG_MEMORIA, "ALGORITMO_BUSQUEDA");
 	PARTICIONES_FIJAS = config_get_array_value(CONFIG_MEMORIA, "PARTICIONES");
@@ -205,7 +204,7 @@ void* procesar_conexion_memoria(void *void_args){
                     list_add(lista_procesos, proceso_nuevo);
                     pthread_mutex_unlock(&mutex_procesos);
                     enviar_mensaje("OK", cliente_socket);
-                    log_warning(LOGGER_MEMORIA, "## Proceso <Creado> -  PID: <%d> - Tamaño: <%d>", proceso_nuevo->pid, proceso_nuevo->limite);
+                    log_info(LOGGER_MEMORIA, "## Proceso <Creado> -  PID: <%d> - Tamaño: <%d>", proceso_nuevo->pid, proceso_nuevo->limite);
                 }
                 break ;
 
