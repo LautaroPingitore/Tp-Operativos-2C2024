@@ -12,12 +12,19 @@ typedef struct {
     t_tcb* hilo_bloqueado;
 } t_join;
 
+typedef struct {
+    uint32_t pid_hilo;
+    uint32_t tid;
+    int milisegundos;
+} t_io;
+
 // COLAS QUE EN LAS CUALES SE GUARDARAN LOS PROCESOS
 extern t_list* cola_new;
 extern t_list* cola_ready;
 extern t_list* cola_exec;
 extern t_list* cola_blocked_join;
 extern t_list* cola_blocked_mutex;
+extern t_list* cola_blocked_io;
 extern t_list* cola_exit;
 extern t_list* colas_multinivel;
 
@@ -37,6 +44,8 @@ extern pthread_mutex_t mutex_tid;
 extern pthread_mutex_t mutex_estado;
 extern pthread_mutex_t mutex_cola_multinivel;
 extern pthread_cond_t cond_estado;
+
+extern sem_t sem_io;
 
 // VARIABLES DE CONTROL
 extern uint32_t pid;
@@ -81,6 +90,7 @@ void intentar_mover_a_execute();
 t_tcb* seleccionar_hilo_por_algoritmo();
 t_tcb* obtener_hilo_fifo();
 t_tcb* obtener_hilo_x_prioridad();
+bool hay_algo_en_cmn();
 t_tcb* seleccionar_hilo_multinivel();
 void agregar_hilo_a_cola(t_tcb*);
 t_cola_multinivel* buscar_cola_multinivel(int);
@@ -91,6 +101,10 @@ void ejecutar_hilo(t_tcb*);
 
 // ENTRADA SALIDA
 void io(t_pcb*, uint32_t, int);
+void empezar_io(uint32_t, uint32_t, int);
+void* ejecutar_temporizador_io(void*);
+void agregar_hilo_a_bloqueados_io(t_io*);
+void desbloquear_hilo_bloqueado_io(uint32_t, uint32_t);
 
 extern t_pcb* obtener_pcb_padre_de_hilo(uint32_t);
 void eliminar_pcb_lista(t_list*, uint32_t);

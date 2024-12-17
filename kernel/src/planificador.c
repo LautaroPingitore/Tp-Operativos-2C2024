@@ -48,6 +48,7 @@ t_list* cola_ready;
 t_list* cola_exec;
 t_list* cola_blocked_join;
 t_list* cola_blocked_mutex;
+t_list* cola_blocked_io;
 t_list* cola_exit;
 t_list* colas_multinivel;
 
@@ -69,6 +70,7 @@ pthread_mutex_t mutex_estado;
 pthread_mutex_t mutex_join;
 pthread_mutex_t mutex_cola_multinivel;
 
+sem_t sem_io;
 
 // VARIABLES DE CONTROL
 uint32_t pid = 0;
@@ -81,6 +83,7 @@ void inicializar_kernel() {
     cola_exit = list_create();
     cola_blocked_join = list_create();
     cola_blocked_mutex = list_create();
+    cola_blocked_io = list_create();
 
     if(strcmp(ALGORITMO_PLANIFICACION, "CMN") == 0) {
         colas_multinivel = list_create();
@@ -105,6 +108,7 @@ void inicializar_kernel() {
     pthread_mutex_init(&mutex_join, NULL);
 
     sem_init(&sem_process_create, 0, 0);
+    sem_init(&sem_io, 0, 0);
 }
 
 uint32_t asignar_pid() {
@@ -497,6 +501,20 @@ void intentar_mover_a_execute() {
         log_info(LOGGER_KERNEL, "CPU ocupada, no se puede mover un proceso a EXECUTE");
         return;
     }
+
+    if(strcmp(ALGORITMO_PLANIFICACION, "CMN") == 0) {
+        if(!hay_algo_en_cmn() && list_size(cola_exec) == 0 && list_size(cola_blocked_io) != 0) {
+            log_warning(LOGGER_KERNEL, "No hay procesos en READY ni ejecutandose");
+            log_warning(LOGGER_KERNEL, "Pero hay al menos uno bloqueado por IO, se esperara a que termine");
+            sem_wait(&sem_io);
+        }
+    } else {
+        if(list_size(cola_ready) == 0 && list_size(cola_exec) == 0 && list_size(cola_blocked_io) != 0) {
+            log_warning(LOGGER_KERNEL, "No hay procesos en READY ni ejecutandose");
+            log_warning(LOGGER_KERNEL, "Pero hay al menos uno bloqueado por IO, se esperara a que termine");
+            sem_wait(&sem_io);
+        }
+    }
     
     // Obtener el proximo hilo a ejecutar en base al planificador
     t_tcb* hilo_a_ejecutar = seleccionar_hilo_por_algoritmo();
@@ -598,6 +616,18 @@ t_tcb* obtener_hilo_x_prioridad() {
 }
 
 // COLAS MULTINIVEL (LOS HILOS DE CADA COLA SE EJECUTAN USANDO FIFO) ===============
+bool hay_algo_en_cmn() {
+    pthread_mutex_lock(&mutex_cola_ready);
+    for(int i=0; i < list_size(colas_multinivel); i++) {
+        t_cola_multinivel* cola = list_get(colas_multinivel, i);
+        if(list_size(cola->cola) != 0) {    
+            pthread_mutex_unlock(&mutex_cola_ready);
+            return true;
+        }
+    }
+    pthread_mutex_unlock(&mutex_cola_ready);
+    return false;
+}
 
 t_tcb* seleccionar_hilo_multinivel() {
     pthread_mutex_lock(&mutex_cola_ready);
@@ -671,7 +701,6 @@ void empezar_quantum(int quantum) {
 }
 
 // ENTRADA Y SALIDA ====================
-
 void io(t_pcb* pcb, uint32_t tid, int milisegundos) {
     t_tcb* tcb = buscar_hilo_por_tid(pcb, tid);
     if(tcb == NULL) {
@@ -680,14 +709,93 @@ void io(t_pcb* pcb, uint32_t tid, int milisegundos) {
     }
 
     tcb->ESTADO = BLOCK_IO;
-    log_info(LOGGER_KERNEL, "## (<%d>:<%d>) - Bloqueado por <IO> durante %d", pcb->PID, tid, milisegundos);
+    empezar_io(tcb->PID_PADRE, tcb->TID, milisegundos);
+}
 
-    usleep(milisegundos * 100); // tiene que ser por mil esto
-    log_info(LOGGER_KERNEL, "(<%d>:<%d>) Finalizó IO y pasa a READY", tcb->PID_PADRE, tcb->TID);
+void empezar_io(uint32_t pid, uint32_t tid, int milisegundos) {
+    pthread_t hilo_temporizador;
 
-    tcb->ESTADO = READY;
-    mover_hilo_a_ready(tcb);
+    t_io* parametros = malloc(sizeof(t_io));
+    if(parametros == NULL) {
+        log_error(LOGGER_KERNEL, "Error al asignar memoria");
+        return;
+    }
+    parametros->pid_hilo = pid;
+    parametros->tid = tid;
+    parametros->milisegundos = milisegundos;
+
+    agregar_hilo_a_bloqueados_io(parametros);
+
+    if(pthread_create(&hilo_temporizador, NULL, ejecutar_temporizador_io, (void*)parametros) != 0) {
+        log_error(LOGGER_KERNEL, "Error al hacer el IO");
+        free(parametros);
+        return;
+    }
+
+    pthread_detach(hilo_temporizador);
+
+}
+
+void* ejecutar_temporizador_io(void* args) {
+    t_io* parametros = (t_io*)args;
+
+    log_warning(LOGGER_KERNEL, "## (<%d>:<%d>) - Bloqueado por <IO> durante %d", parametros->pid_hilo, parametros->tid, parametros->milisegundos);
     intentar_mover_a_execute();
+
+    usleep(30000 * 1000);//parametros->milisegundos * 1000);
+    desbloquear_hilo_bloqueado_io(parametros->pid_hilo, parametros->tid);
+    return NULL;
+}
+
+void agregar_hilo_a_bloqueados_io(t_io* hilo) {
+    pthread_mutex_lock(&mutex_cola_blocked);
+    list_add(cola_blocked_io, hilo);
+    pthread_mutex_unlock(&mutex_cola_blocked);
+}
+
+void desbloquear_hilo_bloqueado_io(uint32_t pid, uint32_t tid) {
+    uint32_t pid_desbloqueado = -1;
+    uint32_t tid_desbloqueado = -1;
+
+    for(int i=0; i < list_size(cola_blocked_io); i++) {
+        t_io* io = list_get(cola_blocked_io, i);
+        if(io->tid == tid && io->pid_hilo == pid) {
+            list_remove(cola_blocked_io, i);
+            pid_desbloqueado = io->pid_hilo;
+            tid_desbloqueado = io->tid;
+            free(io);
+            break;
+        }
+    }
+
+    if(pid_desbloqueado == -1 || tid_desbloqueado == -1) {
+        log_error(LOGGER_KERNEL, "ERROR AL OBTENER LOS IDENTIFICADORES");
+        return;
+    }
+
+    t_pcb* pcb = obtener_pcb_padre_de_hilo(pid_desbloqueado);
+    t_tcb* tcb = buscar_hilo_por_tid(pcb, tid_desbloqueado);
+
+    log_warning(LOGGER_KERNEL, "## (<%d>:<%d>) - Finalizo IO y pasa a READY", tcb->PID_PADRE, tcb->TID);
+
+    if(strcmp(ALGORITMO_PLANIFICACION, "CMN") == 0) {
+        if(!hay_algo_en_cmn() && list_size(cola_exec) == 0) {
+            tcb->ESTADO = READY;
+            mover_hilo_a_ready(tcb);
+            sem_post(&sem_io);
+        } else {
+            mover_hilo_a_ready(tcb);
+        }
+    } else {
+        if(list_size(cola_ready) == 0 && list_size(cola_exec) == 0) {
+            tcb->ESTADO = READY;
+            mover_hilo_a_ready(tcb);
+            sem_post(&sem_io);
+        } else {
+            mover_hilo_a_ready(tcb);
+        }
+    }
+
 }
 
 // MANEJO DE TABLA PATHS
