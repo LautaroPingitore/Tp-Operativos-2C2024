@@ -120,16 +120,6 @@ void sub_registros(char* destino, char* origen) {
 
 //Si el valor del registro es distinto de cero, actualiza el program counter
 // al numero de instruccion pasada por parametro.
-// void jnz_pc(char* registro, char* instruccion) {
-//     uint32_t *reg = obtener_registro(registro);
-
-//     if(!reg) {
-//         log_warning(LOGGER_CPU, "Error: Registro inválido en jnz_pc.");
-//         return;
-//     }
-
-// }
-
 void jnz_pc(char* registro, uint32_t nro_pc) {
     uint32_t *reg = obtener_registro(registro);
 
@@ -140,6 +130,7 @@ void jnz_pc(char* registro, uint32_t nro_pc) {
     
     if(*reg != 0) {
         hilo_actual->PC = nro_pc;
+        actualizar_listas_cpu(pcb_actual, hilo_actual);
     }
 }
 
