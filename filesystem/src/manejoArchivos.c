@@ -67,8 +67,17 @@ int crear_archivo_dump(char* nombre_archivo, char* contenido, int tamanio) {
     }
 
     // CREAR ARCHIVO DE METADATA (NOMBRE FORMATEADO)
+    char files_path[256];
+    sprintf(files_path, "%d/files", MOUNT_DIR);
+    if(access(files_path, F_OK) != 0) {
+        if(mkdir(files_path, 0755) == -1) {
+            log_error(LOGGER_FILESYSTEM, "ERROR AL CREAR EL DIRECTORIO FILES");
+        } else {
+            log_info(LOGGER_FILESYSTEM, "Directorio files creado con exito");
+        }
+    }
     char metadata_path[256];
-    sprintf(metadata_path, "%s/files/%s.dmp", MOUNT_DIR, nombre_archivo);
+    sprintf(metadata_path, "%s/%s.dmp", files_path, nombre_archivo);
 
     FILE* metadata = fopen(metadata_path, "w+");
     if (!metadata) {

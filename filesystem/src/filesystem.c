@@ -73,6 +73,16 @@ void inicializar_archivo(char* path, size_t size, char* nombre) {
 }
 
 void iniciar_archivos() {
+    if(access(MOUNT_DIR, F_OK) != 0) {
+        if (mkdir(MOUNT_DIR, 0755) == -1) {
+            log_error(LOGGER_FILESYSTEM, "Error al crear el directorio");
+            return; // Salir si no se pudo crear el directorio
+        } else {
+            log_info(LOGGER_FILESYSTEM, "Directorio '%s' creado con éxito.\n", MOUNT_DIR);
+        }
+    } else {
+        log_info(LOGGER_FILESYSTEM, "El directorio '%s' ya existe.\n", MOUNT_DIR);
+    }
     char bitmap_path[256], bloques_path[256];
     sprintf(bitmap_path, "%s/bitmap.dat", MOUNT_DIR);
     sprintf(bloques_path, "%s/bloques.dat", MOUNT_DIR);
