@@ -7,7 +7,7 @@ void read_mem(char*, char*);
 void write_mem(char*, char*);
 void sum_registros(char*, char*);
 void sub_registros(char*, char*);
-void jnz_pc(char*, char*);
+void jnz_pc(char*, uint32_t);
 void log_registro(char*);
 
 //funciones ayuda

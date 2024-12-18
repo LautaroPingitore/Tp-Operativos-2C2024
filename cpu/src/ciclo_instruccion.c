@@ -129,7 +129,8 @@ void execute(t_instruccion *instruccion, int socket, t_tcb* tcb) {
             break;
         case JNZ:
             loguear_y_sumar_pc(instruccion);
-            jnz_pc(instruccion->parametro1, instruccion->parametro2);
+            uint32_t nro_pc = atoi(instruccion->parametro2);
+            jnz_pc(instruccion->parametro1, nro_pc);
             break;
         case SET:
             loguear_y_sumar_pc(instruccion);
