@@ -119,15 +119,28 @@ void sub_registros(char* destino, char* origen) {
 }
 
 //Si el valor del registro es distinto de cero, actualiza el program counter
-//al numero de instruccion pasada por parametro.
-void jnz_pc(char* registro, char* instruccion) {
+// al numero de instruccion pasada por parametro.
+// void jnz_pc(char* registro, char* instruccion) {
+//     uint32_t *reg = obtener_registro(registro);
+
+//     if(!reg) {
+//         log_warning(LOGGER_CPU, "Error: Registro inválido en jnz_pc.");
+//         return;
+//     }
+
+// }
+
+void jnz_pc(char* registro, uint32_t nro_pc) {
     uint32_t *reg = obtener_registro(registro);
 
     if(!reg) {
         log_warning(LOGGER_CPU, "Error: Registro inválido en jnz_pc.");
         return;
     }
-
+    
+    if(*reg != 0) {
+        hilo_actual->PC = nro_pc;
+    }
 }
 
 //Escribe en el archivo de log el valor del registro.
@@ -139,5 +152,5 @@ void log_registro(char* registro) {
         return;
     }
 
-    log_info(LOGGER_CPU, "LOG - Registro %s: %d (PID: %d, PC: %d)", registro, *reg, pcb_actual->PID, hilo_actual->PC);
+    log_warning(LOGGER_CPU, "LOG - Registro %s: %d (<%d>:<%d>, PC: %d)", registro, *reg, pcb_actual->PID, hilo_actual->TID, hilo_actual->PC);
 }

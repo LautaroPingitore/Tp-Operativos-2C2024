@@ -168,11 +168,6 @@ t_particion* buscar_hueco_worst_fit(uint32_t tamano_requerido) {
 int asignar_espacio_memoria(t_proceso_memoria* proceso, const char* algoritmo) {
     t_particion* particion = buscar_hueco(proceso->limite, algoritmo);
 
-    for(int i=0; i<list_size(lista_particiones); i++) {
-        t_particion* part = list_get(lista_particiones, i);
-        log_warning(LOGGER_MEMORIA, "INICIO = %d, TAMNIO = %d", part->inicio, part->tamano);
-    }
-
     if(particion == NULL){
         log_warning(LOGGER_MEMORIA, "No se encontró espacio suficiente para inicializar el proceso %d usando el algoritmo: %s", proceso->pid, algoritmo);
         return -1;
