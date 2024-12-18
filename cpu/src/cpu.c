@@ -330,7 +330,8 @@ void terminar_cpu() {
     destruir_colas();
 
     int sockets[] = {socket_servidor_dispatch, socket_servidor_interrupt, socket_cpu_dispatch_kernel, socket_cpu_interrupt_kernel, socket_cpu_memoria, -1};
-    terminar_programa(CONFIG_CPU, LOGGER_CPU, sockets); 
+    terminar_programa(CONFIG_CPU, LOGGER_CPU, sockets);
+    exit(SUCCES);
 }
 
 void destruir_colas() {

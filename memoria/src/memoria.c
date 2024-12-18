@@ -401,6 +401,7 @@ void terminar_memoria() {
 
     int sockets[] = {socket_memoria, socket_memoria_filesystem, -1};
     terminar_programa(CONFIG_MEMORIA, LOGGER_MEMORIA, sockets);
+    exit(SUCCES);
 }
 
 void destruir_listas() {

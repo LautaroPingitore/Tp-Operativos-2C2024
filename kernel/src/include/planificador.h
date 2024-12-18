@@ -51,6 +51,7 @@ extern sem_t sem_io;
 extern uint32_t pid;
 extern uint32_t contador_tid;
 extern bool cpu_libre;
+extern bool termino_programa;
 
 // PLANIFICADOR LARGO PLAZO
 void inicializar_kernel();

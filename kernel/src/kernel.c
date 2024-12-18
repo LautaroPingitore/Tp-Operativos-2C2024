@@ -217,7 +217,9 @@ void manejar_comunicaciones(int socket, const char* nombre_modulo) {
                 t_instruccion* inst_pe = recibir_instruccion(socket);
                 log_syscall("PROCESS_EXIT", hilo_pe);
                 syscall_process_exit(hilo_pe->PID_PADRE);
-                intentar_mover_a_execute();
+                if(!termino_programa) {
+                    intentar_mover_a_execute();
+                }
                 free(inst_pe);
                 break;
             case THREAD_CREATE:
@@ -316,11 +318,13 @@ void manejar_comunicaciones(int socket, const char* nombre_modulo) {
 // ====================|
 
 void terminar_kernel() {
+    termino_programa = true;
     destruir_mutex_semaforos();
     destruir_colas();
 
     int sockets[] = {socket_kernel_memoria, socket_kernel_cpu_dispatch, socket_kernel_cpu_interrupt, -1};
-    terminar_programa(CONFIG_KERNEL, LOGGER_KERNEL, sockets); 
+    terminar_programa(CONFIG_KERNEL, LOGGER_KERNEL, sockets);
+    exit(SUCCES);
 }
 
 void destruir_mutex_semaforos() {
@@ -341,7 +345,7 @@ void destruir_mutex_semaforos() {
 void destruir_colas() {
     list_destroy(cola_new);
     list_destroy(cola_exec);
-    list_destroy_and_destroy_elements(cola_exit, free);
+    list_destroy(cola_exit);
     list_destroy(cola_blocked_join);
     list_destroy(cola_blocked_mutex);
     list_destroy(cola_blocked_io);

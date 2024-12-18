@@ -74,6 +74,7 @@ sem_t sem_io;
 uint32_t pid = 0;
 uint32_t contador_tid = 0;
 bool cpu_libre = true;
+bool termino_programa = false;
 
 void inicializar_kernel() {
     cola_new = list_create();
