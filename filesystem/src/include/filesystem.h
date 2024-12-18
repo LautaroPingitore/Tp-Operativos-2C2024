@@ -1,32 +1,40 @@
 #ifndef FILESYSTEM_H_
 #define FILESYSTEM_H_
-#define MAX_CLIENTES 100
 
-#include <utils/hello.h>
+#include "../../utils/src/utils/include/hello.h"
 
-char* PUERTO_ESCUCHA;
-char* MOUNT_DIR;
-int BLOCK_SIZE;
-int BLOCK_COUNT;
-int RETARDO_ACCESO_BLOQUE;
-char* LOG_LEVEL;
+extern char* PUERTO_ESCUCHA;
+extern char* MOUNT_DIR;
+extern int BLOCK_SIZE;
+extern int BLOCK_COUNT;
+extern int RETARDO_ACCESO_BLOQUE;
+extern char* LOG_LEVEL;
+extern char* IP_FILESYSTEM;
 
-t_log *LOGGER_FILESYSTEM;
-t_config *CONFIG_FILESYSTEM;
+extern t_log *LOGGER_FILESYSTEM;
+extern t_config *CONFIG_FILESYSTEM;
 
-int socket_filesystem;
-int socket_filesystem_memoria;
+extern int socket_filesystem;
+extern pthread_t hilo_servidor_filesystem;
 
-void inicializar_config(char*);
-void iniciar_archivos();
-void* handle_client(void*);
-void handle_signal(int);
 
 typedef struct {
-    int socket_cliente;
-    struct sockaddr_in direccion_cliente;
-} t_datos_cliente;
+    char* nombre;
+    uint32_t tamanio_nombre;
+    char* contenido;
+    uint32_t tamanio_contenido;
+} t_archivo_dump;
 
-char* IP_FILESYSTEM;
+void inicializar_config(char*);
+void inicializar_archivo(char*, size_t, char*);
+void iniciar_archivos();
+void iniciar_conexiones();
+void* escuchar_filesystem();
+int server_escuchar(t_log*, char* , int);
+void* gestionar_conexiones(void*);
+
+
+t_archivo_dump* recibir_datos_archivo(int);
+t_archivo_dump* deserializar_archivo_dump(t_buffer*);
 
 #endif /* FILESYSTEM_H_ */

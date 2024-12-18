@@ -1,58 +1,43 @@
-#include <include/filesystem.h>
-#include <include/manejoArchivos.h>
+#include "include/gestor.h"
 
-volatile sig_atomic_t server_running = 1;  // Variable global para controlar el ciclo del servidor
-// Manejo de señales con signal(): Se define una función handle_signal para interceptar la señal SIGINT (cuando se presiona Ctrl+C)
-// Esto cambia la variable server_running a 0, lo que permite salir del ciclo.
+char* PUERTO_ESCUCHA;
+char* MOUNT_DIR;
+int BLOCK_SIZE;
+int BLOCK_COUNT;
+int RETARDO_ACCESO_BLOQUE;
+char* LOG_LEVEL;
+char* IP_FILESYSTEM;
 
-// Función para manejar la señal SIGINT
-void handle_signal(int signal) {
-    if (signal == SIGINT) {
-        log_info(LOGGER_FILESYSTEM, "Servidor cerrándose...");
-        server_running = 0;  // Cambiar el estado para salir del ciclo
+t_log *LOGGER_FILESYSTEM;
+t_config *CONFIG_FILESYSTEM;
+
+int socket_filesystem;
+
+pthread_t hilo_servidor_filesystem;
+
+int main(int argc, char* argv[]) {
+    if(argc != 2) {
+        printf("Uso: %s [archivo_config] \n", argv[0]);
+        return -1;
     }
-}
 
-int main(int argc, char *argv[]) {
-
-    signal(SIGINT, handle_signal);
-
-    inicializar_config("filesystem");
+    char* config = argv[1];
+    inicializar_config(config);
     iniciar_archivos();
-
-    //Iniciar servidor
-    socket_filesystem = iniciar_servidor(PUERTO_ESCUCHA,LOGGER_FILESYSTEM,IP_FILESYSTEM,"FILESYSTEM");
-
-    // CICLO PARA ESPERAR CONEXIONES Y CREAR HILOS POR CLIENTE
-    while(server_running) {
-        // ESPERAR A MEMORIA Y GESTIONAR LA CONEXION
-        socket_filesystem_memoria = esperar_cliente(socket_filesystem, LOGGER_FILESYSTEM);
-
-        // CREA UN HILO PARA MANEJAR CADA CLIENTE
-        pthread_t thread_id;
-        t_datos_cliente *datos_cliente = malloc(sizeof(t_datos_cliente));
-        datos_cliente->socket_cliente = socket_filesystem_memoria;
-
-        if(pthread_create(&thread_id, NULL, handle_client, (void *) datos_cliente) != 0) {
-            log_error(LOGGER_FILESYSTEM, "Error al crear el hilo");
-            free(datos_cliente);  // Liberar memoria en caso de error
-        }
+    cargar_bitmap();
     
-        // SEPARA AL HILO PARA QUE SE LIMPIE AUTOMATICAMENTE AL FINALIZAR
-        pthread_detach(thread_id);
-    
-    }
+    iniciar_conexiones();
+    pthread_exit(NULL); // Evita que el hilo principal finalice y permite que los hilos creados sigan ejecutándose
 
-    int sockets[] = {socket_filesystem, socket_filesystem_memoria, -1};
+    int sockets[] = {socket_filesystem, -1};
     terminar_programa(CONFIG_FILESYSTEM, LOGGER_FILESYSTEM, sockets);
-
     return 0;
 }
 
 void inicializar_config(char* arg){
 
     char config_path[256];
-    strcpy(config_path, "../");
+    strcpy(config_path, "../configs/");
     strcat(config_path, arg);
     strcat(config_path, ".config");
     
@@ -69,64 +54,194 @@ void inicializar_config(char* arg){
     IP_FILESYSTEM = config_get_string_value(CONFIG_FILESYSTEM,"IP_FILESYSTEM");
 }
 
+void inicializar_archivo(char* path, size_t size, char* nombre) {
+    FILE* file = fopen(path, "r+");
+    if(!file) { // VERIFICA SI ESTA VACIO
+        log_warning(LOGGER_FILESYSTEM, "%s no encontrado. Creando...", nombre);
+        file = fopen(path, "w");
+        if (!file) {
+            log_error(LOGGER_FILESYSTEM, "Error al crear %s", nombre);
+            exit(EXIT_FAILURE);
+        }
+        if(size > 0) {
+            fseek(file, size - 1, SEEK_SET);
+            fputc('\0', file);
+        }
+    }
+    log_info(LOGGER_FILESYSTEM, "El archivo %s ya se encuentra creado", nombre);
+    fclose(file);
+}
+
 void iniciar_archivos() {
     char bitmap_path[256], bloques_path[256];
     sprintf(bitmap_path, "%s/bitmap.dat", MOUNT_DIR);
     sprintf(bloques_path, "%s/bloques.dat", MOUNT_DIR);
 
-    FILE* bitmap = fopen(bitmap_path, "r+");
-    if(!bitmap) { // VERIFICA SI ESTA VACIO
-        bitmap = fopen(bitmap_path, "w");
-        for (int i = 0; i < (BLOCK_COUNT + 7) / 8; i++) {
-            fputc(0, bitmap); // VA PONIENDO 0 EN CADA BLOQUE DEL ARCHIVO (0 = BLOQUE LIBRE)
-        }
-        fclose(bitmap);
-    }
-    
-    
-    FILE* bloques = fopen(bloques_path, "r+");
-    if (!bloques) { // VERIFICA SI ESTA VACIO
-        bloques = fopen(bloques_path, "w");
-        fseek(bloques, BLOCK_COUNT * BLOCK_SIZE - 1, SEEK_SET); 
-        fputc('\0', bloques); // PONE UN 0 AL FINAL DEL ARCHIVO
-        fclose(bloques);
-    }
+    inicializar_archivo(bitmap_path, BLOCK_COUNT / 8, "bitmap.dat");
+    inicializar_archivo(bloques_path, BLOCK_COUNT * BLOCK_SIZE, "bloques.dat");
 }
 
-// FUNCION LA CUAL MANEJARA CADA PETICION DE UN HILO
-void *handle_client(void *arg) {
-    t_datos_cliente *datos_cliente = (t_datos_cliente *) arg;
-    int socket_cliente = datos_cliente->socket_cliente;
-    
+void iniciar_conexiones() {
+    socket_filesystem = iniciar_servidor(PUERTO_ESCUCHA, LOGGER_FILESYSTEM, IP_FILESYSTEM, "FILESYSTEM");
+    if (socket_filesystem == -1) {
+        log_error(LOGGER_FILESYSTEM, "Error al iniciar el servidor. El socket no se pudo crear.");
+        exit(EXIT_FAILURE);
+    }
+    log_info(LOGGER_FILESYSTEM, "Servidor filesystem iniciado y escuchando en el puerto %s", PUERTO_ESCUCHA);
 
+    pthread_create(&hilo_servidor_filesystem, NULL, escuchar_filesystem, NULL);
+    pthread_detach(hilo_servidor_filesystem);
+}
 
+void* escuchar_filesystem() 
+{
+    log_info(LOGGER_FILESYSTEM, "El hilo de escuchar_filesystem ha iniciado.");
+    while (server_escuchar(LOGGER_FILESYSTEM, "FILESYSTEM", socket_filesystem)) {
+        log_info(LOGGER_FILESYSTEM, "Conexión procesada.");
+    }
+    log_warning(LOGGER_FILESYSTEM, "El servidor de filesystem terminó inesperadamente.");
+    return NULL;
+}
+
+int server_escuchar(t_log* logger, char* servidor, int socket_server) {
     while (1) {
-        int cod_op = recibir_operacion(socket_cliente);
-        switch (cod_op) {
-            case CREAR_ARCHIVO:
-                //  char* nombre_archivo = recibir_nombre(socket_cliente);
-                //  char* contenido = recibir_contenido(socket_cliente);
-                //  int tamanio = recibir_tamanio(socket_cliente);
-                //  int resultado = crear_archivo_dump(nombre_archivo, contenido, tamanio);
-                //  if (resultado == -1) {
-                //      enviar_respuesta_error(socket_cliente, "Error en la creación de archivo");
-                //  }
-                // log_info(LOGGER_FILESYSTEM, "## Fin de solicitud - Archivo: %s", nombre_archivo);
-                log_info(LOGGER_FILESYSTEM, "OKY DOKY");
+        log_info(logger, "[%s] Esperando cliente...", servidor);
+        int socket_cliente = esperar_cliente(socket_server, logger);
+
+        if (socket_cliente == -1) {
+            log_warning(logger, "[%s] Error al aceptar conexión. Reintentando...", servidor);
+            continue;
+        }
+
+        pthread_t hilo_cliente;
+        t_procesar_conexion_args *args = malloc(sizeof(t_procesar_conexion_args));
+        if (!args) {
+            log_error(logger, "[%s] Error al asignar memoria para las conexiones.", servidor);
+            close(socket_cliente);
+            continue;
+        }
+
+        args->log = logger;
+        args->fd = socket_cliente;
+        args->server_name = strdup(servidor);
+
+        if (pthread_create(&hilo_cliente, NULL, gestionar_conexiones, (void *)args) != 0) {
+            log_error(logger, "[%s] Error al crear hilo para cliente.", servidor);
+            
+            free(args);
+            close(socket_cliente);
+            continue;
+        }
+
+        pthread_detach(hilo_cliente);
+        log_info(logger, "[%s] Hilo creado para procesar la conexión.", servidor);
+    }
+
+    return 0; // Este punto no se alcanza debido al ciclo infinito.
+}
+
+void* gestionar_conexiones(void* void_args) {
+    t_procesar_conexion_args *args = (t_procesar_conexion_args *)void_args;
+    t_log *logger = args->log;
+    int socket_cliente = args->fd;
+    //char* server_name = args->server_name;
+
+    free(args);
+
+    op_code cod;
+    while (socket_cliente != -1) {
+        // Recibir código de operación
+        ssize_t bytes_recibidos = recv(socket_cliente, &cod, sizeof(op_code), MSG_WAITALL);
+        if (bytes_recibidos != sizeof(op_code)) {
+            log_error(logger, "Error al recibir código de operación, bytes recibidos: %zd", bytes_recibidos);
+            break;
+        }
+        log_info(logger, "Se recibió el código de operación: %d", cod);
+
+        switch (cod) {
+            case HANDSHAKE_memoria:
+                log_info(logger, "## MEMORIA Conectado - FD del socket: <%d>", socket_cliente);
                 break;
-            case -1:
-                //  log_error(LOGGER_FILESYSTEM, "El cliente se desconectó. Terminando hilo");
-                //  close(socket_cliente);
-                //  free(datos_cliente);
-                log_info(LOGGER_FILESYSTEM, "OKEY");
+
+            case MENSAJE:
+                char* mensaje = recibir_mensaje(socket_cliente);
+                log_info(LOGGER_FILESYSTEM, "Me llego el mensaje %s", mensaje);
                 break;
+
+            case DUMP_MEMORY:
+                log_info(logger, "ENTRO A DUMP_MEMORY");
+                t_archivo_dump* archivo = recibir_datos_archivo(socket_cliente);
+                int resultado = crear_archivo_dump(archivo->nombre, archivo->contenido, archivo->tamanio_contenido);
+                if (resultado == -1) {
+                    enviar_mensaje("Error", socket_cliente);
+                } else {
+                    enviar_mensaje("OK", socket_cliente);
+                    log_info(logger, "## Archivo Creado: <%s> - Tamaño: <%d>", archivo->nombre, archivo->tamanio_contenido);
+                    log_info(logger, "## Fin de solicitud - Archivo: %s", archivo->nombre);
+                }
+                free(archivo->contenido);
+                free(archivo->nombre);
+                free(archivo);
+                break;
+
             default:
-                log_warning(LOGGER_FILESYSTEM, "Operacion desconocida");
+                log_error(logger, "Código de operación desconocido: %d", cod);
                 break;
         }
     }
 
-    close(socket_cliente);
-    free(datos_cliente);
-    pthread_exit(NULL);
+    log_warning(logger, "Finalizando conexión con el cliente.");
+    close(socket_cliente); // Cerrar el socket del cliente
+    free(args->server_name);
+
+    return NULL;
+}
+
+t_archivo_dump* recibir_datos_archivo(int socket) {
+    t_paquete* paquete = recibir_paquete(socket);
+    t_archivo_dump* archivo_recibido = deserializar_archivo_dump(paquete->buffer);
+    eliminar_paquete(paquete);
+    return archivo_recibido;
+}
+
+t_archivo_dump* deserializar_archivo_dump(t_buffer* buffer) {
+    t_archivo_dump* archivo_recibido = malloc(sizeof(t_archivo_dump));
+    if(archivo_recibido == NULL) {
+        printf("Error al asignarle espacio el archivo de dump");
+        return NULL;
+    }
+
+    void* stream = buffer->stream;
+    int desplazamiento = 0;
+
+    uint32_t tamanio_nombre, tamanio_contenido;
+
+    memcpy(&(tamanio_nombre), stream + desplazamiento, sizeof(uint32_t));
+    desplazamiento += sizeof(uint32_t);
+    archivo_recibido->tamanio_nombre = tamanio_nombre;
+
+    archivo_recibido->nombre = malloc(tamanio_nombre);
+    if(archivo_recibido->nombre == NULL) {
+        free(archivo_recibido);
+        printf("Error en nombre archivo");
+        return NULL;
+    }
+
+    memcpy(archivo_recibido->nombre, stream + desplazamiento, tamanio_nombre);
+    desplazamiento += tamanio_nombre;
+
+    memcpy(&(tamanio_contenido), stream + desplazamiento, sizeof(uint32_t));
+    desplazamiento += sizeof(uint32_t);
+    archivo_recibido->tamanio_contenido = tamanio_contenido;
+
+    archivo_recibido->contenido = malloc(tamanio_contenido);
+    if(archivo_recibido->contenido == NULL) {
+        free(archivo_recibido);
+        printf("Error en contenido archivo");
+        return NULL;
+    }
+
+    memcpy(archivo_recibido->contenido, stream + desplazamiento, tamanio_contenido);
+
+    return archivo_recibido;
 }

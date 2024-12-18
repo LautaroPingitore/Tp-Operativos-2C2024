@@ -1,254 +1,349 @@
-#include <include/ciclo_instruccion.h>
+#include "include/gestor.h"
 
-t_pcb *pcb_actual;
-int fd_cpu_memoria;
+// VARIABLES GLOBALES
+t_proceso_cpu* pcb_actual = NULL;
+t_tcb* hilo_actual = NULL;
+bool hay_syscall = false;
 
-void ciclo_instruccion() {
+pthread_mutex_t mutex_syscall;
+
+void ejecutar_ciclo_instruccion() {
+
     while (1) {
-        // Asegúrate de que pcb_actual esté inicializado antes de comenzar el ciclo
-        if (pcb_actual == NULL) {
-            log_error(LOGGER_CPU, "No hay PCB actual. Terminando ciclo de instrucción.");
+
+        if (!hilo_actual) {
+            log_error(LOGGER_CPU, "No hay Hilo actual. Terminando ciclo de instrucción.");
             break;
         }
 
-        t_instruccion *instruccion = fetch(pcb_actual->pid, pcb_actual->contexto_ejecucion->registros->program_counter);
+        if(!pcb_actual) {
+            log_error(LOGGER_CPU, "No hay Proceso actual. Terminando ciclo de instrucción.");
+            break;
+        }
+
+        t_instruccion *instruccion = fetch(hilo_actual->PID_PADRE, hilo_actual->TID, hilo_actual->PC);
         
-        if (instruccion == NULL) {
+        if (!instruccion) {
             log_error(LOGGER_CPU, "Error al obtener la instrucción. Terminando ciclo.");
             break;
         }
 
         // Aquí se llama a decode, pero por simplicidad se omite en este ejemplo
-        execute(instruccion, fd_cpu_memoria);
+        execute(instruccion, socket_cpu_dispatch_kernel, hilo_actual);
         
+        pthread_mutex_lock(&mutex_syscall);
+        if(hay_syscall) {
+            actualizar_listas_cpu(pcb_actual, hilo_actual);
+            pthread_mutex_unlock(&mutex_syscall);
+            liberar_instruccion(instruccion);
+            return;
+        }
+        pthread_mutex_unlock(&mutex_syscall);
+
         // Verifica si se necesita realizar un check_interrupt
         check_interrupt();
+        if(hay_interrupcion) {
+            return;
+        }
 
         liberar_instruccion(instruccion);
-    }
-}
 
-void ejecutar_ciclo_instruccion(int socket)
-{
-    t_instruccion *instruccion = fetch(pcb_actual->pid, pcb_actual->contexto_ejecucion->registros->program_counter);
-    // TODO decode: manejo de TLB y MMU
-    execute(instruccion, socket);
-    check_interrupt();
-    liberar_instruccion(instruccion);
+    }
 }
 
 // RECIBE LA PROXIMA EJECUCION A REALIZAR OBTENIDA DEL MODULO MEMORIA
-t_instruccion *fetch(uint32_t pid, uint32_t pc)
-{
-    pedir_instruccion_memoria(pid, pc, fd_cpu_memoria);
+t_instruccion *fetch(uint32_t pid, uint32_t tid, uint32_t pc) {
+    pedir_instruccion_memoria(pid, tid, pc, socket_cpu_memoria);
+    t_instruccion* inst = malloc(sizeof(t_instruccion));
 
-    op_code codigo_op = recibir_operacion(fd_cpu_memoria);
+    sem_wait(&sem_instruccion);
 
-    t_instruccion *instruccion;
-
-    if (codigo_op == INSTRUCCION) {
-        instruccion = deserializar_instruccion(fd_cpu_memoria);
-    }
-    else
-    {
-        log_warning(LOGGER_CPU, "Operacion desconocida. No se pudo recibir la instruccion de memoria.");
-        exit(EXIT_FAILURE);
+    inst = instruccion_actual;
+    
+    if (!inst) {
+        log_error(LOGGER_CPU, "Fallo al deserializar la instrucción.");
+        return NULL;
     }
 
-    log_info(LOGGER_CPU, "PID: %d - FETCH - Program Counter: %d", pid, pc);
+    log_info(LOGGER_CPU, "## (<%d> : <%d>) - FETCH - Program Counter: <%d>", pid, tid, pc);
 
-    return instruccion;
+    return inst;
+}
+
+nombre_instruccion string_a_enum(char* instruccion) {
+    if (strcmp(instruccion, "SUM") == 0) {
+        return SUM;
+    } else if (strcmp(instruccion, "READ_MEM") == 0) {
+        return READ_MEM;
+    } else if (strcmp(instruccion, "WRITE_MEM") == 0) {
+        return WRITE_MEM;
+    } else if (strcmp(instruccion, "JNZ") == 0) {
+        return JNZ;
+    } else if (strcmp(instruccion, "SET") == 0) {
+        return SET;
+    } else if (strcmp(instruccion, "SUB") == 0) {
+        return SUB;
+    } else if (strcmp(instruccion, "LOG") == 0) {
+        return LOG;
+    } else if (strcmp(instruccion, "DUMP_MEMORY") == 0) {
+        return INST_DUMP_MEMORY;
+    } else if (strcmp(instruccion, "IO") == 0) {
+        return INST_IO;
+    } else if (strcmp(instruccion, "PROCESS_CREATE") == 0) {
+        return INST_PROCESS_CREATE;
+    } else if (strcmp(instruccion, "THREAD_CREATE") == 0) {
+        return INST_THREAD_CREATE;
+    } else if (strcmp(instruccion, "THREAD_JOIN") == 0) {
+        return INST_THREAD_JOIN;
+    } else if (strcmp(instruccion, "THREAD_CANCEL") == 0) {
+        return INST_THREAD_CANCEL;
+    } else if (strcmp(instruccion, "MUTEX_CREATE") == 0) {
+        return INST_MUTEX_CREATE;
+    } else if (strcmp(instruccion, "MUTEX_LOCK") == 0) {
+        return INST_MUTEX_LOCK;
+    } else if (strcmp(instruccion, "MUTEX_UNLOCK") == 0) {
+        return INST_MUTEX_UNLOCK;
+    } else if (strcmp(instruccion, "THREAD_EXIT") == 0) {
+        return INST_THREAD_EXIT;
+    } else if (strcmp(instruccion, "PROCESS_EXIT") == 0) {
+        return INST_PROCESS_EXIT;
+    }
+    return ERROR_INSTRUCCION;
 }
 
 // EJECUTA LA INSTRUCCION OBTENIDA, Y TAMBIEN HACE EL DECODE EN CASO DE NECESITARLO
-void execute(t_instruccion *instruccion, int socket)
-{
-    switch (instruccion->nombre)
-    {
-    case SUM:
-        loguear_y_sumar_pc(instruccion);
-        sum_registros(instruccion->parametro1, instruccion->parametro2);
-        break;
-    case READ_MEM:
-        loguear_y_sumar_pc(instruccion);
-        read_mem(instruccion->parametro1, instruccion->parametro2, fd_cpu_memoria); // cambiar nombre _mov_in
-        break;
-    case WRITE_MEM:
-        loguear_y_sumar_pc(instruccion);
-        write_mem(instruccion->parametro1, instruccion->parametro2, fd_cpu_memoria); // cambiar nombre _mov_out
-        break;
-    case JNZ:
-        loguear_y_sumar_pc(instruccion);
-        jnz_pc(instruccion->parametro1, instruccion->parametro2);
-        break;
-    case SET:
-        loguear_y_sumar_pc(instruccion);
-        set_registro(instruccion->parametro1, instruccion->parametro2);
-        break;
-    case SUB:
-        loguear_y_sumar_pc(instruccion);
-        sub_registros(instruccion->parametro1, instruccion->parametro2);
-        break;
-    case LOG:
-        loguear_y_sumar_pc(instruccion);
-        //log_registro(instruccion->parametro1,instruccion->parametro2); COMENTADO POR ERROR, PROBLABLEMENTE ESTE MAL DESARROLLADA log_registro
-        log_registro(instruccion->parametro1);
-        break;
-    case SEGMENTATION_FAULT:
-        // NO SE BIEN QUE PONER ACA PORQUE EL SWITCH ME TIRA UN WARNING DE QUE NO LO USABA
-        break;
+void execute(t_instruccion *instruccion, int socket, t_tcb* tcb) {
+    nombre_instruccion op_code = string_a_enum(instruccion->nombre);
+    switch (op_code) {
+        case SUM:
+            loguear_y_sumar_pc(instruccion);
+            sum_registros(instruccion->parametro1, instruccion->parametro2);
+            break;
+        case READ_MEM:
+            loguear_y_sumar_pc(instruccion);
+            read_mem(instruccion->parametro1, instruccion->parametro2);
+            break;
+        case WRITE_MEM:
+            loguear_y_sumar_pc(instruccion);
+            write_mem(instruccion->parametro1, instruccion->parametro2);
+            break;
+        case JNZ:
+            loguear_y_sumar_pc(instruccion);
+            jnz_pc(instruccion->parametro1, instruccion->parametro2);
+            break;
+        case SET:
+            loguear_y_sumar_pc(instruccion);
+            set_registro(instruccion->parametro1, instruccion->parametro2);
+            break;
+        case SUB:
+            loguear_y_sumar_pc(instruccion);
+            sub_registros(instruccion->parametro1, instruccion->parametro2);
+            break;
+        case LOG:
+            log_registro(instruccion->parametro1);
+            hilo_actual->PC++;
+            break;
+
+        // SYSCALLS QUE DEVUELVEN EL CONTROL A KERNEL
+        case INST_DUMP_MEMORY:
+            loguear_y_sumar_pc(instruccion);
+            actualizar_contexto_memoria();
+
+            pthread_mutex_lock(&mutex_syscall);
+            hay_syscall = true;
+            pthread_mutex_unlock(&mutex_syscall);
+
+            enviar_syscall_kernel(instruccion, DUMP_MEMORY);
+            break;
+        case INST_IO:
+            loguear_y_sumar_pc(instruccion);
+            actualizar_contexto_memoria();
+
+            pthread_mutex_lock(&mutex_syscall);
+            hay_syscall = true;
+            pthread_mutex_unlock(&mutex_syscall);
+            
+            enviar_syscall_kernel(instruccion, IO);
+            break;
+        case INST_PROCESS_CREATE:
+            loguear_y_sumar_pc(instruccion);
+            actualizar_contexto_memoria();
+            
+            pthread_mutex_lock(&mutex_syscall);
+            hay_syscall = true;
+            pthread_mutex_unlock(&mutex_syscall);
+            
+            enviar_syscall_kernel(instruccion, PROCESS_CREATE);
+            break;
+        case INST_THREAD_CREATE:
+            loguear_y_sumar_pc(instruccion);
+            actualizar_contexto_memoria();
+
+            pthread_mutex_lock(&mutex_syscall);
+            hay_syscall = true;
+            pthread_mutex_unlock(&mutex_syscall);
+            
+            enviar_syscall_kernel(instruccion, THREAD_CREATE);
+            break;
+        case INST_THREAD_JOIN:
+            loguear_y_sumar_pc(instruccion);
+            actualizar_contexto_memoria();
+            
+            pthread_mutex_lock(&mutex_syscall);
+            hay_syscall = true;
+            pthread_mutex_unlock(&mutex_syscall);
+
+            
+            enviar_syscall_kernel(instruccion, THREAD_JOIN);
+            break;
+        case INST_THREAD_CANCEL:
+            loguear_y_sumar_pc(instruccion);
+            actualizar_contexto_memoria();
+
+            pthread_mutex_lock(&mutex_syscall);
+            hay_syscall = true;
+            pthread_mutex_unlock(&mutex_syscall);
+
+            enviar_syscall_kernel(instruccion, THREAD_CANCEL);
+            break;
+        case INST_MUTEX_CREATE:
+            loguear_y_sumar_pc(instruccion);
+            actualizar_contexto_memoria();
+            
+            pthread_mutex_lock(&mutex_syscall);
+            hay_syscall = true;
+            pthread_mutex_unlock(&mutex_syscall);
+            
+            enviar_syscall_kernel(instruccion, MUTEX_CREATE);
+            break;
+        case INST_MUTEX_LOCK:
+            //loguear_y_sumar_pc(instruccion);
+            log_warning(LOGGER_CPU, "SOLICITO %d:%d MUTEX LOCK", hilo_actual->PID_PADRE, hilo_actual->TID);
+            hilo_actual->PC ++;
+            actualizar_contexto_memoria();
+            
+            pthread_mutex_lock(&mutex_syscall);
+            hay_syscall = true;
+            pthread_mutex_unlock(&mutex_syscall);
+            
+            enviar_syscall_kernel(instruccion, MUTEX_LOCK);
+            break;
+        case INST_MUTEX_UNLOCK:
+            loguear_y_sumar_pc(instruccion);
+            actualizar_contexto_memoria();
+            
+            pthread_mutex_lock(&mutex_syscall);
+            hay_syscall = true;
+            pthread_mutex_unlock(&mutex_syscall);
+            
+            enviar_syscall_kernel(instruccion, MUTEX_UNLOCK);
+            break;
+        case INST_THREAD_EXIT:
+            loguear_y_sumar_pc(instruccion);
+            actualizar_contexto_memoria();
+            
+            pthread_mutex_lock(&mutex_syscall);
+            hay_syscall = true;
+            pthread_mutex_unlock(&mutex_syscall);
+            
+            enviar_syscall_kernel(instruccion, THREAD_EXIT);
+            break;
+        case INST_PROCESS_EXIT:
+            loguear_y_sumar_pc(instruccion);
+            actualizar_contexto_memoria();
+            
+            pthread_mutex_lock(&mutex_syscall);
+            hay_syscall = true;
+            pthread_mutex_unlock(&mutex_syscall);
+
+            enviar_syscall_kernel(instruccion, PROCESS_EXIT);
+            break;
+        default:
+            log_warning(LOGGER_CPU, "Instrucción desconocida.");
+            break;
     }
+
 }
 
 // VERIFICA SI SE RECIBIO UNA INTERRUPCION POR PARTE DE KERNEL
+// PODRIA RECIBIR UN PAQUETE CON EL NOMBRE DE LA INTERRUPCCION
 void check_interrupt() {
-    if (recibir_interrupcion(socket_cpu_interrupt_kernel)) {
-        log_info(LOGGER_CPU, "Interrupción recibida. Actualizando contexto y devolviendo control al Kernel.");
+    //recibir_interrupcion(socket_cpu_interrupt_kernel);
+    if(hay_interrupcion) {
+        log_info(LOGGER_CPU, "## Llega interrupción al puerto Interrupt");
+        actualizar_listas_cpu(pcb_actual, hilo_actual);
         actualizar_contexto_memoria();
         devolver_control_al_kernel();
     }
 }
 
 // MUESTRA EN CONSOLA LA INSTRUCCION EJECUTADA Y LE SUMA 1 AL PC
-void loguear_y_sumar_pc(t_instruccion *instruccion)
-{
-    log_instruccion_ejecutada(instruccion->nombre, instruccion->parametro1, instruccion->parametro2, instruccion->parametro3);
-    pcb_actual->contexto_ejecucion->registros->program_counter++;
-}
-
-// MUESTRA EN EL LOGGER LA INSTRUCCION EJECUTADA
-void log_instruccion_ejecutada(nombre_instruccion nombre, char *param1, char *param2, char *param3)
-{
-    char *nombre_instruccion = instruccion_to_string(nombre);
-    // log_info(LOGGER_CPU, "PID: %d - Ejecutando: %s - Parametros: %s %s %s %s %s", pcb_actual->pid, nombre_instruccion, param1, param2, param3);
-    log_info(LOGGER_CPU, "PID: %d - Ejecutando: %s - Parametros: %s %s %s", pcb_actual->pid, nombre_instruccion, param1, param2, param3);
-}
-
-// LO QUE HACE ES CONVERTIR UNA INSTRUCCION RECIBIDA A FORMATO STRING PARA QUE PUEDA ESCRIBIRSE EN LA CONSOLA
-char *instruccion_to_string(nombre_instruccion nombre) 
-{
-    switch (nombre)
-    {
-    case SET:
-        return "SET";
-    case SUM:
-        return "SUM";
-    case SUB:
-        return "SUB";
-    case JNZ:
-        return "JNZ";
-    case READ_MEM:
-        return "READ_MEM";
-    case WRITE_MEM:
-        return "WRITE_MEM";
-    case LOG:
-        return "LOG";
-    default:
-        return "DESCONOCIDA";
+void loguear_y_sumar_pc(t_instruccion *instruccion) {
+    if(instruccion->parametro3 == -1) {
+        log_info(LOGGER_CPU, "## TID: %d - Ejecutando: %s - Parametros: %s %s", hilo_actual->TID, instruccion->nombre, instruccion->parametro1, instruccion->parametro2);
+    } else {
+        log_info(LOGGER_CPU, "## TID: %d - Ejecutando: %s - Parametros: %s %s %d", hilo_actual->TID, instruccion->nombre, instruccion->parametro1, instruccion->parametro2, instruccion->parametro3);
     }
-}
-
-void pedir_instruccion_memoria(uint32_t pid, uint32_t pc, int socket)
-{
-    t_paquete *paquete = crear_paquete_con_codigo_de_operacion(PEDIDO_INSTRUCCION);
-    paquete->buffer->size += sizeof(uint32_t) * 2;
-    paquete->buffer->stream = malloc(paquete->buffer->size);
-    memcpy(paquete->buffer->stream, &(pid), sizeof(uint32_t));
-    memcpy(paquete->buffer->stream + sizeof(uint32_t), &(pc), sizeof(int));
-    enviar_paquete(paquete, socket);
-    eliminar_paquete(paquete);
-}
-
-t_instruccion *deserializar_instruccion(int socket)
-{
-    t_paquete* paquete = recibir_paquete_entero(socket); // error debido a que recibir_paquete retorna t_list
-    t_instruccion* instruccion = malloc(sizeof(t_instruccion));
-
-    void *stream = paquete->buffer->stream;
-    int desplazamiento = 0;
-
-    memcpy(&(instruccion->nombre), stream + desplazamiento, sizeof(nombre_instruccion));
-    desplazamiento += sizeof(nombre_instruccion);
-
-    uint32_t tamanio_parametro1;
-    memcpy(&(tamanio_parametro1), stream + desplazamiento, sizeof(uint32_t));
-    desplazamiento += sizeof(uint32_t);
-
-    uint32_t tamanio_parametro2;
-    memcpy(&(tamanio_parametro2), stream + desplazamiento, sizeof(uint32_t));
-    desplazamiento += sizeof(uint32_t);
-
-    uint32_t tamanio_parametro3;
-    memcpy(&(tamanio_parametro3), stream + desplazamiento, sizeof(uint32_t));
-    desplazamiento += sizeof(uint32_t);
-
-    instruccion->parametro1 = malloc(tamanio_parametro1);
-    memcpy(instruccion->parametro1, stream + desplazamiento, tamanio_parametro1);
-    desplazamiento += tamanio_parametro1;
-
-    instruccion->parametro2 = malloc(tamanio_parametro2);
-    memcpy(instruccion->parametro2, stream + desplazamiento, tamanio_parametro2);
-    desplazamiento += tamanio_parametro2;
-
-    instruccion->parametro3 = malloc(tamanio_parametro3);
-    memcpy(instruccion->parametro3, stream + desplazamiento, tamanio_parametro3);
-    desplazamiento += tamanio_parametro3;
-
-    eliminar_paquete(paquete);
-
-    return instruccion;
+    hilo_actual->PC++;
 }
 
 void liberar_instruccion(t_instruccion *instruccion) {
+    free(instruccion->nombre);
     free(instruccion->parametro1);
     free(instruccion->parametro2);
-    free(instruccion->parametro3);
     free(instruccion);
-}
-
-bool recibir_interrupcion(int fd_cpu_memoria) {
-    int interrupcion = 0;
-
-    if (recv(fd_cpu_memoria, &interrupcion, sizeof(int), 0) <= 0) {
-        log_error(LOGGER_CPU, "Error al recibir interrupción del Kernel.");
-        return false;
-    }
-
-    return interrupcion == 1;
 }
 
 void actualizar_contexto_memoria() {
     // Se puede suponer que la actualización del contexto implica actualizar los registros y el PC
-    log_info(LOGGER_CPU, "Actualizando el contexto de la CPU en memoria...");
+    if (!hilo_actual) {
+        log_error(LOGGER_CPU, "No hay Hilo actual. No se puede actualizar contexto.");
+        return;
+    }
 
     // Enviar los registros y el program counter a memoria
     // A través de la memoria se actualizaría el PCB
-    enviar_contexto_memoria(pcb_actual->pid, pcb_actual->contexto_ejecucion->registros, pcb_actual->contexto_ejecucion->registros->program_counter, fd_cpu_memoria);
-
-    log_info(LOGGER_CPU, "Contexto de la CPU actualizado en memoria.");
+    enviar_contexto_memoria(hilo_actual->PID_PADRE, hilo_actual->TID, pcb_actual->REGISTROS, socket_cpu_memoria);
+    log_info(LOGGER_CPU, "## TID <%d> - Actualizo Contexto Ejecucion", hilo_actual->TID);
+    sem_wait(&sem_mensaje);
+    if(!mensaje_okey) {
+        log_error(LOGGER_CPU, "ERROR AL ACTUALIZAR EL CONTEXTO EN MEMORIA");
+    }
 }
 
-void enviar_contexto_memoria(uint32_t pid, t_registros* registros, uint32_t program_counter, int socket_memoria) {
-    t_paquete *paquete = crear_paquete_con_codigo_de_operacion(ACTUALIZAR_CONTEXTO);
 
-    agregar_a_paquete(paquete, &pid, sizeof(uint32_t));
-    agregar_a_paquete(paquete, registros, sizeof(t_registros));
-    agregar_a_paquete(paquete, &program_counter, sizeof(uint32_t));
-
-    enviar_paquete(paquete, socket_memoria);
-    eliminar_paquete(paquete);
+t_tcb* esta_hilo_guardado(t_tcb* tcb) {
+    for(int i=0; i < list_size(hilos_ejecutados); i++) {
+        t_tcb* tcb_act = list_get(hilos_ejecutados, i);
+        if(tcb->TID == tcb_act->TID && tcb->PID_PADRE == tcb_act->PID_PADRE) {
+            return tcb_act;
+        }
+    }
+    return NULL;
 }
 
-void devolver_control_al_kernel() {
-    log_info(LOGGER_CPU, "Devolviendo control al Kernel...");
+t_proceso_cpu* esta_proceso_guardado(t_proceso_cpu* pcb) {
+    for(int i=0; i < list_size(procesos_ejecutados); i++) {
+        t_proceso_cpu* pcb_act = list_get(procesos_ejecutados, i);
+        if(pcb->PID == pcb_act->PID) {
+            return pcb_act;
+        }
+    }
+    return NULL;
+}
 
-    // Crear un paquete para notificar al Kernel
-    t_paquete *paquete = crear_paquete_con_codigo_de_operacion(DEVOLVER_CONTROL_KERNEL);
+void actualizar_listas_cpu(t_proceso_cpu* pcb, t_tcb* tcb) {
+    for(int i=0; i < list_size(procesos_ejecutados); i++) {
+        t_proceso_cpu* pcb_act = list_get(procesos_ejecutados, i);
+        if(pcb->PID == pcb_act->PID) {
+            list_replace(procesos_ejecutados, i, pcb);
+        }
+    }
 
-    // Enviar el paquete indicando que el control se devuelve al Kernel
-    enviar_paquete(paquete, socket_cpu_interrupt_kernel);  // Asegúrate de tener el socket correspondiente para el Kernel (socket_cpu_interrupt_kernel)
-
-    eliminar_paquete(paquete);
-
-    log_info(LOGGER_CPU, "Control devuelto al Kernel.");
+    for(int j=0; j < list_size(hilos_ejecutados); j++) {
+        t_tcb* tcb_act = list_get(hilos_ejecutados, j);
+        if(tcb->TID == tcb_act->TID && tcb_act->PID_PADRE == tcb->PID_PADRE) {
+            list_replace(hilos_ejecutados, j, tcb);
+        }
+    }
 }

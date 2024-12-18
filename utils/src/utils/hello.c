@@ -1,61 +1,190 @@
-#include <utils/hello.h>
+#include "include/hello.h"
 
-int iniciar_servidor(char* puerto, t_log* logger, char* ip, char* nombreServidor) // Guarda pq capaz el puerto es char*
+t_tcb* recibir_hilo(int socket) {
+	t_paquete* paquete = recibir_paquete(socket);
+	t_tcb* hilo = deserializar_paquete_tcb(paquete->buffer);
+	eliminar_paquete(paquete);
+	return hilo;
+}
+
+t_tcb* deserializar_paquete_tcb(t_buffer* buffer) {
+	t_tcb* tcb = malloc(sizeof(t_tcb));
+	if(!tcb) {
+		printf("Error al crear el tcb");
+		return NULL;
+	}
+
+	void* stream = buffer->stream;
+	int desplazamiento = 0; 
+
+	memcpy(&tcb->TID, stream + desplazamiento, sizeof(uint32_t));
+    desplazamiento += sizeof(uint32_t);
+
+    memcpy(&tcb->PRIORIDAD, stream + desplazamiento, sizeof(int));
+    desplazamiento += sizeof(int);
+
+    memcpy(&tcb->PID_PADRE, stream + desplazamiento, sizeof(uint32_t));
+    desplazamiento += sizeof(uint32_t);
+
+    memcpy(&tcb->motivo_desalojo, stream + desplazamiento, sizeof(motivo_desalojo));
+	desplazamiento += sizeof(motivo_desalojo);
+
+	memcpy(&tcb->PC, stream + desplazamiento, sizeof(uint32_t));
+
+	return tcb;
+}
+
+t_instruccion* deserializar_instruccion(t_buffer* buffer) {
+    t_instruccion* instruccion = malloc(sizeof(t_instruccion));
+    if (!instruccion) {
+        fprintf(stderr, "Error: No se pudo asignar memoria para t_instruccion\n");
+        return NULL;
+    }
+
+	void* stream = buffer->stream;
+	int desplazamiento = 0;
+	uint32_t tam_nom, tam_p1, tam_p2;
+
+	memcpy(&tam_nom, stream + desplazamiento, sizeof(uint32_t));
+	desplazamiento += sizeof(uint32_t);
+
+	instruccion->nombre = malloc(tam_nom);
+	if(!instruccion->nombre) {
+		printf("Error");
+		free(instruccion);
+		return NULL;
+	}
+	memcpy(instruccion->nombre, stream + desplazamiento, tam_nom);
+	desplazamiento += tam_nom;
+
+	memcpy(&tam_p1, stream + desplazamiento, sizeof(uint32_t));
+	desplazamiento += sizeof(uint32_t);
+
+	instruccion->parametro1 = malloc(tam_p1);
+	if(!instruccion->parametro1) {
+		printf("Error");
+		free(instruccion->nombre);
+		free(instruccion);
+		return NULL;
+	}
+	memcpy(instruccion->parametro1, stream + desplazamiento, tam_p1);
+	desplazamiento += tam_p1;
+
+	memcpy(&tam_p2, stream + desplazamiento, sizeof(uint32_t));
+	desplazamiento += sizeof(uint32_t);
+
+	instruccion->parametro2 = malloc(tam_p2);
+	if(!instruccion->parametro2) {
+		printf("Error");
+		free(instruccion->nombre);
+		free(instruccion->parametro1);
+		free(instruccion);
+		return NULL;
+	}
+	memcpy(instruccion->parametro2, stream + desplazamiento, tam_p2);
+	desplazamiento += tam_p2;
+
+	memcpy(&instruccion->parametro3, stream + desplazamiento, sizeof(int));
+    
+    return instruccion;
+}
+
+char* recibir_mensaje(int socket) {
+	t_paquete* paquete = recibir_paquete(socket);
+	char* mensaje = deserializar_mensaje(paquete->buffer);
+	eliminar_paquete(paquete);
+	return mensaje;
+}
+
+char* deserializar_mensaje(t_buffer* buffer) {
+
+	void* stream = buffer->stream;
+	int desplazamiento = 0;
+
+	uint32_t tamanio_mensaje;
+	memcpy(&tamanio_mensaje, stream + desplazamiento, sizeof(uint32_t));
+	desplazamiento += sizeof(uint32_t);
+	
+    char* mensaje = malloc(tamanio_mensaje);
+    if (mensaje == NULL) {
+        return NULL; // Error al asignar memoria
+    }
+
+    memcpy(mensaje, stream + desplazamiento, tamanio_mensaje);
+
+    return mensaje; // Retorna el mensaje deserializado
+}
+
+uint32_t recibir_pid(int socket) {
+    t_paquete* paquete = recibir_paquete(socket);
+    uint32_t pid;
+    memcpy(&pid, paquete->buffer->stream, sizeof(uint32_t));
+    eliminar_paquete(paquete);
+    return pid;
+}
+
+uint32_t recibir_uint_memoria(int socket) {
+    t_paquete* paquete = recibir_paquete(socket);
+    uint32_t valor;
+    memcpy(&valor, paquete->buffer->stream, sizeof(uint32_t));
+    eliminar_paquete(paquete);
+    return valor;
+}
+
+// SERVIDORES.C
+t_log *logger_recibido;
+
+int iniciar_servidor(char* puerto, t_log* logger, char* ip, char* name)
 {
+	logger_recibido = logger;
 	int socket_servidor;
-	int err;
-
-	struct addrinfo hints, *servinfo/*, *p */;
+	struct addrinfo hints, *servinfo;
 
 	memset(&hints, 0, sizeof(hints));
-	hints.ai_family = AF_INET;
+	hints.ai_family = AF_UNSPEC;
 	hints.ai_socktype = SOCK_STREAM;
 	hints.ai_flags = AI_PASSIVE;
 
 	getaddrinfo(ip, puerto, &hints, &servinfo);
 
-	// Creamos el socket de escucha del servidor
+	bool conecto = false;
 
-	socket_servidor = socket(servinfo->ai_family,
-                        servinfo->ai_socktype,
-                        servinfo->ai_protocol);
+	for (struct addrinfo *p = servinfo; p != NULL; p = p->ai_next)
+	{
+		socket_servidor = socket(p->ai_family, p->ai_socktype, p->ai_protocol);
+		if (socket_servidor == -1)
+			continue;
 
-	// Asociamos el socket a un puerto
+		int enable = 1;
+		if (setsockopt(socket_servidor, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int)) < 0)
+		{
+			close(socket_servidor);
+			log_error(logger, "setsockopt(SO_REUSEADDR) failed");
+			continue;
+		}
 
-	err = setsockopt(socket_servidor, SOL_SOCKET, SO_REUSEPORT, &(int){1}, sizeof(int));
-
-	if(err == (-1)){
-		perror("Error en la funcion setsockopt");
-		log_info(logger, "Error en la funcion setsockopt");
+		if (bind(socket_servidor, p->ai_addr, p->ai_addrlen) == -1)
+		{
+			close(socket_servidor);
+			continue;
+		}
+		conecto = true;
+		break;
 	}
-
-	err = bind(socket_servidor, servinfo->ai_addr, servinfo->ai_addrlen);
-
-	if(err == (-1)){
-		perror("Error en la funcion bind");
-		log_info(logger, "Error en la funcion bind");
+	if (!conecto)
+	{
+		free(servinfo);
+		return 0;
 	}
-
-	// Escuchamos las conexiones entrantes
-
-	err = listen(socket_servidor, SOMAXCONN);
-
-	if(err == (-1)){
-		perror("Error en la funcion listen");
-		log_info(logger, "Error en la funcion listen");
-	}
-	
+	listen(socket_servidor, SOMAXCONN);
+	log_info(logger, "Servidor %s escuchando en %s:%s", name, ip, puerto);
 
 	freeaddrinfo(servinfo);
-	log_info(logger, "El servidor %s esta escuchando. \nIP: %s \nPUERTO: %s \n", nombreServidor, ip, puerto);
-
-
 	return socket_servidor;
 }
 
-int esperar_cliente(int socket_servidor, t_log* logger)
+int esperar_cliente(int socket_servidor, t_log *logger)
 {
-	// Aceptamos un nuevo cliente
 	int socket_cliente = accept(socket_servidor, NULL, NULL);
 
 	if (socket_cliente == (-1))
@@ -68,280 +197,35 @@ int esperar_cliente(int socket_servidor, t_log* logger)
 	return socket_cliente;
 }
 
-int recibir_operacion(int socket_cliente)
+void iterator(char *value)
 {
-	int cod_op;
-	if(recv(socket_cliente, &cod_op, sizeof(int), MSG_WAITALL) > 0)
-		return cod_op;
-	else
-	{
-		close(socket_cliente);
-		return -1;
-	}
+	log_info(logger_recibido, "%s", value);
 }
 
-
-
-
-void recibir_mensaje(int socket_cliente, t_log* logger)
+t_log* iniciar_logger(char *file_name, char *name)
 {
-	int size;
-	char* buffer = recibir_buffer(&size, socket_cliente);
-	log_info(logger, "Me llego el mensaje %s", buffer);
-	free(buffer);
-}
-
-void* recibir_buffer(int* size, int socket_cliente)
-{
-	void * buffer;
-
-	recv(socket_cliente, size, sizeof(int), MSG_WAITALL);
-	buffer = malloc(*size);
-	recv(socket_cliente, buffer, *size, MSG_WAITALL);
-
-	return buffer;
-}
-
-t_list* recibir_paquete(int socket_cliente)
-{
-	int size;
-	int desplazamiento = 0;
-	void * buffer;
-	t_list* valores = list_create();
-	int tamanio;
-
-	buffer = recibir_buffer(&size, socket_cliente);
-	while(desplazamiento < size)
-	{
-		memcpy(&tamanio, buffer + desplazamiento, sizeof(int));
-		desplazamiento+=sizeof(int);
-		char* valor = malloc(tamanio);
-		memcpy(valor, buffer+desplazamiento, tamanio);
-		desplazamiento+=tamanio;
-		list_add(valores, valor);
-	}
-	free(buffer);
-	return valores;
-}
-
-
-t_paquete* recibir_paquete_entero(int socket_cliente) {
-    int size;
-    int desplazamiento = 0;
-    void *buffer;
-    t_paquete *paquete = malloc(sizeof(t_paquete));  // Reservar memoria para el paquete
-    buffer = recibir_buffer(&size, socket_cliente);
-    
-    // Leer el código de operación
-    memcpy(&paquete->codigo_operacion, buffer + desplazamiento, sizeof(op_code));
-    desplazamiento += sizeof(op_code);
-    
-    // Leer el tamaño del buffer
-    int tamanio_buffer;
-    memcpy(&tamanio_buffer, buffer + desplazamiento, sizeof(int));
-    desplazamiento += sizeof(int);
-    
-    // Reservar memoria para el buffer y copiar los datos
-    paquete->buffer = malloc(sizeof(t_buffer));  // Asegúrate de definir t_buffer correctamente
-    paquete->buffer->size = tamanio_buffer;      // Asigna el tamaño al buffer
-    paquete->buffer->stream = malloc(tamanio_buffer);  // Reserva memoria para el stream
-    memcpy(paquete->buffer->stream, buffer + desplazamiento, tamanio_buffer);
-    
-    free(buffer);
-    return paquete;  // Retorna el puntero a t_paquete
-}
-
-
-
-t_log* iniciar_logger(char* file_name, char* logger_name)
-{
-	t_log* nuevo_logger = log_create(file_name, logger_name, 1, LOG_LEVEL_INFO);
-
+	t_log *nuevo_logger;
+	nuevo_logger = log_create(file_name, name, 1, LOG_LEVEL_INFO); // LOG_LEVEL_TRACE
 	if (nuevo_logger == NULL)
 	{
 		perror("Error creando el log ");
-		printf("%s", logger_name);
+		printf("%s", name);
 		exit(EXIT_FAILURE);
 	};
 	return nuevo_logger;
 }
 
-t_config* iniciar_config(char* file_name, char* config_name)
+t_config* iniciar_config(char *file_name, char *name)
 {
-	t_config* nuevo_config = config_create(file_name);
-
+	t_config *nuevo_config;
+	nuevo_config = config_create(file_name);
 	if (nuevo_config == NULL)
 	{
 		perror("Error creando el config ");
-		printf("%s", config_name);
+		printf("%s", name);
 		exit(EXIT_FAILURE);
 	};
 	return nuevo_config;
-}
-
-/*
-t_config* iniciar_config(void)
-{
-	t_config* nuevo_config = config_create("cliente.config");
-
-	if (nuevo_config == NULL) {
-		perror("HUBO UN PROBLEMA EN LA CREACION DEL CONFIG");
-		exit(EXIT_FAILURE);
-	}
-
-	return nuevo_config;
-}
-*/
-
-//funciones tp0
-
-int crear_conexion(char *ip, char* puerto)
-{
-	struct addrinfo hints;
-	struct addrinfo *server_info;
-
-	memset(&hints, 0, sizeof(hints));
-	hints.ai_family = AF_INET;
-	hints.ai_socktype = SOCK_STREAM;
-	hints.ai_flags = AI_PASSIVE;
-
-	getaddrinfo(ip, puerto, &hints, &server_info);
-
-	// Ahora vamos a crear el socket.
-	int socket_cliente = 0;
-
-	socket_cliente = socket(server_info->ai_family,
-                         server_info->ai_socktype,
-                         server_info->ai_protocol);
-
-	// Ahora que tenemos el socket, vamos a conectarlo
-
-	int err = connect(socket_cliente, server_info->ai_addr, server_info->ai_addrlen);
-
-	if(err == (-1)){
-		perror("Error al intentar conectarse al servidor");
-	}
-
-	freeaddrinfo(server_info);
-
-	return socket_cliente;
-}
-
-void* serializar_paquete(t_paquete* paquete, int bytes)
-{
-	void * paqueteSerializado = malloc(bytes);
-	int desplazamiento = 0;
-
-	memcpy(paqueteSerializado + desplazamiento, &(paquete->codigo_operacion), sizeof(int));
-	desplazamiento+= sizeof(int);
-	memcpy(paqueteSerializado + desplazamiento, &(paquete->buffer->size), sizeof(int));
-	desplazamiento+= sizeof(int);
-	memcpy(paqueteSerializado + desplazamiento, paquete->buffer->stream, paquete->buffer->size);
-	desplazamiento+= paquete->buffer->size;
-
-	return paqueteSerializado;
-}
-
-void enviar_mensaje(char* mensaje, int socket_cliente)
-{
-	t_paquete* paquete = malloc(sizeof(t_paquete));
-
-	paquete->codigo_operacion = MENSAJE;
-	paquete->buffer = malloc(sizeof(t_buffer));
-	paquete->buffer->size = strlen(mensaje) + 1;
-	paquete->buffer->stream = malloc(paquete->buffer->size);
-	memcpy(paquete->buffer->stream, mensaje, paquete->buffer->size);
-
-	int bytes = paquete->buffer->size + 2*sizeof(int);
-
-	void* a_enviar = serializar_paquete(paquete, bytes);
-
-	send(socket_cliente, a_enviar, bytes, 0);
-
-	free(a_enviar);
-	eliminar_paquete(paquete);
-}
-
-
-void crear_buffer(t_paquete* paquete)
-{
-	paquete->buffer = malloc(sizeof(t_buffer));
-	paquete->buffer->size = 0;
-	paquete->buffer->stream = NULL;
-}
-
-t_paquete* crear_paquete(void) // PUEDE SER REMPLAZADA POR LA FUNCION CREAR_PAQUETE_CON_CODIGO_DE_OPERACION
-{
-	t_paquete* paquete = malloc(sizeof(t_paquete));
-	paquete->codigo_operacion = PAQUETE;
-	crear_buffer(paquete);
-	return paquete;
-}
-
-void agregar_a_paquete(t_paquete* paquete, void* valor, int tamanio)
-{
-	paquete->buffer->stream = realloc(paquete->buffer->stream, paquete->buffer->size + tamanio + sizeof(int));
-
-	memcpy(paquete->buffer->stream + paquete->buffer->size, &tamanio, sizeof(int));
-	memcpy(paquete->buffer->stream + paquete->buffer->size + sizeof(int), valor, tamanio);
-
-	paquete->buffer->size += tamanio + sizeof(int);
-}
-
-int enviar_paquete(t_paquete* paquete, int socket_cliente)
-{
-	int bytes = paquete->buffer->size + 2*sizeof(int);
-	void* a_enviar = serializar_paquete(paquete, bytes);
-
-	int resultado = send(socket_cliente, a_enviar, bytes, 0);
-
-	free(a_enviar);
-
-	if (resultado == -1)
-	{
-		return -1;
-	}
-
-	return 0;
-}
-
-void eliminar_paquete(t_paquete* paquete)
-{
-	free(paquete->buffer->stream);
-	free(paquete->buffer);
-	free(paquete);
-}
-
-void liberar_socket(int socket)
-{
-	close(socket);
-}
-
-void paquete(int conexion, t_log* logger)
-{
-	// Ahora toca lo divertido!
-	char* leido;
-	t_paquete* paquete = crear_paquete();
-
-	// Leemos y esta vez agregamos las lineas al paquete
-	
-	leido = readline("> ");
-
-	while(strcmp(leido, "") != 0){
-		log_info(logger, "Recibi de consola: %s", leido);
-		agregar_a_paquete(paquete, leido, string_length(leido) + 1);
-		free(leido);
-		leido = readline("> ");
-	}
-	
-	free(leido);
-
-	enviar_paquete(paquete, conexion);
-
-	eliminar_paquete(paquete);
-
-	// ¡No te olvides de liberar las líneas y el paquete antes de regresar!
-	
 }
 
 void terminar_programa(t_config* config, t_log* logger, int sockets[]){
@@ -355,61 +239,238 @@ void terminar_programa(t_config* config, t_log* logger, int sockets[]){
 	}
 }
 
-/*
-void terminar_programa(int conexion, t_log* logger, t_config* config)
+int crear_conexion(char *ip, char *puerto)
 {
-	Y por ultimo, hay que liberar lo que utilizamos (conexion, log y config) 
-	  con las funciones de las commons y del TP mencionadas en el enunciado 
+	struct addrinfo hints;
+	struct addrinfo *server_info;
 
-	log_destroy(logger);
-	config_destroy(config);
-	liberar_conexion(conexion);
-}
-*/
+	memset(&hints, 0, sizeof(hints));
+	hints.ai_family = AF_UNSPEC;
+	hints.ai_socktype = SOCK_STREAM;
+	hints.ai_flags = AI_PASSIVE;
 
-/*
-POSIBLE SOLUCION A LA GENERALIZACION DE GESTIONAR CONEXIONES
+	getaddrinfo(ip, puerto, &hints, &server_info);
 
+	// Ahora vamos a crear el socket.
+	int socket_cliente = socket(server_info->ai_family, server_info->ai_socktype, server_info->ai_protocol);
 
-// Función original 'iterator', que ahora sólo recibe el valor
-void iterator(char* value, t_log* LOG_SERVIDOR) {
-    log_info(LOG_SERVIDOR, "%s", value);
-}
+	// Ahora que tenemos el socket, vamos a conectarlo
+	int err = connect(socket_cliente, server_info->ai_addr, server_info->ai_addrlen);
 
-// Función auxiliar que envuelve la lógica del logger
-void iterator_aux(void* value) {
-    // Cast del value a char* (elemento de la lista)
-    char* str_value = (char*) value;
+    if(err == (-1)){
+		perror("Error al intentar conectarse al servidor");
+	}
 
-    // Aquí accedemos al logger usando una variable estática
-    extern t_log* LOG_SERVIDOR_GLOBAL;
-    iterator(str_value, LOG_SERVIDOR_GLOBAL);
+	freeaddrinfo(server_info);
+
+	return socket_cliente;
 }
 
-// Variable estática para almacenar el logger
-t_log* LOG_SERVIDOR_GLOBAL;
-
-int gestionarConexiones(int socket_cliente, t_log* LOG_SERVIDOR) 
+void liberar_socket(int socket)
 {
-    t_list* lista;
+	close(socket);
+}
 
-    // Guardamos el logger en la variable global antes de la iteración
-    LOG_SERVIDOR_GLOBAL = LOG_SERVIDOR;
 
-        case PAQUETE:
-            lista = recibir_paquete(socket_cliente);
-            log_info(LOG_SERVIDOR, "Me llegaron los siguientes valores:\n");
+// PAQUETES.C
 
-            // Usamos la función auxiliar para iterar sobre la lista
-            list_iterate(lista, iterator_aux);
+// FUNCIONES DE RECIBIR
+t_paquete *recibir_paquete(int socket_cliente)
+{
+	t_paquete *paquete = malloc(sizeof(t_paquete));
+	paquete->buffer = malloc(sizeof(t_buffer));
+	paquete->buffer->stream = NULL;
+	paquete->buffer->size = 0;
+	paquete->codigo_operacion = 0;
 
-            break;
+	if (recv(socket_cliente, &(paquete->buffer->size), sizeof(uint32_t), 0) != sizeof(uint32_t))
+	{
+		printf("Error al recibir el tamanio del buffer\n");
+		return NULL;
+	}
 
-*/
+	paquete->buffer->stream = malloc(paquete->buffer->size);
 
-t_paquete* crear_paquete_con_codigo_operacion(op_code operacion) {
-	t_paquete* paquete = malloc(sizeof(t_paquete));
-	paquete->codigo_operacion = operacion;
+	if (recv(socket_cliente, paquete->buffer->stream, paquete->buffer->size, 0) != paquete->buffer->size)
+	{
+		printf("Error al recibir el buffer\n");
+		return NULL;
+	}
+
+	return paquete;
+}
+
+// SE USA SOLO PARA RECIBIR MENSAJES
+void *recibir_buffer(int *size, int socket_cliente)
+{
+	void *buffer;
+
+	recv(socket_cliente, size, sizeof(int), MSG_WAITALL);
+	buffer = malloc(*size);
+	recv(socket_cliente, buffer, *size, MSG_WAITALL);
+
+	return buffer;
+}
+
+int recibir_operacion(int socket_cliente)
+{
+	int cod_op;
+	if (recv(socket_cliente, &cod_op, sizeof(int), MSG_WAITALL) > 0)
+		return cod_op;
+	else
+	{
+		close(socket_cliente);
+		return -1;
+	}
+}
+
+// char* recibir_mensaje(int socket_cliente) {
+// 	int size;
+// 	char *buffer = recibir_buffer(&size, socket_cliente);
+// 	return buffer;
+// }
+
+
+// void recibir_mensaje(int socket_cliente, t_log *logger)
+// {
+// 	int size;
+// 	char *buffer = recibir_buffer(&size, socket_cliente);
+// 	log_info(logger, "Me llego el mensaje: %s", buffer);
+// 	free(buffer);
+// }
+
+// CREACION Y SERIALIZACION
+void *serializar_paquete(t_paquete *paquete, int bytes)
+{
+	void *magic = malloc(bytes);
+	int desplazamiento = 0;
+
+	memcpy(magic + desplazamiento, &(paquete->codigo_operacion), sizeof(op_code));
+	desplazamiento += sizeof(op_code);
+	memcpy(magic + desplazamiento, &(paquete->buffer->size), sizeof(int));
+	desplazamiento += sizeof(int);
+	memcpy(magic + desplazamiento, paquete->buffer->stream, paquete->buffer->size);
+
+	return magic;
+}
+
+void enviar_mensaje(char *mensaje, int socket_cliente)
+{
+	t_paquete *paquete = crear_paquete_con_codigo_de_operacion(MENSAJE);
+	uint32_t tamanio = strlen(mensaje) + 1;
+
+	paquete->buffer->size = sizeof(uint32_t) + tamanio;
+	paquete->buffer->stream = malloc(paquete->buffer->size);
+
+	int desplazamiento = 0;
+
+	// Serializar el PID
+    memcpy(paquete->buffer->stream + desplazamiento, &(tamanio), sizeof(uint32_t));
+    desplazamiento += sizeof(uint32_t);
+
+	memcpy(paquete->buffer->stream + desplazamiento, mensaje, tamanio);
+
+	if(enviar_paquete(paquete, socket_cliente) != 0) {
+		perror("Error al enviar el paquete");
+	}
+	eliminar_paquete(paquete);
+}
+
+void crear_buffer(t_paquete *paquete)
+{
+	paquete->buffer = malloc(sizeof(t_buffer));
+	paquete->buffer->size = 0;
+	paquete->buffer->stream = NULL;
+}
+
+void agregar_a_paquete(t_paquete *paquete, void *valor, uint32_t tamanio)
+{
+	paquete->buffer->stream = realloc(paquete->buffer->stream, paquete->buffer->size + tamanio + sizeof(int));
+
+	memcpy(paquete->buffer->stream + paquete->buffer->size, &tamanio, sizeof(int));
+	memcpy(paquete->buffer->stream + paquete->buffer->size + sizeof(int), valor, tamanio);
+
+	paquete->buffer->size += tamanio + sizeof(int);
+}
+
+int enviar_paquete(t_paquete *paquete, int socket_cliente)
+{
+    // Calcular el tamaño total del mensaje a enviar
+    size_t total_size = sizeof(op_code) + sizeof(int) + paquete->buffer->size;
+
+    // Asignar memoria para el buffer que se va a enviar
+    void *a_enviar = malloc(total_size);
+    if (a_enviar == NULL) {
+        perror("Error al asignar memoria para a_enviar");
+        return -1;
+    }
+
+    int offset = 0;
+
+    // Copiar el código de operación al inicio del buffer
+    memcpy(a_enviar + offset, &(paquete->codigo_operacion), sizeof(op_code));
+    offset += sizeof(op_code);
+
+    // Copiar el tamaño del buffer después del código de operación
+    memcpy(a_enviar + offset, &(paquete->buffer->size), sizeof(int));
+    offset += sizeof(int);
+
+    // Copiar el stream de datos al final del buffer
+    memcpy(a_enviar + offset, paquete->buffer->stream, paquete->buffer->size);
+
+    // Enviar el buffer a través del socket
+    ssize_t bytes_enviados = send(socket_cliente, a_enviar, total_size, 0);
+    if (bytes_enviados == -1)
+    {
+        perror("Error al enviar datos");
+		free(a_enviar);
+		return -1;
+    }
+
+    // Liberar la memoria asignada para a_enviar
+    free(a_enviar);
+	return 0;
+}
+
+void enviar_handshake(int socket, op_code codigo) {
+    t_paquete *paquete = malloc(sizeof(t_paquete));
+	
+    paquete->codigo_operacion = codigo;
+    paquete->buffer = malloc(sizeof(t_buffer));
+    paquete->buffer->size = 0;
+    paquete->buffer->stream = NULL;
+
+    void *a_enviar = malloc(sizeof(op_code) + sizeof(uint32_t));
+    int offset = 0;
+
+    memcpy(a_enviar + offset, &(paquete->codigo_operacion), sizeof(op_code));
+    offset += sizeof(op_code);
+    memcpy(a_enviar + offset, &(paquete->buffer->size), sizeof(uint32_t));
+
+    if (send(socket, a_enviar, offset, 0) == -1) {
+        perror("Error al enviar el handshake");
+    }
+
+    free(a_enviar);
+    eliminar_paquete(paquete);
+}
+
+void eliminar_paquete(t_paquete *paquete)
+{
+	free(paquete->buffer->stream);
+	free(paquete->buffer);
+	free(paquete);
+}
+
+t_paquete *crear_paquete_con_codigo_de_operacion(op_code codigo)
+{
+	t_paquete *paquete = malloc(sizeof(t_paquete));
+	paquete->codigo_operacion = codigo;
 	crear_buffer(paquete);
 	return paquete;
+}
+
+void liberar_conexion(int socket_cliente)
+{
+	close(socket_cliente);
 }
