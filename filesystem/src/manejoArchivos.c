@@ -13,15 +13,15 @@ void cargar_bitmap() {
     }
 
     // Reservar memoria para el bitmap
-    size_t bitmap_size = (BLOCK_COUNT + 7) / 8 ;
-    bitmap_memoria = malloc(bitmap_size);// bitmap_memoria de donde sale??? Y pq la cuenta de +7 / 8 ???
+    size_t bitmap_size = BLOCK_COUNT / 8 ;
+    bitmap_memoria = malloc(bitmap_size);
     if (!bitmap_memoria) {
         log_error(LOGGER_FILESYSTEM, "Error al asignar memoria para el bitmap.");
         fclose(bitmap);
         exit(EXIT_FAILURE);
     }
 
-    // Leer el contenido del archivo en la memoria
+    // Leer el contenido del archivo en la memoria 
     fread(bitmap_memoria, 1, bitmap_size, bitmap);
     fclose(bitmap);
 }
@@ -64,6 +64,7 @@ int crear_archivo_dump(char* nombre_archivo, char* contenido, int tamanio) {
 
     // CREAR ARCHIVO DE METADATA (NOMBRE FORMATEADO)
     char metadata_path[256];
+    sprintf(metadata_path, "%s/files/%s.dmp", MOUNT_DIR, nombre_archivo);
 
     FILE* metadata = fopen(metadata_path, "w+");
     if (!metadata) {
@@ -80,7 +81,7 @@ int crear_archivo_dump(char* nombre_archivo, char* contenido, int tamanio) {
     escribir_en_bloques(contenido, tamanio, bloque_indice);
 
     log_info(LOGGER_FILESYSTEM, "Archivo Creado: %s - Tamaño: %d", nombre_archivo, tamanio);
-    return 0;
+    return 1;
 }
 
 // FUNCION LA CUAL TOMA Y ESCRIBE LOS DATOS EN LOS BLOQUES DE bloques.dat

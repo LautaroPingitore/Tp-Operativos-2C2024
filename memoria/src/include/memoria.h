@@ -21,6 +21,8 @@ extern int socket_memoria_filesystem;
 extern t_log* LOGGER_MEMORIA;
 extern t_config* CONFIG_MEMORIA;
 
+extern bool mensaje_okey;
+
 void inicializar_programa();
 void inicializar_config(char*);
 void iniciar_conexiones();

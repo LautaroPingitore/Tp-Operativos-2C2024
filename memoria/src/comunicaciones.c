@@ -7,6 +7,7 @@ t_list* lista_instrucciones; // TIPO t_hilo_instrucciones
 pthread_mutex_t mutex_procesos;
 pthread_mutex_t mutex_instrucciones;
 
+sem_t sem_respuesta;
 
 void inicializar_datos(){
     lista_procesos = list_create();
@@ -14,6 +15,8 @@ void inicializar_datos(){
 
     pthread_mutex_init(&mutex_procesos, NULL);
     pthread_mutex_init(&mutex_instrucciones, NULL);
+
+    sem_init(&sem_respuesta, 0, 0);
 }
 
 
@@ -245,49 +248,37 @@ t_pid_tid* deserializar_identificadores(t_buffer* buffer) {
    return ident;
 }
 
-
 int solicitar_archivo_filesystem(uint32_t pid, uint32_t tid) {
     char nombre_archivo[256];
     time_t t = time(NULL);
     struct tm* tiempo = localtime(&t);
     sprintf(nombre_archivo, "<%d>-<%d>-<%d>", pid, tid, tiempo->tm_sec);
-   
-    char* contenido_proceso = obtener_contenido_proceso(pid, tid);
-    int tamanio = strlen(contenido_proceso);
 
+    char* contenido_proceso = obtener_contenido_proceso(pid, tid);
+    log_warning(LOGGER_MEMORIA, "AAAA :V");
+    int tamanio = strlen(contenido_proceso);
 
     int resultado = mandar_solicitud_dump_memory(nombre_archivo, contenido_proceso, tamanio);
 
+    log_warning(LOGGER_MEMORIA, "EEEE :V");
 
     // Liberar memoria si es necesario
-    free(contenido_proceso);
+    //free(contenido_proceso); DESCOMENTAR DESPUES :P
 
-
-    if (resultado == 0) {
-        log_info(LOGGER_MEMORIA, "Solicitud enviada correctamente para el archivo: %s", nombre_archivo);
-        return 0;
-    } else {
-        log_error(LOGGER_MEMORIA, "Error al enviar solicitud para el archivo: %s", nombre_archivo);
-        return -1;
-    }
+    return resultado;
 }
 
-
 char* obtener_contenido_proceso(uint32_t pid, uint32_t tid) {
-    // Obtener el proceso por PID
     t_proceso_memoria* pcb = obtener_proceso_memoria(pid);
     if (!pcb || !pcb->contexto) {
         log_error(LOGGER_MEMORIA, "Proceso o contexto no encontrado para PID: %d", pid);
         return NULL;
     }
 
+    t_registros* registros = pcb->contexto;
 
-    // Calcular el tamanio necesario para los registros
-    size_t tamanio_total = 0;
     const char* nombres_registros[] = {"AX:", "BX:", "CX:", "DX:", "EX:", "FX:", "GX:", "HX:"};
-    tamanio_total += 32; // Espacio para <PID> <TID> (incluye "\n").
-    tamanio_total += 8 * 12; // Espacio para 8 registros (aproximado, con valores grandes).
-
+    size_t tamanio_total = 30 + (8 * 16); // 30 bytes para el encabezado y 16 bytes por registro.
 
     // Reservar memoria para el contenido
     char* contenido = malloc(tamanio_total + 1);
@@ -297,32 +288,18 @@ char* obtener_contenido_proceso(uint32_t pid, uint32_t tid) {
     }
     contenido[0] = '\0'; // Inicializar el string.
 
-
-    // Agregar encabezado <PID> <TID>
+    // Agregar encabezado "<PID> <TID>"
     snprintf(contenido, tamanio_total, "<%d> <%d>\n", pid, tid);
 
-
     // Agregar los registros al contenido
-    t_list* lista_registros = convertir_registros_a_char(pcb->contexto);
-    if (!lista_registros) {
-        free(contenido);
-        log_error(LOGGER_MEMORIA, "Error al convertir registros para PID: %d", pid);
-        return NULL;
-    }
     for (int i = 0; i < 8; i++) {
-        char linea[50];
-        snprintf(linea, sizeof(linea), "%s%s\n", nombres_registros[i], (char*)list_get(lista_registros, i));
+        char linea[20]; // Espacio suficiente para "REGISTRO: valor\n"
+        snprintf(linea, sizeof(linea), "%s %u\n", nombres_registros[i], ((uint32_t*)registros)[i]);
         strcat(contenido, linea);
     }
 
-
-    // Liberar lista de registros
-    list_destroy_and_destroy_elements(lista_registros, free);
-
-
     return contenido;
 }
-
 
 t_proceso_memoria* obtener_proceso_memoria(uint32_t pid) {
     for(int i=0; i < list_size(lista_procesos); i++) {
@@ -562,11 +539,9 @@ int mandar_solicitud_dump_memory(char* nombre_archivo, char* contenido_proceso, 
     paquete->buffer->size = sizeof(uint32_t) * 3 + tamanio_nombre;
     paquete->buffer->stream = malloc(paquete->buffer->size);
 
-
     int desplazamiento = 0;
 
-
-    memcpy(paquete->buffer->stream + desplazamiento, &tamanio_nombre, sizeof(uint32_t));
+    memcpy(paquete->buffer->stream + desplazamiento, &(tamanio_nombre), sizeof(uint32_t));
     desplazamiento += sizeof(uint32_t);
     memcpy(paquete->buffer->stream + desplazamiento, nombre_archivo, tamanio_nombre);
     desplazamiento += tamanio_nombre;

@@ -7,6 +7,8 @@ extern t_list* lista_instrucciones; // TIPO t_hilo_instrucciones
 extern pthread_mutex_t mutex_procesos;
 extern pthread_mutex_t mutex_instrucciones;
 
+extern sem_t sem_respuesta; 
+
 t_instruccion* obtener_instruccion(uint32_t,uint32_t, uint32_t);
 
 void recibir_log(char [256], int);

@@ -22,6 +22,8 @@ t_config* CONFIG_MEMORIA;
 
 pthread_t hilo_server_memoria;
 
+bool mensaje_okey = false;
+
 int main(int argc, char* argv[]) {
     if(argc != 2) {
         printf("Uso: %s [archivo_config] \n", argv[0]);
@@ -186,8 +188,18 @@ void* procesar_conexion_memoria(void *void_args){
                 log_info(LOGGER_MEMORIA, "## KERNEL Conectado - FD del socket: <%d>", cliente_socket);
                 break;
 
-            // OJO, ANTE UNA DE LAS PETICIONES QUE RECIBE MEMORIA SE TIENE QUE TENER UN
-            // RETARDO DE RESPUESTA DEFINIDO EN LAS CONFIGS
+            case MENSAJE:
+                log_warning(LOGGER_MEMORIA, "ENTRO A MSJ");
+                char* respuesta = recibir_mensaje(cliente_socket);
+                log_warning(LOGGER_MEMORIA, "MENSAJE = %s", respuesta);
+                if (respuesta && strcmp(respuesta, "OK") == 0) {
+                    mensaje_okey = true;
+                } else {
+                    mensaje_okey = false;
+                }
+                sem_post(&sem_respuesta);
+                free(respuesta);
+                break;
 
             case PROCESS_CREATE:
                 t_proceso_memoria* proceso_nuevo = recibir_proceso(cliente_socket);
@@ -255,18 +267,29 @@ void* procesar_conexion_memoria(void *void_args){
 
             case DUMP_MEMORY:
                 t_pid_tid* ident_dm = recibir_identificadores(cliente_socket);
-                
                 if(!ident_dm) {
                     enviar_mensaje("ERROR", cliente_socket);
                 } 
-                if (solicitar_archivo_filesystem(ident_dm->pid, ident_dm->tid) == 0) {
+                
+                if(solicitar_archivo_filesystem(ident_dm->pid, ident_dm->tid) == 0) {
                     log_info(LOGGER_MEMORIA, "## Memory Dump solicitado - (<%d>:<%d>)",
                              ident_dm->pid, ident_dm->tid);
+                } else {
+                    log_warning(LOGGER_MEMORIA, ":V");
+                    enviar_mensaje("ERROR", cliente_socket);
+                }
+
+                free(ident_dm);
+
+                log_warning(LOGGER_MEMORIA, "BBBB");
+                sem_wait(&sem_respuesta);
+
+                if(mensaje_okey) {
                     enviar_mensaje("OK", cliente_socket);
                 } else {
                     enviar_mensaje("ERROR", cliente_socket);
                 }
-                free(ident_dm);
+
                 break;
 
             case HANDSHAKE_cpu: //AVISA QUE SE CONECTO A CPU

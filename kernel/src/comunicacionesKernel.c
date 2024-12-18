@@ -157,6 +157,8 @@ void enviar_memory_dump(t_pcb* pcb, uint32_t tid) {
         process_exit(pcb);
         eliminar_paquete(paquete);
         return;
+    } else {
+        log_info(LOGGER_KERNEL, "Solicitud Dump Memory enviada correctamente");
     }
     eliminar_paquete(paquete);
 }

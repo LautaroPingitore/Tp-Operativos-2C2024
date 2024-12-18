@@ -178,29 +178,19 @@ void syscall_dump_memory(uint32_t pid, uint32_t tid) {
 
     t_pcb* pcb = obtener_pcb_padre_de_hilo(pid);
 
-    enviar_memory_dump(pcb, tid);
-
     // Bloquear el hilo actual mientras espera la respuesta del módulo de memoria
     log_info(LOGGER_KERNEL, "Esperando confirmación del módulo de memoria...");
-    char buffer[10];
-    int bytes_recibidos = recv(socket_kernel_memoria, buffer, sizeof(buffer) - 1, 0);
 
-    if (bytes_recibidos <= 0) {
-        log_error(LOGGER_KERNEL, "Error al recibir respuesta del módulo de memoria");
-        // Mover el proceso a EXIT en caso de error
-        process_exit(pcb);
-        return;
-    }
+    enviar_memory_dump(pcb, tid);
 
-    buffer[bytes_recibidos] = '\0';  // Asegurar que el mensaje recibido esté terminado en NULL
+    sem_wait(&sem_mensaje);
 
-    if (strcmp(buffer, "OK") == 0) {
+    if(mensaje_okey) {
         log_info(LOGGER_KERNEL, "DUMP_MEMORY completado correctamente para proceso %d, hilo %d", pcb->PID, tid);
 
         // Mover el hilo a READY
         t_tcb* hilo = buscar_hilo_por_tid(pcb, tid);
         mover_hilo_a_ready(hilo);
-        
     } else {
         log_error(LOGGER_KERNEL, "Error reportado por el módulo de memoria durante el DUMP_MEMORY");
         // Mover el proceso a EXIT en caso de error
