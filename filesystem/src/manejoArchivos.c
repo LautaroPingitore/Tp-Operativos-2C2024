@@ -1,9 +1,9 @@
 #include "include/gestor.h"
 
-git clone https://github.com/sisoputnfrba/so-deploy.git
-cd so-deploy
-./deploy.sh -r=release -p=utils -p=kernel -p=cpu -p=memoria -p=filesystem "tp-2024-2c-Los-Galacticos-SO"
-https://github.com/sisoputnfrba/the-last-of-c-pruebas.git
+// git clone https://github.com/sisoputnfrba/so-deploy.git
+// cd so-deploy
+// ./deploy.sh -r=release -p=utils -p=kernel -p=cpu -p=memoria -p=filesystem "tp-2024-2c-Los-Galacticos-SO"
+// https://github.com/sisoputnfrba/the-last-of-c-pruebas.git
 
 char* bitmap_memoria = NULL;
 
