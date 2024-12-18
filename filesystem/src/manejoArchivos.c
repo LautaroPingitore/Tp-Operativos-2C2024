@@ -22,7 +22,8 @@ void cargar_bitmap() {
     }
 
     // Leer el contenido del archivo en la memoria 
-    fread(bitmap_memoria, 1, bitmap_size, bitmap);
+    size_t valor = fread(bitmap_memoria, 1, bitmap_size, bitmap);
+    valor = 0;
     fclose(bitmap);
 }
 
