@@ -324,7 +324,7 @@ t_list* convertir_registros_a_char(t_registros* registros) {
 
 
     for (int i = 0; i < 8; i++) {
-        char* registro_str = malloc(strlen(registro_str) + 1); // Espacio para un entero de 32 bits (10 dígitos máx.) + nulo
+        char* registro_str = malloc(sizeof(uint32_t) + 1); // Espacio para un entero de 32 bits (10 dígitos máx.) + nulo
         if (!registro_str) {
             list_destroy_and_destroy_elements(lista, free); // Limpiar si hay error
             return NULL;
