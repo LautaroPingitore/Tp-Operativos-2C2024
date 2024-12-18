@@ -47,9 +47,7 @@ void inicializar_memoria_usuario() {
 
 // Función general para buscar hueco usando un algoritmo especificado
 t_particion* buscar_hueco(uint32_t tamano_requerido, const char* algoritmo) {
-    if (strcmp(ESQUEMA, "DINAMICAS") == 0) {
-        return asignar_hueco_dinamico(tamano_requerido);
-    } else if (strcmp(algoritmo, "FIRST") == 0) {
+    if (strcmp(algoritmo, "FIRST") == 0) {
         return buscar_hueco_first_fit(tamano_requerido);
     } else if (strcmp(algoritmo, "BEST") == 0) {
         return buscar_hueco_best_fit(tamano_requerido);
@@ -59,37 +57,53 @@ t_particion* buscar_hueco(uint32_t tamano_requerido, const char* algoritmo) {
     return NULL;
 }
 
-t_particion* asignar_hueco_dinamico(uint32_t tamanio) {
+t_particion* dividir_particion(t_particion* particion, uint32_t tamanio, uint32_t espacio_sobrante) {
+    if(particion == NULL) {
+        log_error(LOGGER_MEMORIA, "ERROR AL ENCONTRAR LA PARTICION");
+        return NULL;
+    }
+
     pthread_mutex_lock(&mutex_particiones);
 
+    int posicion_lista = buscar_posicion_particion(particion);
+    if(posicion_lista == -1) {
+        log_error(LOGGER_MEMORIA, "ERROR AL ENCONTRAR LA POSICION");
+        return NULL;
+    }
+
+    particion->tamano = tamanio;
+    particion->libre = false;
+
+    t_particion* particion_nueva = malloc(sizeof(t_particion));
+    particion_nueva->inicio = particion->inicio + particion->tamano;
+    particion_nueva->tamano = espacio_sobrante;
+    particion_nueva->libre = true;
+
+
+    list_replace(lista_particiones, posicion_lista, particion);
+    list_add_in_index(lista_particiones, posicion_lista + 1, particion_nueva);
+
+    pthread_mutex_unlock(&mutex_particiones);
+
+    return particion;
+}
+
+bool es_fija() {
+    if(strcmp(ALGORITMO_BUSQUEDA, "FIJAS") == 0) {
+        return true;
+    } else {
+        return false;
+    }
+}
+
+int buscar_posicion_particion(t_particion* particion) {
     for(int i=0; i < list_size(lista_particiones); i++) {
-        t_particion* particion = list_get(lista_particiones, i);
-
-        if (particion->libre && particion->tamano >= tamanio) {
-            // Si sobra espacio, dividir la partición en dos
-            if (particion->tamano > tamanio) {
-                t_particion* nueva_particion = malloc(sizeof(t_particion));
-                nueva_particion->inicio = particion->inicio + tamanio;
-                nueva_particion->tamano = particion->tamano - tamanio;
-                nueva_particion->libre = true;
-
-                // Reducir tamaño de la partición original
-                particion->tamano = tamanio;
-                particion->libre = false;
-
-                // Insertar la nueva partición en la lista
-                list_add_in_index(lista_particiones, i + 1, nueva_particion);
-            } else {
-                particion->libre = false; // Marcar partición como ocupada
-            }
-
-            pthread_mutex_unlock(&mutex_particiones);
-            return particion; // Retornar la partición asignada
+        t_particion* part = list_get(lista_particiones, i);
+        if(part->inicio==particion->inicio){
+            return i;
         }
     }
-    pthread_mutex_unlock(&mutex_particiones);
-    log_warning(LOGGER_MEMORIA, "No se encontró hueco dinámico suficiente para %u bytes", tamanio);
-    return NULL; // No se encontró un hueco libre
+    return -1;
 }
 
 // First Fit: Encuentra el primer hueco que cumpla con el tamaño requerido
@@ -97,12 +111,17 @@ t_particion* buscar_hueco_first_fit(uint32_t tamano_requerido) {
     for (int i = 0; i < list_size(lista_particiones); i++) {
         t_particion* particion = list_get(lista_particiones, i);
         if (particion && particion->libre && particion->tamano >= tamano_requerido) {
-            return particion;
+            if(es_fija()) {
+                return particion;
+            } else {
+                return dividir_particion(particion, tamano_requerido, particion->tamano - tamano_requerido);
+            }
         }
     }
     
     return NULL; // No hay espacio
 }
+
 
 // Best Fit: Encuentra el hueco que más se ajuste al tamaño solicitado
 t_particion* buscar_hueco_best_fit(uint32_t tamano_requerido) {
@@ -119,7 +138,12 @@ t_particion* buscar_hueco_best_fit(uint32_t tamano_requerido) {
             }
         }
     }
-    return mejor_particion;
+
+    if(es_fija()) {
+        return mejor_particion;
+    } else {
+        return dividir_particion(mejor_particion, tamano_requerido, tamano_minimo);
+    }
 }
 
 // Worst Fit: Encuentra el hueco más grande disponible
@@ -138,12 +162,21 @@ t_particion* buscar_hueco_worst_fit(uint32_t tamano_requerido) {
         }
     }
 
-    return peor_particion;
+    if(es_fija()) {
+        return peor_particion;
+    } else {
+        return dividir_particion(peor_particion, tamano_requerido, tamano_maximo);
+    }
 }
 
 // Asigna espacio de memoria a un proceso, usando un algoritmo de búsqueda específico
 int asignar_espacio_memoria(t_proceso_memoria* proceso, const char* algoritmo) {
     t_particion* particion = buscar_hueco(proceso->limite, algoritmo);
+
+    for(int i=0; i<list_size(lista_particiones); i++) {
+        t_particion* part = list_get(lista_particiones, i);
+        log_warning(LOGGER_MEMORIA, "INICIO = %d, TAMNIO = %d", part->inicio, part->tamano);
+    }
 
     if(particion == NULL){
         log_warning(LOGGER_MEMORIA, "No se encontró espacio suficiente para inicializar el proceso %d usando el algoritmo: %s", proceso->pid, algoritmo);
