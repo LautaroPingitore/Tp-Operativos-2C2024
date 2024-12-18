@@ -58,11 +58,6 @@ t_particion* buscar_hueco(uint32_t tamano_requerido, const char* algoritmo) {
 }
 
 t_particion* dividir_particion(t_particion* particion, uint32_t tamanio, uint32_t espacio_sobrante) {
-    if(particion == NULL) {
-        log_error(LOGGER_MEMORIA, "ERROR AL ENCONTRAR LA PARTICION");
-        return NULL;
-    }
-
     pthread_mutex_lock(&mutex_particiones);
 
     int posicion_lista = buscar_posicion_particion(particion);

@@ -314,7 +314,7 @@ void* procesar_conexion_memoria(void *void_args){
                 t_write_mem* wri_mem = recibir_write_mem(cliente_socket);
                 int resultado = escribir_memoria(wri_mem->dire_fisica_wm, wri_mem->valor_escribido);
                 if(resultado == 1) {
-                    enviar_mensaje("OK", cliente_socket);
+                    enviar_mensaje("SE PUDO ESCRIBIR", cliente_socket);
                 } else {
                     enviar_mensaje("ERROR", cliente_socket);
                 }

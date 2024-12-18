@@ -87,7 +87,8 @@ typedef enum{
     HILO,
     CREAR_ARCHIVO,
     FINALIZACION_QUANTUM,
-    SOLICITUD_PROCESO
+    SOLICITUD_PROCESO,
+    MENSAJE_WRITE_MEM
 } op_code;
 
 typedef struct {

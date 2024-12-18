@@ -31,11 +31,13 @@ extern sem_t sem_valor_memoria;
 extern sem_t sem_instruccion;
 extern sem_t sem_mutex_globales;
 extern sem_t sem_proceso_actual;
+extern sem_t sem_mensaje;
 
 extern pthread_t hilo_servidor_dispatch;
 extern pthread_t hilo_servidor_interrupt;
 extern pthread_t hilo_com_memoria;
 
+extern bool mensaje_okey;
 
 void inicializar_config(char*);
 

@@ -30,6 +30,9 @@ t_instruccion* instruccion_actual = NULL;
 
 sem_t sem_base, sem_limite, sem_valor_memoria, sem_instruccion;
 sem_t sem_proceso_actual;
+sem_t sem_mensaje;
+
+bool mensaje_okey = false;
 
 int main() {
     inicializar_config("../configs/cpu");
@@ -174,6 +177,20 @@ void* procesar_conexion_memoria(void*) {
                 break;
 
             case MENSAJE:
+                char* respuesta_mensaje = recibir_mensaje(socket_cpu_memoria);
+                if(respuesta_mensaje && strcmp(respuesta_mensaje, "OK") == 0) {
+                    mensaje_okey = true;
+                    sem_post(&sem_mensaje);
+                } else if(strcmp(respuesta_mensaje, "SE PUDO ESCRIBIR") == 0){
+                    log_info(LOGGER_CPU, "Se pudo escribir en memoria");
+                } else {
+                    mensaje_okey = false;
+                    sem_post(&sem_mensaje);
+                }
+                free(respuesta_mensaje);
+                break;
+
+            case MENSAJE_WRITE_MEM:
                 char* respuesta = recibir_mensaje(socket_cpu_memoria);
                 if (respuesta == NULL) {
                     log_warning(LOGGER_CPU, "Error al recibir el mensaje.");
@@ -319,6 +336,7 @@ void inicializar_cpu() {
     sem_init(&sem_valor_memoria, 0, 0);
     sem_init(&sem_instruccion, 0, 0);
     sem_init(&sem_proceso_actual, 0, 0);
+    sem_init(&sem_mensaje, 0, 0);
     pthread_mutex_init(&mutex_syscall, NULL);
 
     hilos_ejecutados = list_create();
@@ -351,4 +369,5 @@ void destruir_semaforos() {
     sem_destroy(&sem_limite);
     sem_destroy(&sem_valor_memoria);
     sem_destroy(&sem_instruccion);
+    sem_destroy(&sem_mensaje);
 }

@@ -305,6 +305,10 @@ void actualizar_contexto_memoria() {
     // A través de la memoria se actualizaría el PCB
     enviar_contexto_memoria(hilo_actual->PID_PADRE, hilo_actual->TID, pcb_actual->REGISTROS, socket_cpu_memoria);
     log_info(LOGGER_CPU, "## TID <%d> - Actualizo Contexto Ejecucion", hilo_actual->TID);
+    sem_wait(&sem_mensaje);
+    if(!mensaje_okey) {
+        log_error(LOGGER_CPU, "ERROR AL ACTUALIZAR EL CONTEXTO EN MEMORIA");
+    }
 }
 
 

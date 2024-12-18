@@ -522,7 +522,7 @@ void procesar_actualizacion_contexto(int socket_cliente, uint32_t pid, uint32_t 
         if (proceso->pid == pid) {
             memcpy(proceso->contexto, nuevo_contexto, sizeof(t_registros));
             log_info(LOGGER_MEMORIA, "## Contexto <Actualizado> - (<%d>:<%d>)", pid, tid);
-
+            enviar_mensaje("OK", socket_cliente);
             return;
         }
     }
