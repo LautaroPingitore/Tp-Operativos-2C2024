@@ -23,7 +23,10 @@ void cargar_bitmap() {
 
     // Leer el contenido del archivo en la memoria 
     size_t valor = fread(bitmap_memoria, 1, bitmap_size, bitmap);
-    valor = 0;
+    if(valor < 0 ) {
+        log_error(LOGGER_FILESYSTEM, "NO SE PUDO LEER EL BITMAP");
+    }
+    
     fclose(bitmap);
 }
 
