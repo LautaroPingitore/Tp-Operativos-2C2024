@@ -10,6 +10,8 @@ void syscall_process_create(t_tcb* hilo_actual, char* path_proceso, int tamanio_
 
     mover_hilo_a_ready(hilo_actual);
 
+}
+
 void syscall_process_exit(uint32_t pid) {
     if (pid < 0) {
         log_error(LOGGER_KERNEL, "Syscall PROCESS_EXIT: Argumento PCB nulo");
