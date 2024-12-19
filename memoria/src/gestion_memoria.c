@@ -53,7 +53,7 @@ uint32_t buscar_base_registro(uint32_t pid, uint32_t nro_registro) {
 
     // Calcula la base del proceso en memoria
     uint32_t base = pid * (8 * sizeof(uint32_t));
-    
+    log_warning(LOGGER_MEMORIA,"valor de base: %d",base);
     // Valida que la base esté dentro del rango permitido
     if (base >= TAM_MEMORIA) {
         fprintf(stderr, "PID fuera del rango de memoria asignada\n");
