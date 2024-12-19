@@ -273,9 +273,9 @@ void enviar_valor_a_memoria(int socket, uint32_t dire_fisica, uint32_t valor) {
 
 
     if (enviar_paquete(paquete, socket) < 0) {
-        log_error(LOGGER_CPU, "Error al enviar valor a memoria: Dirección Física %d - Valor %d", dire_fisica, *valor);
+        log_error(LOGGER_CPU, "Error al enviar valor a memoria: Dirección Física %d - Valor %d", dire_fisica, valor);
     } else {
-        log_info(LOGGER_CPU, "Valor enviado a Memoria: Dirección Física %d - Valor %d", dire_fisica, *valor);
+        log_info(LOGGER_CPU, "Valor enviado a Memoria: Dirección Física %d - Valor %d", dire_fisica, valor);
     }
     
     // Eliminar el paquete para liberar memoria
@@ -315,7 +315,7 @@ uint32_t recibir_valor_de_memoria(int socket) {
 
 // FUNCIONES MMU
 
-void enviar_solicitud_memoria(int socket, uint32_t pid, op_code codigo, const char* descripcion) {
+void enviar_solicitud_memoria(int socket, uint32_t valor, op_code codigo, const char* descripcion) {
     t_paquete* paquete = crear_paquete_con_codigo_de_operacion(codigo);
 
     paquete->buffer->size = sizeof(uint32_t);
@@ -323,7 +323,7 @@ void enviar_solicitud_memoria(int socket, uint32_t pid, op_code codigo, const ch
 
     int desplazamiento = 0;
 
-    memcpy(paquete->buffer->stream + desplazamiento, &(pid), sizeof(uint32_t));
+    memcpy(paquete->buffer->stream + desplazamiento, &(valor), sizeof(uint32_t));
 
     if (enviar_paquete(paquete, socket) < 0) {
         log_error(LOGGER_CPU, "Error al enviar solicitud de %s para PID: %d", descripcion, pid);

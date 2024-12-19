@@ -255,12 +255,10 @@ int solicitar_archivo_filesystem(uint32_t pid, uint32_t tid) {
     sprintf(nombre_archivo, "<%d>-<%d>-<%d>", pid, tid, tiempo->tm_sec);
 
     char* contenido_proceso = obtener_contenido_proceso(pid, tid);
-    log_warning(LOGGER_MEMORIA, "AAAA :V");
     int tamanio = strlen(contenido_proceso);
-
+    log_warning(LOGGER_MEMORIA, "EL TAMANIO DEL CONTENIDO ES DE %d", tamanio);
     int resultado = mandar_solicitud_dump_memory(nombre_archivo, contenido_proceso, tamanio);
 
-    log_warning(LOGGER_MEMORIA, "EEEE :V");
 
     // Liberar memoria si es necesario
     //free(contenido_proceso); DESCOMENTAR DESPUES :P

@@ -16,7 +16,10 @@
 #include <stdint.h>
 #include <pthread.h>
 #include <semaphore.h>
-#include <sys/stat.h>  
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <sys/mman.h>
+#include <math.h>
 #include "paquetes.h"
 #include "servidores.h"
 

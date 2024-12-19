@@ -26,8 +26,6 @@ typedef struct {
 } t_archivo_dump;
 
 void inicializar_config(char*);
-void inicializar_archivo(char*, size_t, char*);
-void iniciar_archivos();
 void iniciar_conexiones();
 void* escuchar_filesystem();
 int server_escuchar(t_log*, char* , int);

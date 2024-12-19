@@ -359,7 +359,6 @@ void* procesar_conexion_memoria(void *void_args){
 
             case SOLICITUD_BASE_MEMORIA:
                 uint32_t pid_bm = recibir_pid(cliente_socket);
-                t_proceso_memoria* pcb_bm = obtener_proceso_memoria(pid_bm);
                 int resultado_bm = enviar_valor_uint_cpu(cliente_socket, pcb_bm->base, SOLICITUD_BASE_MEMORIA);
                 if(resultado_bm == 0) {
                     log_info(LOGGER_MEMORIA, "Base enviada");

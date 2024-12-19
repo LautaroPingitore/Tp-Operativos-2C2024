@@ -24,7 +24,6 @@ int main(int argc, char* argv[]) {
     char* config = argv[1];
     inicializar_config(config);
     iniciar_archivos();
-    cargar_bitmap();
     
     iniciar_conexiones();
     pthread_exit(NULL); // Evita que el hilo principal finalice y permite que los hilos creados sigan ejecutándose
@@ -52,43 +51,6 @@ void inicializar_config(char* arg){
     LOG_LEVEL = config_get_string_value(CONFIG_FILESYSTEM, "LOG_LEVEL");
 
     IP_FILESYSTEM = config_get_string_value(CONFIG_FILESYSTEM,"IP_FILESYSTEM");
-}
-
-void inicializar_archivo(char* path, size_t size, char* nombre) {
-    FILE* file = fopen(path, "r+");
-    if(!file) { // VERIFICA SI ESTA VACIO
-        log_warning(LOGGER_FILESYSTEM, "%s no encontrado. Creando...", nombre);
-        file = fopen(path, "w");
-        if (!file) {
-            log_error(LOGGER_FILESYSTEM, "Error al crear %s", nombre);
-            exit(EXIT_FAILURE);
-        }
-        if(size > 0) {
-            fseek(file, size - 1, SEEK_SET);
-            fputc('\0', file);
-        }
-    }
-    log_info(LOGGER_FILESYSTEM, "El archivo %s ya se encuentra creado", nombre);
-    fclose(file);
-}
-
-void iniciar_archivos() {
-    if(access(MOUNT_DIR, F_OK) != 0) {
-        if (mkdir(MOUNT_DIR, 0755) == -1) {
-            log_error(LOGGER_FILESYSTEM, "Error al crear el directorio");
-            return; // Salir si no se pudo crear el directorio
-        } else {
-            log_info(LOGGER_FILESYSTEM, "Directorio '%s' creado con éxito.\n", MOUNT_DIR);
-        }
-    } else {
-        log_info(LOGGER_FILESYSTEM, "El directorio '%s' ya existe.\n", MOUNT_DIR);
-    }
-    char bitmap_path[256], bloques_path[256];
-    sprintf(bitmap_path, "%s/bitmap.dat", MOUNT_DIR);
-    sprintf(bloques_path, "%s/bloques.dat", MOUNT_DIR);
-
-    inicializar_archivo(bitmap_path, BLOCK_COUNT / 8, "bitmap.dat");
-    inicializar_archivo(bloques_path, BLOCK_COUNT * BLOCK_SIZE, "bloques.dat");
 }
 
 void iniciar_conexiones() {
@@ -163,10 +125,10 @@ void* gestionar_conexiones(void* void_args) {
         // Recibir código de operación
         ssize_t bytes_recibidos = recv(socket_cliente, &cod, sizeof(op_code), MSG_WAITALL);
         if (bytes_recibidos != sizeof(op_code)) {
-            log_error(logger, "Error al recibir código de operación, bytes recibidos: %zd", bytes_recibidos);
+            log_error(logger, "Error al recibir código de operacion, bytes recibidos: %zd", bytes_recibidos);
             break;
         }
-        log_info(logger, "Se recibió el código de operación: %d", cod);
+        log_info(logger, "Se recibió el código de operacion: %d", cod);
 
         switch (cod) {
             case HANDSHAKE_memoria:

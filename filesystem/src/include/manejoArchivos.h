@@ -3,6 +3,8 @@
 
 extern char* bitmap_memoria;
 
+void inicializar_archivo(char*, size_t, char*);
+void iniciar_archivos();
 int crear_archivo_dump(char*, char*, int);
 void escribir_en_bloques(char*, int, int);
 int asignar_bloque();
