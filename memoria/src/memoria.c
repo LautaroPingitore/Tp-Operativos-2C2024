@@ -182,23 +182,11 @@ void* procesar_conexion_memoria(void *void_args){
         }
 
         usleep(RETARDO_RESPUESTA * 1000);
+        log_info(LOGGER_MEMORIA, "CODIGO = %d, SOCKET = %d", cod, cliente_socket);
 
         switch (cod) {
             case HANDSHAKE_kernel: // Simplemente avisa que se conecta a kernel 
                 log_info(LOGGER_MEMORIA, "## KERNEL Conectado - FD del socket: <%d>", cliente_socket);
-                break;
-
-            case MENSAJE:
-                log_warning(LOGGER_MEMORIA, "ENTRO A MSJ");
-                char* respuesta = recibir_mensaje(cliente_socket);
-                log_warning(LOGGER_MEMORIA, "MENSAJE = %s", respuesta);
-                if (respuesta && strcmp(respuesta, "OK") == 0) {
-                    mensaje_okey = true;
-                } else {
-                    mensaje_okey = false;
-                }
-                sem_post(&sem_respuesta);
-                free(respuesta);
                 break;
 
             case PROCESS_CREATE:
@@ -290,6 +278,19 @@ void* procesar_conexion_memoria(void *void_args){
                     enviar_mensaje("ERROR", cliente_socket);
                 }
 
+                break;
+
+            case MENSAJE:
+                log_warning(LOGGER_MEMORIA, "ENTRO A MSJ");
+                char* respuesta = recibir_mensaje(cliente_socket);
+                log_warning(LOGGER_MEMORIA, "MENSAJE = %s", respuesta);
+                if (respuesta && strcmp(respuesta, "OK") == 0) {
+                    mensaje_okey = true;
+                } else {
+                    mensaje_okey = false;
+                }
+                sem_post(&sem_respuesta);
+                free(respuesta);
                 break;
 
             case HANDSHAKE_cpu: //AVISA QUE SE CONECTO A CPU

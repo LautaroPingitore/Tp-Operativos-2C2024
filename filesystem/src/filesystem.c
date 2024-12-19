@@ -144,9 +144,10 @@ void* gestionar_conexiones(void* void_args) {
                 t_archivo_dump* archivo = recibir_datos_archivo(socket_cliente);
                 int resultado = crear_archivo_dump(archivo->nombre, archivo->contenido, archivo->tamanio_contenido);
                 if (resultado == -1) {
+                    log_error(LOGGER_FILESYSTEM, "Error al crear el archivo");
                     enviar_mensaje("Error", socket_cliente);
                 } else {
-                    log_info(logger, "## Archivo Creado: <%s> - Tamaño: <%d>", archivo->nombre, archivo->tamanio_contenido);
+                    log_info(logger, "## Archivo Creado: %s - Tamaño: <%d>", archivo->nombre, archivo->tamanio_contenido);
                     log_info(logger, "## Fin de solicitud - Archivo: %s", archivo->nombre);
                     enviar_mensaje("OK", socket_cliente);
                 }
