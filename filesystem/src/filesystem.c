@@ -141,15 +141,14 @@ void* gestionar_conexiones(void* void_args) {
                 break;
 
             case DUMP_MEMORY:
-                log_info(logger, "ENTRO A DUMP_MEMORY");
                 t_archivo_dump* archivo = recibir_datos_archivo(socket_cliente);
                 int resultado = crear_archivo_dump(archivo->nombre, archivo->contenido, archivo->tamanio_contenido);
                 if (resultado == -1) {
                     enviar_mensaje("Error", socket_cliente);
                 } else {
-                    enviar_mensaje("OK", socket_cliente);
                     log_info(logger, "## Archivo Creado: <%s> - Tamaño: <%d>", archivo->nombre, archivo->tamanio_contenido);
                     log_info(logger, "## Fin de solicitud - Archivo: %s", archivo->nombre);
+                    enviar_mensaje("OK", socket_cliente);
                 }
                 free(archivo->contenido);
                 free(archivo->nombre);
@@ -188,23 +187,23 @@ t_archivo_dump* deserializar_archivo_dump(t_buffer* buffer) {
 
     uint32_t tamanio_nombre, tamanio_contenido;
 
-    memcpy(&(tamanio_nombre), stream + desplazamiento, sizeof(uint32_t));
+    memcpy(&(archivo_recibido->tamanio_nombre), stream + desplazamiento, sizeof(uint32_t));
     desplazamiento += sizeof(uint32_t);
-    archivo_recibido->tamanio_nombre = tamanio_nombre;
+    tamanio_nombre = archivo_recibido->tamanio_nombre;
 
     archivo_recibido->nombre = malloc(tamanio_nombre);
     if(archivo_recibido->nombre == NULL) {
         free(archivo_recibido);
-        printf("Error en nombre archivo");
+        printf("Error en nombre archivo\n");
         return NULL;
     }
 
     memcpy(archivo_recibido->nombre, stream + desplazamiento, tamanio_nombre);
     desplazamiento += tamanio_nombre;
 
-    memcpy(&(tamanio_contenido), stream + desplazamiento, sizeof(uint32_t));
+    memcpy(&(archivo_recibido->tamanio_contenido), stream + desplazamiento, sizeof(uint32_t));
     desplazamiento += sizeof(uint32_t);
-    archivo_recibido->tamanio_contenido = tamanio_contenido;
+    tamanio_contenido = archivo_recibido->tamanio_contenido;
 
     archivo_recibido->contenido = malloc(tamanio_contenido);
     if(archivo_recibido->contenido == NULL) {

@@ -373,6 +373,7 @@ void enviar_mensaje(char *mensaje, int socket_cliente)
 	if(enviar_paquete(paquete, socket_cliente) != 0) {
 		perror("Error al enviar el paquete");
 	}
+
 	eliminar_paquete(paquete);
 }
 

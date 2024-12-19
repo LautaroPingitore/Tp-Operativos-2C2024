@@ -256,13 +256,11 @@ int solicitar_archivo_filesystem(uint32_t pid, uint32_t tid) {
     sprintf(nombre_archivo, "<%d>-<%d>-<%d>", pid, tid, tiempo->tm_sec);
 
     char* contenido_proceso = obtener_contenido_proceso(pid, tid);
-    int tamanio = strlen(contenido_proceso);
-    log_warning(LOGGER_MEMORIA, "EL TAMANIO DEL CONTENIDO ES DE %d", tamanio);
+    log_warning(LOGGER_MEMORIA, "%s", contenido_proceso);
+
+    int tamanio = strlen(contenido_proceso) + 1;
+
     int resultado = mandar_solicitud_dump_memory(nombre_archivo, contenido_proceso, tamanio);
-
-
-    // Liberar memoria si es necesario
-    //free(contenido_proceso); DESCOMENTAR DESPUES :P
 
     return resultado;
 }
@@ -288,16 +286,39 @@ char* obtener_contenido_proceso(uint32_t pid, uint32_t tid) {
     contenido[0] = '\0'; // Inicializar el string.
 
     // Agregar encabezado "<PID> <TID>"
-    snprintf(contenido, tamanio_total, "<%d> <%d>\n", pid, tid);
+    snprintf(contenido, tamanio_total, "<%d> <%d> | ", pid, tid);
 
     // Agregar los registros al contenido
     for (int i = 0; i < 8; i++) {
         char linea[20]; // Espacio suficiente para "REGISTRO: valor\n"
-        snprintf(linea, sizeof(linea), "%s %u\n", nombres_registros[i], ((uint32_t*)registros)[i]);
+        snprintf(linea, sizeof(linea), "%s %u | ", nombres_registros[i], ((uint32_t*)registros)[i]);
         strcat(contenido, linea);
     }
 
     return contenido;
+}
+
+int mandar_solicitud_dump_memory(char* nombre_archivo, char* contenido_proceso, uint32_t tamanio) {
+    t_paquete* paquete = crear_paquete_con_codigo_de_operacion(DUMP_MEMORY);
+    uint32_t tamanio_nombre = strlen(nombre_archivo) + 1;
+    
+    paquete->buffer->size = sizeof(uint32_t) * 2 + tamanio_nombre + tamanio;
+    paquete->buffer->stream = malloc(paquete->buffer->size);
+
+    int desplazamiento = 0;
+
+    memcpy(paquete->buffer->stream + desplazamiento, &(tamanio_nombre), sizeof(uint32_t));
+    desplazamiento += sizeof(uint32_t);
+    memcpy(paquete->buffer->stream + desplazamiento, nombre_archivo, tamanio_nombre);
+    desplazamiento += tamanio_nombre;
+    memcpy(paquete->buffer->stream + desplazamiento, &(tamanio), sizeof(uint32_t));
+    desplazamiento += sizeof(uint32_t);
+    memcpy(paquete->buffer->stream + desplazamiento, contenido_proceso, tamanio);
+   
+    int resultado = enviar_paquete(paquete, socket_memoria_filesystem);
+    eliminar_paquete(paquete);
+   
+    return resultado;
 }
 
 t_proceso_memoria* obtener_proceso_memoria(uint32_t pid) {
@@ -527,29 +548,6 @@ void procesar_actualizacion_contexto(int socket_cliente, uint32_t pid, uint32_t 
     enviar_mensaje("ERROR", socket_cliente);
 }
 
-
-int mandar_solicitud_dump_memory(char* nombre_archivo, char* contenido_proceso, uint32_t tamanio) {
-    t_paquete* paquete = crear_paquete_con_codigo_de_operacion(DUMP_MEMORY);
-    uint32_t tamanio_nombre = strlen(nombre_archivo) + 1;
-    
-    paquete->buffer->size = sizeof(uint32_t) * 3 + tamanio_nombre;
-    paquete->buffer->stream = malloc(paquete->buffer->size);
-
-    int desplazamiento = 0;
-
-    memcpy(paquete->buffer->stream + desplazamiento, &(tamanio_nombre), sizeof(uint32_t));
-    desplazamiento += sizeof(uint32_t);
-    memcpy(paquete->buffer->stream + desplazamiento, nombre_archivo, tamanio_nombre);
-    desplazamiento += tamanio_nombre;
-    memcpy(paquete->buffer->stream + desplazamiento, &(tamanio), sizeof(uint32_t));
-    desplazamiento += sizeof(uint32_t);
-    memcpy(paquete->buffer->stream + desplazamiento, contenido_proceso, tamanio);
-   
-    int resultado = enviar_paquete(paquete, socket_memoria_filesystem);
-    eliminar_paquete(paquete);
-   
-    return resultado;
-}
 
 // =========|
 // WRITE MEM|
