@@ -255,7 +255,7 @@ void enviar_interrupcion_segfault(uint32_t pid, int socket) {
     eliminar_paquete(paquete);
 }
 
-void enviar_valor_a_memoria(int socket, uint32_t dire_fisica, uint32_t* valor) {
+void enviar_valor_a_memoria(int socket, uint32_t dire_fisica, uint32_t valor) {
     t_paquete *paquete = crear_paquete_con_codigo_de_operacion(PEDIDO_WRITE_MEM);
     
     paquete->buffer->size = sizeof(uint32_t) * 4;

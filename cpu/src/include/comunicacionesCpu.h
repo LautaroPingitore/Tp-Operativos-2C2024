@@ -16,7 +16,7 @@ void devolver_control_al_kernel();
 
 // INSTRUCCIONES
 void enviar_interrupcion_segfault(uint32_t, int);
-void enviar_valor_a_memoria(int, uint32_t, uint32_t*);
+void enviar_valor_a_memoria(int, uint32_t, uint32_t);
 void enviar_solicitud_valor_memoria(int, uint32_t);
 uint32_t recibir_valor_de_memoria(int);
 

@@ -601,7 +601,7 @@ int escribir_memoria(uint32_t direccion_fisica, uint32_t valor) {
         return -1;
     }
     
-    memcpy((uint32_t*)memoria_usuario + direccion_fisica, &valor, sizeof(uint32_t));
+    memcpy((uint8_t*)memoria_usuario + direccion_fisica, &valor, sizeof(uint32_t));
    
     return 1;
 }
@@ -646,7 +646,7 @@ uint32_t leer_memoria(uint32_t direccion_fisica) {
     }
 
     uint32_t valor;
-    memcpy(&valor, (uint32_t*) memoria_usuario + direccion_fisica, sizeof(uint32_t));
+    memcpy(&valor, (uint8_t*) memoria_usuario + direccion_fisica, sizeof(uint32_t));
 
     return valor;
 }
