@@ -65,7 +65,7 @@ void read_mem(char* reg_datos, char* reg_direccion) {
     uint32_t *registro_datos = obtener_registro(reg_datos);
     uint32_t *registro_direccion = obtener_registro(reg_direccion);
 
-    if (!registro_datos || registro_direccion == -1) {
+    if (!registro_datos || !registro_direccion) {
         log_warning(LOGGER_CPU, "Error: Registro inválido en read_mem.");
         return;
     }
@@ -91,7 +91,7 @@ void write_mem(char* reg_direccion, char* reg_datos) {
     uint32_t *reg_dire = obtener_registro(reg_direccion); // DIRECCION LOGICA
     uint32_t *reg_dat = obtener_registro(reg_datos); // VALOR QUE SE VA A ESCRIBIR EN LA MEMORIA DE SISTEMA
 
-    if (reg_dire == -1 || !reg_dat) {
+    if (!reg_dire || !reg_dat) {
         log_warning(LOGGER_CPU, "Error: Registro inválido en write_mem.");
         return;
     }
