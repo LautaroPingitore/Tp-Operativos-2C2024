@@ -446,18 +446,15 @@ int enviar_instruccion(int socket, t_instruccion* inst) {
 }
 
 
-void enviar_valor_leido_cpu(int socket, uint32_t dire_fisica, uint32_t valor) {
+void enviar_valor_leido_cpu(int socket, uint32_t valor) {
     t_paquete* paquete = crear_paquete_con_codigo_de_operacion(PEDIDO_READ_MEM);
 
-    paquete->buffer->size = sizeof(uint32_t) * 2;
+    paquete->buffer->size = sizeof(uint32_t);
     paquete->buffer->stream = malloc(paquete->buffer->size);
 
 
     int desplazamiento = 0;
 
-
-    memcpy(paquete->buffer->stream + desplazamiento, &(dire_fisica), sizeof(uint32_t));
-    desplazamiento += sizeof(uint32_t);
     memcpy(paquete->buffer->stream + desplazamiento, &(valor), sizeof(uint32_t));
    
    
@@ -622,7 +619,7 @@ int escribir_memoria(uint32_t direccion_fisica, uint32_t valor) {
 
     uint32_t valor_leido;
     memcpy(&valor_leido, (uint8_t*) memoria_sistema + direccion_fisica, sizeof(uint32_t));
-    log_warning(LOGGER_MEMORIA, "SE ESCRIBIO %d, EN %d", valor_leido, direccion_fisica);
+    log_info(LOGGER_MEMORIA, "SE ESCRIBIO %d, EN %d", valor_leido, direccion_fisica);
    
     return 1;
 }
@@ -667,7 +664,7 @@ uint32_t leer_memoria(uint32_t direccion_fisica) {
     uint32_t valor;
     memcpy(&valor, (uint8_t*) memoria_sistema + direccion_fisica, sizeof(uint32_t));
 
-    log_warning(LOGGER_MEMORIA, "SE LEYO EL VALOR %d", valor);
+    log_info(LOGGER_MEMORIA, "SE LEYO EL VALOR %d", valor);
 
     return valor;
 }

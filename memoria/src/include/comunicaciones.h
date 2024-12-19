@@ -76,7 +76,7 @@ typedef struct {
 // FUNCIONES MEJORADAS 2.0247234214321473216487537826432
 void eliminar_espacio_hilo(t_hilo_memoria*);
 int enviar_instruccion(int, t_instruccion*);
-void enviar_valor_leido_cpu(int, uint32_t, uint32_t);
+void enviar_valor_leido_cpu(int, uint32_t);
 void procesar_solicitud_contexto(int, uint32_t, uint32_t);
 void enviar_contexto_cpu(int, t_proceso_memoria*);
 void procesar_actualizacion_contexto(int, uint32_t, uint32_t, t_registros*);

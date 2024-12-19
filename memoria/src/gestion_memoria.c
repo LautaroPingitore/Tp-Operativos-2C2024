@@ -88,6 +88,10 @@ t_particion* buscar_hueco(uint32_t tamano_requerido, const char* algoritmo) {
 t_particion* dividir_particion(t_particion* particion, uint32_t tamanio, uint32_t espacio_sobrante) {
     pthread_mutex_lock(&mutex_particiones);
 
+    if(particion == NULL) {
+        return NULL;
+    }
+
     int posicion_lista = buscar_posicion_particion(particion);
     if(posicion_lista == -1) {
         log_error(LOGGER_MEMORIA, "ERROR AL ENCONTRAR LA POSICION");
@@ -122,7 +126,7 @@ bool es_fija() {
 int buscar_posicion_particion(t_particion* particion) {
     for(int i=0; i < list_size(lista_particiones); i++) {
         t_particion* part = list_get(lista_particiones, i);
-        if(part->inicio==particion->inicio){
+        if(part->inicio == particion->inicio){
             return i;
         }
     }

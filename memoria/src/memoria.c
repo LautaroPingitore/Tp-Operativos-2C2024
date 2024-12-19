@@ -275,7 +275,6 @@ void* procesar_conexion_memoria(void *void_args){
                     log_info(LOGGER_MEMORIA, "## Memory Dump solicitado - (<%d>:<%d>)",
                              ident_dm->pid, ident_dm->tid);
                 } else {
-                    log_warning(LOGGER_MEMORIA, ":V");
                     enviar_mensaje("ERROR", cliente_socket);
                 }
 
@@ -328,7 +327,7 @@ void* procesar_conexion_memoria(void *void_args){
                 t_read_mem* read_mem = recibir_read_mem(cliente_socket);
                 uint32_t valor_leido = leer_memoria(read_mem->direccion_fisica);
                 if (valor_leido != SEGF_FAULT) {
-                    enviar_valor_leido_cpu(cliente_socket, read_mem->direccion_fisica, valor_leido);
+                    enviar_valor_leido_cpu(cliente_socket, valor_leido);
                     uint32_t tam = sizeof(valor_leido);
                     log_info(LOGGER_MEMORIA, "## <Lectura> - (<%d>:<%d>) - Dir. Física: <%d> - Tamaño: <%d>",
                              read_mem->pid, read_mem->tid, read_mem->direccion_fisica, tam);
@@ -376,7 +375,7 @@ void* procesar_conexion_memoria(void *void_args){
             case SOLICITUD_LIMITE_MEMORIA:
                 t_pedido_cpu* pedido_limite = recibir_pedido_cpu(cliente_socket);
                 free(pedido_limite);
-                int resultado_lm = enviar_valor_uint_cpu(cliente_socket, 4, SOLICITUD_LIMITE_MEMORIA);
+                int resultado_lm = enviar_valor_uint_cpu(cliente_socket, sizeof(uint32_t), SOLICITUD_LIMITE_MEMORIA);
                 if(resultado_lm == 0) {
                     log_info(LOGGER_MEMORIA, "Limite enviado");
                 } else {

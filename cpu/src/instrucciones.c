@@ -56,7 +56,6 @@ void set_registro(char* registro, char *valor) {
     }
 
     *reg = atoi(valor);
-    log_warning(LOGGER_CPU, "VALOR DEL REGISTRO %s = %d", registro, *reg);
 }
 
 //Lee el valor de memoria correspondiente a
@@ -119,7 +118,6 @@ void sum_registros(char* destino, char* origen) {
     }
     
     *dest += *orig;
-    log_warning(LOGGER_CPU, "VALOR DEL REGISTRO %s = %d", destino, *dest);
 }
 
 //Resta al Registro Destino el Registro Origen y deja el resultado en el Registro Destino.
@@ -138,7 +136,6 @@ void sub_registros(char* destino, char* origen) {
         *dest -= *orig;
     }
     
-    log_warning(LOGGER_CPU, "VALOR DEL REGISTRO %s = %d", destino, *dest);
 }
 
 //Si el valor del registro es distinto de cero, actualiza el program counter
@@ -153,7 +150,6 @@ void jnz_pc(char* registro, uint32_t nro_pc) {
     
     if(*reg != 0) {
         hilo_actual->PC = nro_pc - 1;
-        log_warning(LOGGER_CPU, "VALOR DEL REGISTRO %s = %d", registro, *reg);
         actualizar_listas_cpu(pcb_actual, hilo_actual);
     }
 }
