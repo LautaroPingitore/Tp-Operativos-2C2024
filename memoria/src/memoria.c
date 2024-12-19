@@ -280,8 +280,9 @@ void* procesar_conexion_memoria(void *void_args){
                     enviar_mensaje("ERROR", cliente_socket);
                 }
 
-                log_warning(LOGGER_MEMORIA, "BBBB");
+                log_warning(LOGGER_MEMORIA, "VA A HACER EL WAIT");
                 sem_wait(&sem_respuesta);
+                log_warning(LOGGER_MEMORIA, "HIZO EL WAIT");
 
                 if(mensaje_okey) {
                     enviar_mensaje("OK", cliente_socket);
