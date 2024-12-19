@@ -116,29 +116,6 @@ void liberar_bloque(int numero_bloque) {
     guardar_bitmap();
 }
 
-// void escribir_en_bloques(char* contenido, int tamanio, int bloque_indice) {
-//     char bloques_path[256];
-//     sprintf(bloques_path, "%s/bloques.dat", MOUNT_DIR);
-
-//     FILE* bloques_file = fopen(bloques_path, "r+");
-//     if (!bloques_file) return;
-
-//     // Escribir contenido en bloques
-//     int offset = 0;
-//     while (tamanio > 0) {
-//         int bloque_datos = asignar_bloque();
-//         if (bloque_datos == -1) break;
-
-//         fseek(bloques_file, bloque_datos * BLOCK_SIZE, SEEK_SET);
-//         int bytes_a_escribir = (tamanio < BLOCK_SIZE) ? tamanio : BLOCK_SIZE;
-//         fwrite(contenido + offset, 1, bytes_a_escribir, bloques_file);
-
-//         offset += bytes_a_escribir;
-//         tamanio -= bytes_a_escribir;
-//     }
-
-//     fclose(bloques_file);
-// }
 
 int crear_archivo_dump(char* nombre_archivo, char* contenido, int tamanio) {
     // Calcular bloques necesarios
@@ -165,8 +142,7 @@ int crear_archivo_dump(char* nombre_archivo, char* contenido, int tamanio) {
 
     // Escribir contenido en bloques
     escribir_en_bloques(contenido, tamanio, bloque_indice);
-    log_info(LOGGER_FILESYSTEM, "Archivo creado");
-
+    
     return 1;
 }
 
