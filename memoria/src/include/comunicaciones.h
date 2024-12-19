@@ -50,6 +50,11 @@ typedef struct {
 
 typedef struct {
     uint32_t pid;
+    uint32_t dire_reg;
+} t_pedido_cpu;
+
+typedef struct {
+    uint32_t pid;
     uint32_t tid;
     uint32_t dire_fisica_wm; 
     uint32_t valor_escribido;
@@ -88,6 +93,8 @@ t_pid_tid* recibir_identificadores(int);
 t_pid_tid* deserializar_identificadores(t_buffer*);
 t_actualizar_contexto* recibir_actualizacion(int);
 t_actualizar_contexto* deserializar_actualizacion(t_buffer*);
+t_pedido_cpu* recibir_pedido_cpu(int);
+t_pedido_cpu* deserializar_pedido_cpu(t_buffer*);
 t_write_mem* recibir_write_mem(int);
 t_write_mem* deserializar_write_mem(t_buffer*);
 t_read_mem* recibir_read_mem(int);

@@ -50,7 +50,7 @@ void inicializar_programa() {
 
     list_destroy_and_destroy_elements(particiones_fijas, free);
 
-    inicializar_memoria_usuario();
+    inicializar_memoria_sistema();
 
     // Configurar conexiones de memoria a otros módulos
     log_info(LOGGER_MEMORIA, "Inicializando servidor de memoria en el puerto %s", PUERTO_ESCUCHA);
@@ -358,8 +358,14 @@ void* procesar_conexion_memoria(void *void_args){
                 break;
 
             case SOLICITUD_BASE_MEMORIA:
-                uint32_t pid_bm = recibir_pid(cliente_socket);
-                int resultado_bm = enviar_valor_uint_cpu(cliente_socket, pcb_bm->base, SOLICITUD_BASE_MEMORIA);
+                t_pedido_cpu* pedido_base = recibir_pedido_cpu(cliente_socket);
+                uint32_t base = buscar_base_registro(pedido_base->pid, pedido_base->dire_reg);
+                if (base == -1) {
+                    log_error(LOGGER_MEMORIA, "No se pudo encontrar la base para el PID %d y registro %d", 
+                            pedido_base->pid, pedido_base->dire_reg);
+                    break;
+                }
+                int resultado_bm = enviar_valor_uint_cpu(cliente_socket, base, SOLICITUD_BASE_MEMORIA);
                 if(resultado_bm == 0) {
                     log_info(LOGGER_MEMORIA, "Base enviada");
                 } else {
@@ -368,9 +374,9 @@ void* procesar_conexion_memoria(void *void_args){
                 break;
 
             case SOLICITUD_LIMITE_MEMORIA:
-                uint32_t pid_lm = recibir_pid(cliente_socket);
-                t_proceso_memoria* pcb_lm = obtener_proceso_memoria(pid_lm);
-                int resultado_lm = enviar_valor_uint_cpu(cliente_socket, pcb_lm->limite, SOLICITUD_LIMITE_MEMORIA);
+                t_pedido_cpu* pedido_limite = recibir_pedido_cpu(cliente_socket);
+                free(pedido_limite);
+                int resultado_lm = enviar_valor_uint_cpu(cliente_socket, 4, SOLICITUD_LIMITE_MEMORIA);
                 if(resultado_lm == 0) {
                     log_info(LOGGER_MEMORIA, "Limite enviado");
                 } else {
@@ -393,7 +399,7 @@ void* procesar_conexion_memoria(void *void_args){
 }
 
 void terminar_memoria() {
-    free(memoria_usuario);
+    free(memoria_sistema);
     list_destroy_and_destroy_elements(lista_particiones, free);
     destruir_listas();
     destruir_mutexs();

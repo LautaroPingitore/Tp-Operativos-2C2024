@@ -314,21 +314,46 @@ uint32_t recibir_valor_de_memoria(int socket) {
 }
 
 // FUNCIONES MMU
+void enviar_solicitud_base_memoria(int socket, uint32_t pid, uint32_t dire_reg) {
+    t_paquete* paquete = crear_paquete_con_codigo_de_operacion(SOLICITUD_BASE_MEMORIA);
 
-void enviar_solicitud_memoria(int socket, uint32_t valor, op_code codigo, const char* descripcion) {
-    t_paquete* paquete = crear_paquete_con_codigo_de_operacion(codigo);
-
-    paquete->buffer->size = sizeof(uint32_t);
+    paquete->buffer->size = 2* sizeof(uint32_t);
     paquete->buffer->stream = malloc(paquete->buffer->size);
 
     int desplazamiento = 0;
 
-    memcpy(paquete->buffer->stream + desplazamiento, &(valor), sizeof(uint32_t));
+    memcpy(paquete->buffer->stream + desplazamiento, &(pid), sizeof(uint32_t));
+    desplazamiento += sizeof(uint32_t);
+
+    memcpy(paquete->buffer->stream + desplazamiento, &(dire_reg), sizeof(uint32_t));
 
     if (enviar_paquete(paquete, socket) < 0) {
-        log_error(LOGGER_CPU, "Error al enviar solicitud de %s para PID: %d", descripcion, pid);
+        log_error(LOGGER_CPU, "Error al enviar solicitud de BASE para PID: %d", pid);
     } else {
-        log_info(LOGGER_CPU, "Solicitud de %s enviada para PID: %d", descripcion, pid);
+        log_info(LOGGER_CPU, "Solicitud de BASE enviada para PID: %d", pid);
+    }
+
+    eliminar_paquete(paquete);
+}
+
+
+void enviar_solicitud_limite_memoria(int socket, uint32_t pid, uint32_t dire_reg) {
+    t_paquete* paquete = crear_paquete_con_codigo_de_operacion(SOLICITUD_LIMITE_MEMORIA);
+
+    paquete->buffer->size = 2* sizeof(uint32_t);
+    paquete->buffer->stream = malloc(paquete->buffer->size);
+
+    int desplazamiento = 0;
+
+    memcpy(paquete->buffer->stream + desplazamiento, &(pid), sizeof(uint32_t));
+    desplazamiento += sizeof(uint32_t);
+
+    memcpy(paquete->buffer->stream + desplazamiento, &(dire_reg), sizeof(uint32_t));
+
+    if (enviar_paquete(paquete, socket) < 0) {
+        log_error(LOGGER_CPU, "Error al enviar solicitud de LIMITE para PID: %d", pid);
+    } else {
+        log_info(LOGGER_CPU, "Solicitud de LIMITE enviada para PID: %d", pid);
     }
 
     eliminar_paquete(paquete);

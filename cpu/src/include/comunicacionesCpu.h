@@ -21,7 +21,8 @@ void enviar_solicitud_valor_memoria(int, uint32_t);
 uint32_t recibir_valor_de_memoria(int);
 
 // MMU
-void enviar_solicitud_memoria(int, uint32_t, op_code, const char*);
+void enviar_solicitud_base_memoria(int, uint32_t, uint32_t);
+void enviar_solicitud_limite_memoria(int, uint32_t, uint32_t);
 uint32_t recibir_entero(int, const char*);
 
 t_proceso_cpu* recibir_proceso(int);

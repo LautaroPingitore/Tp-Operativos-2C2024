@@ -1,7 +1,7 @@
 #include "include/gestor.h"
 
 // Variables Globales
-void* memoria_usuario;
+void* memoria_sistema;
 t_list* lista_particiones;
 pthread_mutex_t mutex_particiones = PTHREAD_MUTEX_INITIALIZER;
 
@@ -35,14 +35,42 @@ void inicializar_lista_particiones(char* esquema, t_list* particiones_fijas) {
     log_info(LOGGER_MEMORIA, "Bajo el algoritmo de busqueda: %s", ALGORITMO_BUSQUEDA);
 }
 
-void inicializar_memoria_usuario() {
-    memoria_usuario = malloc(TAM_MEMORIA);
-    if (memoria_usuario == NULL) {
+void inicializar_memoria_sistema() {
+    memoria_sistema = malloc(TAM_MEMORIA);
+    if (memoria_sistema == NULL) {
         perror("Error al inicializar la memoria de usuario");
         exit(EXIT_FAILURE);
     }
-    memset(memoria_usuario, 0, TAM_MEMORIA);
+    memset(memoria_sistema, 0, TAM_MEMORIA);
     log_info(LOGGER_MEMORIA, "Memoria de Usuario inicializada con tamanio: %d", TAM_MEMORIA);
+}
+
+uint32_t buscar_base_registro(uint32_t pid, uint32_t nro_registro) {
+    if (nro_registro < 0 || nro_registro >= 8) {
+        fprintf(stderr, "Número de registro inválido (debe estar entre 0 y 7)\n");
+        return -1;
+    }
+
+    // Calcula la base del proceso en memoria
+    uint32_t base = pid * (8 * sizeof(uint32_t));
+    
+    // Valida que la base esté dentro del rango permitido
+    if (base >= TAM_MEMORIA) {
+        fprintf(stderr, "PID fuera del rango de memoria asignada\n");
+        return -1;
+    }
+
+    // Calcula la dirección del registro
+    uint32_t registro_direccion = base + (nro_registro * sizeof(uint32_t));
+    log_warning(LOGGER_MEMORIA, "BASE = %d", registro_direccion);
+
+    // Valida que la dirección del registro esté dentro de los límites
+    if (registro_direccion >= TAM_MEMORIA) {
+        fprintf(stderr, "Registro fuera del rango de memoria asignada\n");
+        return -1;
+    }
+
+    return registro_direccion;
 }
 
 // Función general para buscar hueco usando un algoritmo especificado

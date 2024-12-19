@@ -556,6 +556,26 @@ int mandar_solicitud_dump_memory(char* nombre_archivo, char* contenido_proceso, 
 // =========|
 // WRITE MEM|
 // =========|
+t_pedido_cpu* recibir_pedido_cpu(int socket) {
+    t_paquete* paquete = recibir_paquete(socket);
+    t_pedido_cpu* pedido = deserializar_pedido_cpu(paquete->buffer);
+    eliminar_paquete(paquete);
+    return pedido;
+}
+
+t_pedido_cpu* deserializar_pedido_cpu(t_buffer* buffer) {
+    t_pedido_cpu* pedido = malloc(sizeof(t_pedido_cpu));
+
+    void * stream = buffer->stream;
+    int desplazamiento = 0;
+
+    memcpy(&(pedido->pid), stream + desplazamiento, sizeof(uint32_t));
+    desplazamiento += sizeof(uint32_t);
+    memcpy(&(pedido->dire_reg), stream + desplazamiento, sizeof(uint32_t));
+
+    return pedido;
+}
+
 t_write_mem* recibir_write_mem(int socket) {
     t_paquete* paquete = recibir_paquete(socket);
     t_write_mem* wri_mem = deserializar_write_mem(paquete->buffer);
@@ -591,7 +611,6 @@ t_write_mem* deserializar_write_mem(t_buffer* buffer) {
     return wri_mem;
 }
 
-
 int escribir_memoria(uint32_t direccion_fisica, uint32_t valor) {
     // Verificar que la dirección física esté dentro de los límites de la memoria de usuario
     if (direccion_fisica + sizeof(uint32_t) > TAM_MEMORIA) {
@@ -599,10 +618,10 @@ int escribir_memoria(uint32_t direccion_fisica, uint32_t valor) {
         return -1;
     }
     
-    memcpy((uint8_t*)memoria_usuario + direccion_fisica, &valor, sizeof(uint32_t));
+    memcpy((uint8_t*)memoria_sistema + direccion_fisica, &valor, sizeof(uint32_t));
 
     uint32_t valor_leido;
-    memcpy(&valor_leido, (uint8_t*) memoria_usuario + direccion_fisica, sizeof(uint32_t));
+    memcpy(&valor_leido, (uint8_t*) memoria_sistema + direccion_fisica, sizeof(uint32_t));
     log_warning(LOGGER_MEMORIA, "SE ESCRIBIO %d, EN %d", valor_leido, direccion_fisica);
    
     return 1;
@@ -646,7 +665,7 @@ uint32_t leer_memoria(uint32_t direccion_fisica) {
     }
 
     uint32_t valor;
-    memcpy(&valor, (uint8_t*) memoria_usuario + direccion_fisica, sizeof(uint32_t));
+    memcpy(&valor, (uint8_t*) memoria_sistema + direccion_fisica, sizeof(uint32_t));
 
     log_warning(LOGGER_MEMORIA, "SE LEYO EL VALOR %d", valor);
 
@@ -708,4 +727,3 @@ int enviar_valor_uint_cpu(int socket, uint32_t valor, op_code codigo) {
     eliminar_paquete(paquete);
     return resultado;
 }
-
