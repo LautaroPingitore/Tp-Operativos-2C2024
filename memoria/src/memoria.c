@@ -280,8 +280,6 @@ void* procesar_conexion_memoria(void *void_args){
                     enviar_mensaje("ERROR", cliente_socket);
                 }
 
-                free(ident_dm);
-
                 log_warning(LOGGER_MEMORIA, "BBBB");
                 sem_wait(&sem_respuesta);
 
