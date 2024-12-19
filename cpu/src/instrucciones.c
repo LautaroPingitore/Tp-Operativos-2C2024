@@ -63,14 +63,14 @@ void set_registro(char* registro, char *valor) {
 //y lo almacena en el Registro Datos.
 void read_mem(char* reg_datos, char* reg_direccion) {
     uint32_t *registro_datos = obtener_registro(reg_datos);
-    uint32_t registro_direccion = convertir_registro_a_uint(reg_direccion);
+    uint32_t *registro_direccion = obtener_registro(reg_direccion);
 
     if (!registro_datos || registro_direccion == -1) {
         log_warning(LOGGER_CPU, "Error: Registro inválido en read_mem.");
         return;
     }
 
-    uint32_t direccion_fisica = traducir_direccion(registro_direccion, pcb_actual->PID);
+    uint32_t direccion_fisica = traducir_direccion(*registro_direccion, pcb_actual->PID);
     if (direccion_fisica == SEGMENTATION_FAULT) {
         enviar_interrupcion_segfault(pcb_actual->PID, socket_cpu_memoria);
         return;
@@ -88,7 +88,7 @@ void read_mem(char* reg_datos, char* reg_direccion) {
 //direccion fisica de memoria obtenida a partir de la 
 //Direccion Logica almacenada en el Registro Direccion.
 void write_mem(char* reg_direccion, char* reg_datos) {
-    uint32_t reg_dire = convertir_registro_a_uint(reg_direccion); // DIRECCION LOGICA
+    uint32_t *reg_dire = obtener_registro(reg_direccion); // DIRECCION LOGICA
     uint32_t *reg_dat = obtener_registro(reg_datos); // VALOR QUE SE VA A ESCRIBIR EN LA MEMORIA DE SISTEMA
 
     if (reg_dire == -1 || !reg_dat) {
@@ -96,7 +96,7 @@ void write_mem(char* reg_direccion, char* reg_datos) {
         return;
     }
 
-    uint32_t direccion_fisica = traducir_direccion(reg_dire, pcb_actual->PID);
+    uint32_t direccion_fisica = traducir_direccion(*reg_dire, pcb_actual->PID);
     if (direccion_fisica == SEGMENTATION_FAULT) {
         enviar_interrupcion_segfault(pcb_actual->PID, socket_cpu_memoria);
         return;

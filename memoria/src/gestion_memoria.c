@@ -45,33 +45,45 @@ void inicializar_memoria_sistema() {
     log_info(LOGGER_MEMORIA, "Memoria de Usuario inicializada con tamanio: %d", TAM_MEMORIA);
 }
 
-uint32_t buscar_base_registro(uint32_t pid, uint32_t nro_registro) {
-    if (nro_registro < 0 || nro_registro >= 8) {
-        fprintf(stderr, "Número de registro inválido (debe estar entre 0 y 7)\n");
+uint32_t buscar_base_registro(uint32_t pid, uint32_t valor_registro) {
+    t_proceso_memoria* proceso = obtener_proceso_memoria(pid);
+
+    uint32_t base_registro = proceso->base + valor_registro;
+    if(base_registro > TAM_MEMORIA) {
+        log_error(LOGGER_MEMORIA, "REgistro fuera del ranfo de la memoria");
         return -1;
     }
 
-    // Calcula la base del proceso en memoria
-    uint32_t base = pid * (8 * sizeof(uint32_t));
-    log_warning(LOGGER_MEMORIA,"valor de base: %d",base);
-    // Valida que la base esté dentro del rango permitido
-    if (base >= TAM_MEMORIA) {
-        fprintf(stderr, "PID fuera del rango de memoria asignada\n");
-        return -1;
-    }
-
-    // Calcula la dirección del registro
-    uint32_t registro_direccion = base + (nro_registro * sizeof(uint32_t));
-    log_warning(LOGGER_MEMORIA, "BASE = %d", registro_direccion);
-
-    // Valida que la dirección del registro esté dentro de los límites
-    if (registro_direccion >= TAM_MEMORIA) {
-        fprintf(stderr, "Registro fuera del rango de memoria asignada\n");
-        return -1;
-    }
-
-    return registro_direccion;
+    return base_registro;
 }
+
+// uint32_t buscar_base_registro(uint32_t pid, uint32_t nro_registro) {
+//     if (nro_registro < 0 || nro_registro >= 8) {
+//         fprintf(stderr, "Número de registro inválido (debe estar entre 0 y 7)\n");
+//         return -1;
+//     }
+
+//     // Calcula la base del proceso en memoria
+//     uint32_t base = pid * (8 * sizeof(uint32_t));
+//     log_warning(LOGGER_MEMORIA,"valor de base: %d",base);
+//     // Valida que la base esté dentro del rango permitido
+//     if (base >= TAM_MEMORIA) {
+//         fprintf(stderr, "PID fuera del rango de memoria asignada\n");
+//         return -1;
+//     }
+
+//     // Calcula la dirección del registro
+//     uint32_t registro_direccion = base + (nro_registro * sizeof(uint32_t));
+//     log_warning(LOGGER_MEMORIA, "BASE = %d", registro_direccion);
+
+//     // Valida que la dirección del registro esté dentro de los límites
+//     if (registro_direccion >= TAM_MEMORIA) {
+//         fprintf(stderr, "Registro fuera del rango de memoria asignada\n");
+//         return -1;
+//     }
+
+//     return registro_direccion;
+// }
 
 // Función general para buscar hueco usando un algoritmo especificado
 t_particion* buscar_hueco(uint32_t tamano_requerido, const char* algoritmo) {
@@ -132,6 +144,7 @@ int buscar_posicion_particion(t_particion* particion) {
     }
     return -1;
 }
+
 
 // First Fit: Encuentra el primer hueco que cumpla con el tamaño requerido
 t_particion* buscar_hueco_first_fit(uint32_t tamano_requerido) {

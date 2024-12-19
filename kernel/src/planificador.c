@@ -747,7 +747,7 @@ void* ejecutar_temporizador_io(void* args) {
     log_warning(LOGGER_KERNEL, "## (<%d>:<%d>) - Bloqueado por <IO> durante %d", parametros->pid_hilo, parametros->tid, parametros->milisegundos);
     intentar_mover_a_execute();
 
-    usleep(30000 * 1000);//parametros->milisegundos * 1000);
+    usleep(parametros->milisegundos * 1000);
     desbloquear_hilo_bloqueado_io(parametros->pid_hilo, parametros->tid);
     return NULL;
 }
