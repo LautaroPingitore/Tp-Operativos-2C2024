@@ -4,6 +4,8 @@
 extern t_list* lista_particiones;
 extern void* memoria_sistema;
 
+extern pthread_mutex_t mutex_particiones;
+
 typedef struct {
     uint32_t inicio;
     uint32_t tamano;

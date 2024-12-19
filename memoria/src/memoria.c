@@ -207,8 +207,10 @@ void* procesar_conexion_memoria(void *void_args){
                     enviar_mensaje("ERROR",cliente_socket);
                     break;
                 }
+                log_info(LOGGER_MEMORIA, "Se recibio el proceso a crear %d", proceso_nuevo->pid);
                 
                 if (asignar_espacio_memoria(proceso_nuevo, ALGORITMO_BUSQUEDA) == -1) {
+                    log_warning(LOGGER_MEMORIA, "NO HAY ESPACIO");
                     enviar_mensaje("ERROR", cliente_socket);
                     free(proceso_nuevo->contexto);
                     free(proceso_nuevo);

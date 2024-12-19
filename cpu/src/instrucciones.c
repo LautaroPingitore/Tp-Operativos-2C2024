@@ -149,7 +149,7 @@ void jnz_pc(char* registro, uint32_t nro_pc) {
     }
     
     if(*reg != 0) {
-        hilo_actual->PC = nro_pc - 1;
+        hilo_actual->PC = nro_pc;
         actualizar_listas_cpu(pcb_actual, hilo_actual);
     }
 }

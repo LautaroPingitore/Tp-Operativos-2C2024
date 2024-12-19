@@ -9,6 +9,7 @@ void syscall_process_create(t_tcb* hilo_actual, char* path_proceso, int tamanio_
     log_info(LOGGER_KERNEL, "Syscall PROCESS_CREATE ejecutada para %s con tamanio %d y prioridad %d", path_proceso, tamanio_proceso, prioridad);
 
     mover_hilo_a_ready(hilo_actual);
+    log_warning(LOGGER_KERNEL, "AAAA");
 }
 
 void syscall_process_exit(uint32_t pid) {

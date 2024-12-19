@@ -15,6 +15,7 @@ void inicializar_datos(){
 
     pthread_mutex_init(&mutex_procesos, NULL);
     pthread_mutex_init(&mutex_instrucciones, NULL);
+    pthread_mutex_init(&mutex_particiones, NULL);
 
     sem_init(&sem_respuesta, 0, 0);
 }

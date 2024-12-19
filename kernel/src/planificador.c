@@ -177,7 +177,6 @@ void crear_proceso(char* path_proceso, int tamanio_proceso, int prioridad){
     //archivo_pseudocodigo* archivo = leer_archivo_pseudocodigo(path_proceso);
 
     t_pcb* pcb = crear_pcb(asignar_pid(), tamanio_proceso, inicializar_contexto(), NEW, path_proceso);
-
     //obtener_recursos_del_proceso(archivo, pcb);
     
     // EN LA LISTA DE NEW, READY, ETC TENDRIAN QUE SER HILOS, NO PROCESOS
@@ -223,6 +222,7 @@ int inicializar_proceso(t_pcb* pcb, char* path_proceso) {
         mover_hilo_a_ready(hilo_cero);
         return 1;
     } else {
+        log_warning(LOGGER_KERNEL, "No hay espacio para el proceso %d, se queda en NEW", pcb->PID);
         pthread_mutex_unlock(&mutex_mensaje);
         return -1;
     }
