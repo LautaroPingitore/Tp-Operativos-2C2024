@@ -77,7 +77,10 @@ void cargar_bitmap() {
 
     size_t bitmap_size = round(BLOCK_COUNT / 8);
     bitmap_memoria = malloc(bitmap_size);
-    fread(bitmap_memoria, 1, bitmap_size, bitmap);
+    size_t valor = fread(bitmap_memoria, 1, bitmap_size, bitmap);
+    if(valor < 0) {
+        log_error(LOGGER_FILESYSTEM, "ERROR AL LEER");
+    }
     fclose(bitmap);
 }
 
