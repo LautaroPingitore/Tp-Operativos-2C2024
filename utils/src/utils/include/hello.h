@@ -19,7 +19,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <sys/mman.h>
-#include <math.h>
+#include <dirent.h>
 #include "paquetes.h"
 #include "servidores.h"
 

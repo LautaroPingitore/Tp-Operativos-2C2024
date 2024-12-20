@@ -346,6 +346,102 @@ void liberar_recursos_proceso(t_pcb* pcb) {
     free(pcb);
 }
 
+void process_cancel(t_pcb* pcb) {
+    mover_a_exit(pcb);
+    log_info(LOGGER_KERNEL, "Se finalizo debido al error en el DUMP_MEMORY");
+    enviar_proceso_memoria(socket_kernel_memoria, pcb, PROCESS_EXIT);
+
+    sem_wait(&sem_mensaje);
+    if(!mensaje_okey) {
+        log_error(LOGGER_KERNEL, "ERROR AL LIBERAR EL PROCESO EN MEMORIA");
+        exit(EXIT_FAILURE);
+    }
+    terminar_hilos_proceso(pcb);
+    eliminar_pcb_lista(tabla_procesos, pcb->PID);
+    eliminar_path(pcb->PID);
+    liberar_recursos_proceso(pcb);
+    intentar_inicializar_proceso_de_new();
+}
+
+void terminar_hilos_proceso(t_pcb* pcb) {
+    eliminar_hilos_ready(pcb->PID);
+    eliminar_hilos_block_mutex(pcb->PID);
+    eliminar_hilos_block_join(pcb->PID);
+    eliminar_hilos_block_io(pcb);
+    list_destroy_and_destroy_elements(pcb->TIDS, free);
+}
+
+void eliminar_hilos_ready(uint32_t pid) {
+    pthread_mutex_lock(&mutex_cola_ready);
+    if(strcmp(ALGORITMO_PLANIFICACION, "CMN") == 0) {
+        for(int i=0; i < list_size(colas_multinivel); i++) {
+            t_cola_multinivel* cola_act = list_get(colas_multinivel, i);
+            if(list_size(cola_act->cola) > 0) {
+                for(int j=0; j < list_size(cola_act->cola); j++) {
+                    t_tcb* act = list_get(cola_act->cola, j);
+                    if(act->PID_PADRE == pid) {
+                        list_remove(cola_act->cola, j);
+                        j--;
+                        free(act->archivo);
+                        free(act);
+                    }
+                }
+            }
+        }
+    } else {
+        for(int k=0; k < list_size(cola_ready); k++) {
+            t_tcb* act2 = list_get(cola_ready, k);
+            if(act2->PID_PADRE == pid) {
+                list_remove(cola_ready, k);
+                k--;
+                free(act2->archivo);
+                free(act2);
+            }
+        }
+    }
+
+    pthread_mutex_unlock(&mutex_cola_ready);
+}
+
+void eliminar_hilos_block_mutex(uint32_t pid) {
+    pthread_mutex_lock(&mutex_cola_blocked);
+    for(int i=0; i < list_size(cola_blocked_mutex); i++) {
+        t_tcb* act = list_get(cola_blocked_mutex, i);
+        if(act->PID_PADRE == pid) {
+            list_remove(cola_blocked_mutex, i);
+            i--;
+            free(act->archivo);
+            free(act);
+        }
+    }
+    pthread_mutex_unlock(&mutex_cola_blocked);
+}
+
+void eliminar_hilos_block_join(uint32_t pid) {
+    pthread_mutex_lock(&mutex_cola_blocked);
+    for(int i=0; i < list_size(cola_blocked_join); i++) {
+        t_join* act = list_get(cola_blocked_join, i);
+        if(act->pid_hilo == pid) {
+            list_remove(cola_blocked_join, i);
+            i--;
+            free(act);
+        }
+    }
+    pthread_mutex_unlock(&mutex_cola_blocked);
+}
+
+void eliminar_hilos_block_io(t_pcb* pcb) {
+    pthread_mutex_lock(&mutex_cola_blocked);
+    for(int i=0; i < list_size(cola_blocked_io); i++) {
+        t_io* act = list_get(cola_blocked_io, i);
+        if(act->pid_hilo == pcb->PID) {
+            act->se_cancelo = true;
+            eliminar_tcb_lista(pcb->TIDS, act->tid);
+        }
+    }
+    pthread_mutex_unlock(&mutex_cola_blocked);
+}
+
 // MANEJO DE HILOS ==============================
 
 // CREA UN NUEVO TCB ASOSICADO AL PROCESO Y LO CONFIGURA CON EL PSEUDOCODIGO A EJECUTAR
@@ -728,6 +824,7 @@ void empezar_io(uint32_t pid, uint32_t tid, int milisegundos) {
     parametros->pid_hilo = pid;
     parametros->tid = tid;
     parametros->milisegundos = milisegundos;
+    parametros->se_cancelo = false;
 
     agregar_hilo_a_bloqueados_io(parametros);
 
@@ -748,6 +845,10 @@ void* ejecutar_temporizador_io(void* args) {
     intentar_mover_a_execute();
 
     usleep(parametros->milisegundos * 1000);
+    if(parametros->se_cancelo) {
+        free(parametros);
+        return NULL;
+    }
     desbloquear_hilo_bloqueado_io(parametros->pid_hilo, parametros->tid);
     return NULL;
 }

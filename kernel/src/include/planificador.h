@@ -16,6 +16,7 @@ typedef struct {
     uint32_t pid_hilo;
     uint32_t tid;
     int milisegundos;
+    bool se_cancelo;
 } t_io;
 
 // COLAS QUE EN LAS CUALES SE GUARDARAN LOS PROCESOS
@@ -66,6 +67,12 @@ void mover_a_exit(t_pcb*);
 void intentar_inicializar_proceso_de_new();
 void serializar_paquete_para_memoria(t_paquete*, int, char*);
 void process_exit(t_pcb*);
+void process_cancel(t_pcb*);
+void terminar_hilos_proceso(t_pcb*);
+void eliminar_hilos_ready(uint32_t);
+void eliminar_hilos_block_mutex(uint32_t);
+void eliminar_hilos_block_join(uint32_t);
+void eliminar_hilos_block_io(t_pcb*);
 void liberar_recursos_proceso(t_pcb*);
 uint32_t asignar_pid();
 uint32_t asignar_tid(t_pcb*);

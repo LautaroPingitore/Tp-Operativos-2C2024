@@ -151,8 +151,8 @@ void* gestionar_conexiones(void* void_args) {
                     log_info(logger, "## Fin de solicitud - Archivo: %s", archivo->nombre);
                     enviar_mensaje("OK", socket_cliente);
                 }
-                free(archivo->contenido);
                 free(archivo->nombre);
+                free(archivo->contenido);
                 free(archivo);
                 break;
 
