@@ -125,7 +125,7 @@ void* gestionar_conexiones(void* void_args) {
         if (bytes_recibidos != sizeof(op_code)) {
             log_warning(logger, "Cliente Desconectado");
             //terminar_filesystem();
-            break;
+            //break;
         }
 
         switch (cod) {
