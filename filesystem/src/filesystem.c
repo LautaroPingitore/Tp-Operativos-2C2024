@@ -124,7 +124,7 @@ void* gestionar_conexiones(void* void_args) {
         ssize_t bytes_recibidos = recv(socket_cliente, &cod, sizeof(op_code), MSG_WAITALL);
         if (bytes_recibidos != sizeof(op_code)) {
             log_warning(logger, "Cliente Desconectado");
-            terminar_filesystem();
+            //terminar_filesystem();
             break;
         }
 
