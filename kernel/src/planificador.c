@@ -334,10 +334,10 @@ void process_exit(t_pcb* pcb) {
 
 void liberar_recursos_proceso(t_pcb* pcb) {
     if (pcb->TIDS != NULL) {
-        list_destroy_and_destroy_elements(pcb->TIDS, free);
+        list_destroy(pcb->TIDS);
     }
     if (pcb->MUTEXS != NULL) {
-        list_destroy_and_destroy_elements(pcb->MUTEXS, free);
+        list_destroy(pcb->MUTEXS);
     }
 
     log_info(LOGGER_KERNEL, "Recursos del proceso %d liberados.", pcb->PID);
@@ -359,8 +359,58 @@ void process_cancel(t_pcb* pcb) {
     terminar_hilos_proceso(pcb);
     eliminar_pcb_lista(tabla_procesos, pcb->PID);
     eliminar_path(pcb->PID);
-    liberar_recursos_proceso(pcb);
+    if(!(pcb->TIDS)){
+        list_destroy(pcb->TIDS);
+    }
+    list_destroy_and_destroy_elements(pcb->MUTEXS, free);
     intentar_inicializar_proceso_de_new();
+}
+
+void terminar_procesos() {
+
+}
+
+void liberar_hilos_ready() {
+    if(strcmp(ALGORITMO_PLANIFICACION, "CMN") == 0) {
+        liberar_colas_multinivel();
+    } else {
+        for(int i=0; i < list_size(cola_ready); i++) {
+            t_tcb* act = list_get(cola_ready, i);
+            free(act->archivo);
+            free(act);
+        }
+    }
+}
+
+void liberar_colas_multinivel() {
+    for(int i=0; i < list_size(colas_multinivel); i++) {
+        t_cola_multinivel* cola = list_get(colas_multinivel, i);
+        for(int j=0; j < list_size(cola->cola); j++) {
+            t_tcb* act = list_get(cola->cola, j);
+            free(act->archivo);
+            free(act);
+        }
+        list_destroy(cola->cola);
+        free(cola);
+    }
+}
+
+void liberar_cola_blocked_join() {
+    for(int i=0; i < list_size(cola_blocked_mutex); i++) {
+        t_join* join = list_get(cola_blocked_mutex, i);
+        t_pcb* pcb = obtener_pcb_padre_de_hilo(join->pid_hilo);
+        t_tcb* tcb = buscar_hilo_por_tid(pcb, join->tid_esperado);
+        free(tcb->archivo);
+        free(tcb);
+        free(join);
+    }
+}
+
+void liberar_cola_blocked_io() {
+    for(int i=0; i < list_size(cola_blocked_io); i++) {
+        t_io* io = list_get(cola_blocked_iom i);
+        io->se_cancelo = true;
+    }
 }
 
 void terminar_hilos_proceso(t_pcb* pcb) {

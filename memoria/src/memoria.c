@@ -185,9 +185,7 @@ void procesar_conexion_filesystem(int cliente_socket, const char* modulo) {
 
         switch (cod) {
         case MENSAJE:
-            log_warning(LOGGER_MEMORIA, "ENTRO A MSJ");
             char* respuesta = recibir_mensaje(cliente_socket);
-            log_warning(LOGGER_MEMORIA, "MENSAJE = %s", respuesta);
             if (respuesta && strcmp(respuesta, "OK") == 0) {
                 mensaje_okey = true;
             } else {
@@ -308,9 +306,7 @@ void* procesar_conexion_memoria(void *void_args){
                     enviar_mensaje("ERROR", cliente_socket);
                 }
 
-                log_warning(LOGGER_MEMORIA, "VA A HACER EL WAIT");
                 sem_wait(&sem_respuesta);
-                log_warning(LOGGER_MEMORIA, "HIZO EL WAIT");
 
                 if(mensaje_okey) {
                     enviar_mensaje("OK", cliente_socket);
