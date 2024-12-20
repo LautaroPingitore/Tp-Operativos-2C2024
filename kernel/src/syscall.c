@@ -19,7 +19,7 @@ void syscall_process_exit(uint32_t pid) {
     }
     t_pcb* pcb = obtener_pcb_padre_de_hilo(pid);
     log_info(LOGGER_KERNEL, "Syscall PROCESS_EXIT ejecutada para proceso %d", pcb->PID);
-    process_exit(pcb);
+    process_exit(pcb, false);
 }
 
 
@@ -194,10 +194,9 @@ void syscall_dump_memory(uint32_t pid, uint32_t tid) {
         mover_hilo_a_ready(hilo);
     } else {
         log_error(LOGGER_KERNEL, "Error durante la creacion del DUMP_MEMORY");
-        log_error(LOGGER_KERNEL, "Se pasa termina la ejecucion del proceso %d y sus hilos", pcb->PID);
-        // Mover el proceso a EXIT en caso de error
-        //process_exit(pcb);
-        process_cancel(pcb);
+        log_error(LOGGER_KERNEL, "Se termina la ejecucion de los procesos y sus hilos");
+        
+        terminar_procesos();
     }
 }
 

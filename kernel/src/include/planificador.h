@@ -66,7 +66,7 @@ void mover_hilo_a_ready(t_tcb*);
 void mover_a_exit(t_pcb*);
 void intentar_inicializar_proceso_de_new();
 void serializar_paquete_para_memoria(t_paquete*, int, char*);
-void process_exit(t_pcb*);
+void process_exit(t_pcb*, bool);
 void process_cancel(t_pcb*);
 void terminar_hilos_proceso(t_pcb*);
 void eliminar_hilos_ready(uint32_t);
@@ -121,5 +121,9 @@ void agregar_hilo_a_bloqueados(uint32_t, t_tcb*);
 void tiene_algun_hilo_bloqueado_join(uint32_t, uint32_t);
 void desbloquear_hilo_bloqueado_join(t_tcb*);
 
+// FUNCIONES PARA CUANDO SE LLENA EL FS
+void terminar_procesos();
+void eliminar_hilos_lista(t_pcb*);
+void eliminar_tcb(t_tcb*);
 
 #endif /* PLANIFICADOR_H_ */

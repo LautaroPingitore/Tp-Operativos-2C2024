@@ -154,7 +154,7 @@ void enviar_memory_dump(t_pcb* pcb, uint32_t tid) {
     if (enviar_paquete(paquete, socket_kernel_memoria) == -1) {
         log_error(LOGGER_KERNEL, "Error al enviar la solicitud de DUMP_MEMORY al módulo de memoria");
         // Mover el proceso a EXIT en caso de error
-        process_exit(pcb);
+        process_exit(pcb, false);
         eliminar_paquete(paquete);
         return;
     } else {
