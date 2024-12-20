@@ -28,8 +28,6 @@ int main(int argc, char* argv[]) {
     iniciar_conexiones();
     pthread_exit(NULL); // Evita que el hilo principal finalice y permite que los hilos creados sigan ejecutándose
 
-    int sockets[] = {socket_filesystem, -1};
-    terminar_programa(CONFIG_FILESYSTEM, LOGGER_FILESYSTEM, sockets);
     return 0;
 }
 
@@ -125,10 +123,10 @@ void* gestionar_conexiones(void* void_args) {
         // Recibir código de operación
         ssize_t bytes_recibidos = recv(socket_cliente, &cod, sizeof(op_code), MSG_WAITALL);
         if (bytes_recibidos != sizeof(op_code)) {
-            log_error(logger, "Error al recibir código de operacion, bytes recibidos: %zd", bytes_recibidos);
+            log_warning(logger, "Cliente Desconectado");
+            terminar_filesystem();
             break;
         }
-        log_info(logger, "Se recibió el código de operacion: %d", cod);
 
         switch (cod) {
             case HANDSHAKE_memoria:
@@ -164,7 +162,6 @@ void* gestionar_conexiones(void* void_args) {
 
     log_warning(logger, "Finalizando conexión con el cliente.");
     close(socket_cliente); // Cerrar el socket del cliente
-    free(args->server_name);
 
     return NULL;
 }
@@ -216,4 +213,12 @@ t_archivo_dump* deserializar_archivo_dump(t_buffer* buffer) {
     memcpy(archivo_recibido->contenido, stream + desplazamiento, tamanio_contenido);
 
     return archivo_recibido;
+}
+
+void terminar_filesystem() {
+    free(bitmap_memoria);
+
+    int sockets[] = {socket_filesystem, -1};
+    terminar_programa(CONFIG_FILESYSTEM, LOGGER_FILESYSTEM, sockets);
+    exit(SUCCES);
 }

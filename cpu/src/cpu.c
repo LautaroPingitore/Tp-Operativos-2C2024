@@ -166,7 +166,7 @@ void* procesar_conexion_memoria(void*) {
     while(1) {
         ssize_t bytes_recibidos = recv(socket_cpu_memoria, &cod, sizeof(op_code), MSG_WAITALL);
         if (bytes_recibidos != sizeof(op_code)) {
-            log_error(LOGGER_CPU, "CLIENTE DESCONECTADO");
+            log_warning(LOGGER_CPU, "CLIENTE DESCONECTADO");
             terminar_cpu();
             break;
         }

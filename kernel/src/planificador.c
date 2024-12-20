@@ -368,7 +368,7 @@ void terminar_hilos_proceso(t_pcb* pcb) {
     eliminar_hilos_block_mutex(pcb->PID);
     eliminar_hilos_block_join(pcb->PID);
     eliminar_hilos_block_io(pcb);
-    list_destroy_and_destroy_elements(pcb->TIDS, free);
+    list_destroy(pcb->TIDS);
 }
 
 void eliminar_hilos_ready(uint32_t pid) {

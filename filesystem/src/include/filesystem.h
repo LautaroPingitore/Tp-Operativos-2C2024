@@ -31,8 +31,9 @@ void* escuchar_filesystem();
 int server_escuchar(t_log*, char* , int);
 void* gestionar_conexiones(void*);
 
-
 t_archivo_dump* recibir_datos_archivo(int);
 t_archivo_dump* deserializar_archivo_dump(t_buffer*);
+
+void terminar_filesystem();
 
 #endif /* FILESYSTEM_H_ */

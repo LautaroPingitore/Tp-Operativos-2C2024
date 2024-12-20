@@ -193,7 +193,8 @@ void syscall_dump_memory(uint32_t pid, uint32_t tid) {
         t_tcb* hilo = buscar_hilo_por_tid(pcb, tid);
         mover_hilo_a_ready(hilo);
     } else {
-        log_error(LOGGER_KERNEL, "Error reportado por el módulo de memoria durante el DUMP_MEMORY");
+        log_error(LOGGER_KERNEL, "Error durante la creacion del DUMP_MEMORY");
+        log_error(LOGGER_KERNEL, "Se pasa termina la ejecucion del proceso %d y sus hilos", pcb->PID);
         // Mover el proceso a EXIT en caso de error
         //process_exit(pcb);
         process_cancel(pcb);
