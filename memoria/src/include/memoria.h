@@ -21,6 +21,9 @@ extern int socket_memoria_filesystem;
 extern t_log* LOGGER_MEMORIA;
 extern t_config* CONFIG_MEMORIA;
 
+extern pthread_t hilo_server_memoria;
+extern pthread_t hilo_filesystem;
+
 extern bool mensaje_okey;
 
 void inicializar_programa();
@@ -29,6 +32,8 @@ void iniciar_conexiones();
 t_list* obtener_particiones_fijas(char**);
 void* escuchar_memoria();
 int server_escuchar(t_log*, char*, int);
+void* manejar_comunicacion_filesystem();
+void procesar_conexion_filesystem(int, const char*);
 void* procesar_conexion_memoria(void *);
 
 void terminar_memoria();

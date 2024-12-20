@@ -21,6 +21,7 @@ t_log* LOGGER_MEMORIA;
 t_config* CONFIG_MEMORIA;
 
 pthread_t hilo_server_memoria;
+pthread_t hilo_filesystem;
 
 bool mensaje_okey = false;
 
@@ -111,6 +112,8 @@ void iniciar_conexiones() {
     }
     enviar_handshake(socket_memoria_filesystem, HANDSHAKE_memoria);
     log_info(LOGGER_MEMORIA, "Conexión con FileSystem establecida exitosamente, se envio codigo %d", HANDSHAKE_memoria);
+    pthread_create(&hilo_filesystem, NULL, manejar_comunicacion_filesystem, NULL);
+    pthread_detach(hilo_filesystem);
 
     // Iniciar hilo servidor
     pthread_create(&hilo_server_memoria, NULL, escuchar_memoria, NULL);
@@ -163,6 +166,44 @@ int server_escuchar(t_log *logger, char *server_name, int server_socket) {
     return 0; // Este punto no se alcanza debido al ciclo infinito.
 }
 
+void* manejar_comunicacion_filesystem(void* args) {
+    procesar_conexion_filesystem(socket_memoria_filesystem, "FILESYSTEM");
+    return NULL;
+}
+
+void procesar_conexion_filesystem(int cliente_socket, const char* modulo) {
+    op_code cod;
+    while (cliente_socket != -1) {
+        // Recibir código de operación
+        ssize_t bytes_recibidos = recv(cliente_socket, &cod, sizeof(op_code), MSG_WAITALL);
+        if (bytes_recibidos != sizeof(op_code) || bytes_recibidos == 0) {
+            log_error(LOGGER_MEMORIA, "Cliente desconectado");
+            break;
+        }
+
+        usleep(RETARDO_RESPUESTA * 1000);
+
+        switch (cod) {
+        case MENSAJE:
+            log_warning(LOGGER_MEMORIA, "ENTRO A MSJ");
+            char* respuesta = recibir_mensaje(cliente_socket);
+            log_warning(LOGGER_MEMORIA, "MENSAJE = %s", respuesta);
+            if (respuesta && strcmp(respuesta, "OK") == 0) {
+                mensaje_okey = true;
+            } else {
+                mensaje_okey = false;
+            }
+            sem_post(&sem_respuesta);
+            free(respuesta);
+            break;
+        
+        default:
+            log_error(LOGGER_MEMORIA, "Codigo desconocido en el servidor de %s, Cod OP: %d", modulo, cod);
+            break;
+        }
+    }
+}
+
 void* procesar_conexion_memoria(void *void_args){
     t_procesar_conexion_args *args = (t_procesar_conexion_args *)void_args;
     //t_log *logger = args->log;
@@ -182,7 +223,6 @@ void* procesar_conexion_memoria(void *void_args){
         }
 
         usleep(RETARDO_RESPUESTA * 1000);
-        log_info(LOGGER_MEMORIA, "CODIGO = %d, SOCKET = %d", cod, cliente_socket);
 
         switch (cod) {
             case HANDSHAKE_kernel: // Simplemente avisa que se conecta a kernel 
@@ -278,19 +318,6 @@ void* procesar_conexion_memoria(void *void_args){
                     enviar_mensaje("ERROR", cliente_socket);
                 }
 
-                break;
-
-            case MENSAJE:
-                log_warning(LOGGER_MEMORIA, "ENTRO A MSJ");
-                char* respuesta = recibir_mensaje(cliente_socket);
-                log_warning(LOGGER_MEMORIA, "MENSAJE = %s", respuesta);
-                if (respuesta && strcmp(respuesta, "OK") == 0) {
-                    mensaje_okey = true;
-                } else {
-                    mensaje_okey = false;
-                }
-                sem_post(&sem_respuesta);
-                free(respuesta);
                 break;
 
             case HANDSHAKE_cpu: //AVISA QUE SE CONECTO A CPU
