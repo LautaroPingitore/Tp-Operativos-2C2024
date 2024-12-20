@@ -154,7 +154,6 @@ void jnz_pc(char* registro, uint32_t nro_pc) {
         hilo_actual->PC = nro_pc;
         log_warning(LOGGER_CPU, "VALOR = %d", *reg);
         if(hilo_actual->PID_PADRE == 0) {
-            usleep(5000 * 1000);
         }
         actualizar_listas_cpu(pcb_actual, hilo_actual);
     }
