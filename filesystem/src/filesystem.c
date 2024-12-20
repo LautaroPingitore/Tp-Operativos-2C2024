@@ -123,9 +123,11 @@ void* gestionar_conexiones(void* void_args) {
         // Recibir código de operación
         ssize_t bytes_recibidos = recv(socket_cliente, &cod, sizeof(op_code), MSG_WAITALL);
         if (bytes_recibidos != sizeof(op_code)) {
-            log_warning(logger, "Cliente Desconectado");
+            //log_warning(logger, "Cliente Desconectado");
             //terminar_filesystem();
-            //break;
+            // TENDRIA QUE APARECERLES EL LOG DE ABAJO CUANDO SALE DEL WHILE
+            // EL DE FINALIZANDO CONEXIÓN 
+            break;
         }
 
         switch (cod) {
