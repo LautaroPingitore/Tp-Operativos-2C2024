@@ -137,9 +137,6 @@ void sub_registros(char* destino, char* origen) {
     } else {
         *dest -= *orig;
     }
-    if(strcmp(destino, "CX") == 0) {
-        pcb_actual->REGISTROS->DX += 5;
-    }
     actualizar_contexto_cpu(destino, *dest);
 }
 
