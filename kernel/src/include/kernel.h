@@ -43,5 +43,4 @@ void destruir_colas();
 void destruir_colas_multinivel();
 void liberar_instruccion(t_instruccion*);
 
-
 #endif /* KERNEL_H_ */

@@ -424,7 +424,7 @@ void* procesar_conexion_memoria(void *void_args){
 
 void terminar_memoria() {
     free(memoria_sistema);
-    list_destroy_and_destroy_elements(lista_particiones, free);
+    list_destroy(lista_particiones);
     destruir_listas();
     destruir_mutexs();
 

@@ -300,7 +300,9 @@ void manejar_comunicaciones(int socket, const char* nombre_modulo) {
                 t_instruccion* inst_dm = recibir_instruccion(socket);
                 log_syscall("DUMP_MEMORY", hilo_dm);
                 syscall_dump_memory(hilo_dm->PID_PADRE, hilo_dm->TID);
-                intentar_mover_a_execute();
+                if(termino_programa) {
+                    intentar_mover_a_execute();
+                }
                 liberar_instruccion(inst_dm);
                 break;
             case IO:
