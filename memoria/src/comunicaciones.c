@@ -618,7 +618,7 @@ int escribir_memoria(uint32_t direccion_fisica, uint32_t valor) {
 
     uint32_t valor_leido;
     memcpy(&valor_leido, (uint8_t*) memoria_sistema + direccion_fisica, sizeof(uint32_t));
-    log_info(LOGGER_MEMORIA, "SE ESCRIBIO %d, EN %d", valor_leido, direccion_fisica);
+    log_warning(LOGGER_MEMORIA, "SE ESCRIBIO %d, EN %d", valor_leido, direccion_fisica);
    
     return 1;
 }

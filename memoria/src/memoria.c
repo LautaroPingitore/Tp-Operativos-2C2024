@@ -351,6 +351,8 @@ void* procesar_conexion_memoria(void *void_args){
             case PEDIDO_READ_MEM:
                 t_read_mem* read_mem = recibir_read_mem(cliente_socket);
                 uint32_t valor_leido = leer_memoria(read_mem->direccion_fisica);
+                //log_warning(LOGGER_MEMORIA, "SE LEYO %d EN %d", valor_leido, read_mem->direccion_fisica);
+           
                 if (valor_leido != -1) {
                     enviar_valor_leido_cpu(cliente_socket, valor_leido);
                     uint32_t tam = sizeof(valor_leido);

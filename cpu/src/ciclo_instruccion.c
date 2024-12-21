@@ -20,7 +20,7 @@ void ejecutar_ciclo_instruccion() {
             log_error(LOGGER_CPU, "No hay Proceso actual. Terminando ciclo de instrucción.");
             break;
         }
-
+       
         t_instruccion *instruccion = fetch(hilo_actual->PID_PADRE, hilo_actual->TID, hilo_actual->PC);
         
         if (!instruccion) {

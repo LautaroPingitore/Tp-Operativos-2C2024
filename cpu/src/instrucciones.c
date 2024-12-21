@@ -56,6 +56,7 @@ void set_registro(char* registro, char *valor) {
     }
 
     *reg = atoi(valor);
+    actualizar_contexto_cpu(registro, *reg);
 }
 
 //Lee el valor de memoria correspondiente a
@@ -80,8 +81,9 @@ void read_mem(char* reg_datos, char* reg_direccion) {
     sem_wait(&sem_valor_memoria); // Bloquea hasta que se reciba el valor
 
     *registro_datos = valor_memoria;
-
     log_info(LOGGER_CPU, "## TID: <%d> - Accion: <LEER> - Direccion Fisica: <%d>", hilo_actual->TID, direccion_fisica);
+
+    actualizar_contexto_cpu(reg_datos, *registro_datos);
 }
 
 //Lee el valor del Registro Datos y lo escribe en la 
@@ -117,6 +119,7 @@ void sum_registros(char* destino, char* origen) {
     }
     
     *dest += *orig;
+    actualizar_contexto_cpu(destino, *dest);
 }
 
 //Resta al Registro Destino el Registro Origen y deja el resultado en el Registro Destino.
@@ -129,12 +132,15 @@ void sub_registros(char* destino, char* origen) {
         return;
     }
     
-    if(*dest < *orig) {
+    if(*dest <= *orig) {
         *dest = 0;
     } else {
         *dest -= *orig;
     }
-    
+    if(strcmp(destino, "CX") == 0) {
+        pcb_actual->REGISTROS->DX += 5;
+    }
+    actualizar_contexto_cpu(destino, *dest);
 }
 
 //Si el valor del registro es distinto de cero, actualiza el program counter
@@ -150,7 +156,9 @@ void jnz_pc(char* registro, uint32_t nro_pc) {
     if(*reg != 0) {
         hilo_actual->PC = nro_pc;
         actualizar_listas_cpu(pcb_actual, hilo_actual);
+        return;
     }
+
 }
 
 //Escribe en el archivo de log el valor del registro.
@@ -163,4 +171,33 @@ void log_registro(char* registro) {
     }
 
     log_warning(LOGGER_CPU, "LOG - Registro %s: %d (<%d>:<%d>, PC: %d)", registro, *reg, pcb_actual->PID, hilo_actual->TID, hilo_actual->PC);
+}
+
+void actualizar_contexto_cpu(char* registro, uint32_t valor) {
+    if (strcmp(registro, "AX") == 0) {
+        pcb_actual->REGISTROS->AX = valor;
+    }
+    if (strcmp(registro, "BX") == 0) {
+        pcb_actual->REGISTROS->BX = valor;        
+    };
+    if (strcmp(registro, "CX") == 0) {
+        pcb_actual->REGISTROS->CX = valor;
+    };
+    if (strcmp(registro, "DX") == 0) {
+        pcb_actual->REGISTROS->DX = valor;
+    };
+    if (strcmp(registro, "EX") == 0) {
+        pcb_actual->REGISTROS->EX = valor;
+    };
+    if (strcmp(registro, "FX") == 0) {
+        pcb_actual->REGISTROS->FX = valor;
+    };
+    if (strcmp(registro, "GX") == 0) {
+        pcb_actual->REGISTROS->GX = valor;
+    };
+    if (strcmp(registro, "HX") == 0) {
+        pcb_actual->REGISTROS->HX = valor;
+    };
+
+    actualizar_listas_cpu(pcb_actual, hilo_actual);
 }

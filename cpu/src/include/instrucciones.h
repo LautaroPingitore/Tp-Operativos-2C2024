@@ -16,5 +16,6 @@ uint32_t* obtener_registro(char*);
 void log_registro(char*);
 void* recibir_dato_de_memoria(int,t_log*,t_list*,uint32_t);
 void enviar_interrupcion_segfault(uint32_t, int);
+void actualizar_contexto_cpu(char* registro, uint32_t);
 
 #endif
