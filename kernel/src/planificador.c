@@ -334,18 +334,8 @@ void process_exit(t_pcb* pcb, bool error_dump) {
     }
 }
 
-void eliminar_tcb(t_tcb* tcb) {
-    if (tcb->archivo != NULL) {
-        free(tcb->archivo);  // Liberar el archivo (si es necesario)
-    }
-    free(tcb);  // Liberar la estructura t_tcb
-}
-
-void eliminar_hilos_lista(t_pcb* pcb) {
-    list_destroy_and_destroy_elements(pcb->TIDS, (void (*)(void*))eliminar_tcb);
-}
-
 void liberar_recursos_proceso(t_pcb* pcb) {
+
     if (pcb->TIDS != NULL) {
         list_destroy(pcb->TIDS);
     }
@@ -356,6 +346,8 @@ void liberar_recursos_proceso(t_pcb* pcb) {
     log_info(LOGGER_KERNEL, "Recursos del proceso %d liberados.", pcb->PID);
 
     // Liberar PCB
+    free(pcb->CONTEXTO->registros);
+    free(pcb->CONTEXTO);
     free(pcb);
 }
 

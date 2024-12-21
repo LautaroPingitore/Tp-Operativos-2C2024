@@ -123,10 +123,6 @@ void* gestionar_conexiones(void* void_args) {
         // Recibir código de operación
         ssize_t bytes_recibidos = recv(socket_cliente, &cod, sizeof(op_code), MSG_WAITALL);
         if (bytes_recibidos != sizeof(op_code)) {
-            //log_warning(logger, "Cliente Desconectado");
-            //terminar_filesystem();
-            // TENDRIA QUE APARECERLES EL LOG DE ABAJO CUANDO SALE DEL WHILE
-            // EL DE FINALIZANDO CONEXIÓN 
             break;
         }
 
@@ -146,6 +142,7 @@ void* gestionar_conexiones(void* void_args) {
                 if (resultado == -1) {
                     log_error(LOGGER_FILESYSTEM, "Error al crear el archivo");
                     enviar_mensaje("Error", socket_cliente);
+                    terminar_filesystem();
                 } else {
                     log_info(logger, "## Archivo Creado: %s - Tamaño: <%d>", archivo->nombre, archivo->tamanio_contenido);
                     log_info(logger, "## Fin de solicitud - Archivo: %s", archivo->nombre);

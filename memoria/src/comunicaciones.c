@@ -657,13 +657,11 @@ uint32_t leer_memoria(uint32_t direccion_fisica) {
     // Verificar que la dirección física esté dentro de los límites de la memoria de usuario
     if (direccion_fisica + sizeof(uint32_t) > TAM_MEMORIA) {
         log_error(LOGGER_MEMORIA, "Error de segmentación: Dirección física %d fuera de los límites de memoria de usuario", direccion_fisica);
-        return 0;  // Retornar 0 o algún valor de error para indicar fallo de segmentación
+        return -1;  // Retornar 0 o algún valor de error para indicar fallo de segmentación
     }
 
     uint32_t valor;
     memcpy(&valor, (uint8_t*) memoria_sistema + direccion_fisica, sizeof(uint32_t));
-
-    log_info(LOGGER_MEMORIA, "SE LEYO EL VALOR %d", valor);
 
     return valor;
 }

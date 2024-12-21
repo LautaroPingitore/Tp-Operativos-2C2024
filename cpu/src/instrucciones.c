@@ -81,7 +81,6 @@ void read_mem(char* reg_datos, char* reg_direccion) {
 
     *registro_datos = valor_memoria;
 
-    log_warning(LOGGER_CPU, "SE ESCRIBIO EL VALOR %d AL REGISTRO", *registro_datos);
     log_info(LOGGER_CPU, "## TID: <%d> - Accion: <LEER> - Direccion Fisica: <%d>", hilo_actual->TID, direccion_fisica);
 }
 
@@ -104,7 +103,6 @@ void write_mem(char* reg_direccion, char* reg_datos) {
     }
 
     enviar_valor_a_memoria(socket_cpu_memoria, direccion_fisica, *reg_dat);
-    log_warning(LOGGER_CPU, "SE ESCRIBIO %d EN %d", *reg_dat, direccion_fisica);
     log_info(LOGGER_CPU, "## TID: <%d> - Accion: <ESCRIBIR> - Direccion Fisica: <%d>", hilo_actual->TID, direccion_fisica);
 }
 
@@ -151,9 +149,6 @@ void jnz_pc(char* registro, uint32_t nro_pc) {
     
     if(*reg != 0) {
         hilo_actual->PC = nro_pc;
-        log_warning(LOGGER_CPU, "VALOR = %d", *reg);
-        if(hilo_actual->PID_PADRE == 0) {
-        }
         actualizar_listas_cpu(pcb_actual, hilo_actual);
     }
 }
