@@ -56,7 +56,6 @@ void set_registro(char* registro, char *valor) {
     }
 
     *reg = atoi(valor);
-    log_warning(LOGGER_CPU, "SE SETEO EL VALOR %d", *reg);
 }
 
 //Lee el valor de memoria correspondiente a
