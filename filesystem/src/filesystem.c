@@ -142,7 +142,6 @@ void* gestionar_conexiones(void* void_args) {
                 if (resultado == -1) {
                     log_error(LOGGER_FILESYSTEM, "Error al crear el archivo");
                     enviar_mensaje("Error", socket_cliente);
-                    terminar_filesystem();
                 } else {
                     log_info(logger, "## Archivo Creado: %s - Tamaño: <%d>", archivo->nombre, archivo->tamanio_contenido);
                     log_info(logger, "## Fin de solicitud - Archivo: %s", archivo->nombre);

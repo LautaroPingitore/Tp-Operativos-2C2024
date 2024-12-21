@@ -220,9 +220,7 @@ void manejar_comunicaciones(int socket, const char* nombre_modulo) {
                 log_syscall("PROCESS_EXIT", hilo_pe);
                 syscall_process_exit(hilo_pe->PID_PADRE);
                 liberar_instruccion(inst_pe);
-                if(!termino_programa) {
-                    intentar_mover_a_execute();
-                }
+                intentar_mover_a_execute();
                 break;
             case THREAD_CREATE:
                 t_tcb* hilo_tc = list_remove(cola_exec, 0);
@@ -300,9 +298,7 @@ void manejar_comunicaciones(int socket, const char* nombre_modulo) {
                 t_instruccion* inst_dm = recibir_instruccion(socket);
                 log_syscall("DUMP_MEMORY", hilo_dm);
                 syscall_dump_memory(hilo_dm->PID_PADRE, hilo_dm->TID);
-                if(termino_programa) {
-                    intentar_mover_a_execute();
-                }
+                intentar_mover_a_execute();
                 liberar_instruccion(inst_dm);
                 break;
             case IO:

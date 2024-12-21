@@ -316,7 +316,7 @@ void intentar_inicializar_proceso_de_new() {
 }
 
 // MUEVE UN PROCESO A EXIT LIBERANDO SUS RECURSOS E INTENTA INICIALIZAR OTRO A NEW
-void process_exit(t_pcb* pcb, bool error_dump) {
+void process_exit(t_pcb* pcb) {
     mover_a_exit(pcb);
     enviar_proceso_memoria(socket_kernel_memoria, pcb, PROCESS_EXIT);
 
@@ -329,10 +329,109 @@ void process_exit(t_pcb* pcb, bool error_dump) {
     eliminar_pcb_lista(tabla_procesos, pcb->PID);
     eliminar_path(pcb->PID);
     liberar_recursos_proceso(pcb);
-    if(error_dump) {
-        intentar_inicializar_proceso_de_new();
-    }
+    intentar_inicializar_proceso_de_new();
+    
 }
+
+void process_cancel(t_pcb* pcb) {
+    mover_a_exit(pcb);
+    log_info(LOGGER_KERNEL, "Se finalizo debido al error en el DUMP_MEMORY");
+    enviar_proceso_memoria(socket_kernel_memoria, pcb, PROCESS_EXIT);
+
+    sem_wait(&sem_mensaje);
+    if(!mensaje_okey) {
+        log_error(LOGGER_KERNEL, "ERROR AL LIBERAR EL PROCESO EN MEMORIA");
+        exit(EXIT_FAILURE);
+    }
+    terminar_hilos_proceso(pcb);
+    eliminar_pcb_lista(tabla_procesos, pcb->PID);
+    eliminar_path(pcb->PID);
+    list_destroy(pcb->TIDS);
+    list_destroy(pcb->MUTEXS);
+    intentar_inicializar_proceso_de_new();
+}
+
+void terminar_hilos_proceso(t_pcb* pcb) {
+    eliminar_hilos_ready(pcb->PID);
+    eliminar_hilos_block_mutex(pcb->PID);
+    eliminar_hilos_block_join(pcb->PID);
+    eliminar_hilos_block_io(pcb);
+    list_destroy(pcb->TIDS);
+}
+
+void eliminar_hilos_ready(uint32_t pid) {
+    pthread_mutex_lock(&mutex_cola_ready);
+    if(strcmp(ALGORITMO_PLANIFICACION, "CMN") == 0) {
+        for(int i=0; i < list_size(colas_multinivel); i++) {
+            t_cola_multinivel* cola_act = list_get(colas_multinivel, i);
+            if(list_size(cola_act->cola) > 0) {
+                for(int j=0; j < list_size(cola_act->cola); j++) {
+                    t_tcb* act = list_get(cola_act->cola, j);
+                    if(act->PID_PADRE == pid) {
+                        list_remove(cola_act->cola, j);
+                        j--;
+                        free(act->archivo);
+                        free(act);
+                    }
+                }
+            }
+        }
+    } else {
+        for(int k=0; k < list_size(cola_ready); k++) {
+            t_tcb* act2 = list_get(cola_ready, k);
+            if(act2->PID_PADRE == pid) {
+                list_remove(cola_ready, k);
+                k--;
+                free(act2->archivo);
+                free(act2);
+            }
+        }
+    }
+
+    pthread_mutex_unlock(&mutex_cola_ready);
+}
+
+void eliminar_hilos_block_mutex(uint32_t pid) {
+    pthread_mutex_lock(&mutex_cola_blocked);
+    for(int i=0; i < list_size(cola_blocked_mutex); i++) {
+        t_tcb* act = list_get(cola_blocked_mutex, i);
+        if(act->PID_PADRE == pid) {
+            list_remove(cola_blocked_mutex, i);
+            i--;
+            free(act->archivo);
+            free(act);
+        }
+    }
+    pthread_mutex_unlock(&mutex_cola_blocked);
+}
+
+void eliminar_hilos_block_join(uint32_t pid) {
+    pthread_mutex_lock(&mutex_cola_blocked);
+    for(int i=0; i < list_size(cola_blocked_join); i++) {
+        t_join* act = list_get(cola_blocked_join, i);
+        if(act->pid_hilo == pid) {
+            list_remove(cola_blocked_join, i);
+            i--;
+            free(act);
+        }
+    }
+    pthread_mutex_unlock(&mutex_cola_blocked);
+}
+
+void eliminar_hilos_block_io(t_pcb* pcb) {
+    pthread_mutex_lock(&mutex_cola_blocked);
+    for(int i=0; i < list_size(cola_blocked_io); i++) {
+        t_io* act = list_get(cola_blocked_io, i);
+        if(act->pid_hilo == pcb->PID) {
+            act->se_cancelo = true;
+            eliminar_tcb_lista(pcb->TIDS, act->tid);
+        }
+    }
+    pthread_mutex_unlock(&mutex_cola_blocked);
+}
+
+
+
 
 void liberar_recursos_proceso(t_pcb* pcb) {
 
@@ -354,7 +453,7 @@ void liberar_recursos_proceso(t_pcb* pcb) {
 void terminar_procesos() {
     for(int i=0; i < list_size(tabla_procesos); i++) {
         t_pcb* act = list_get(tabla_procesos, i);
-        process_exit(act, true);
+        process_exit(act);
         i--;
     }
 

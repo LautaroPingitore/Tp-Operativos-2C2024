@@ -66,7 +66,7 @@ void mover_hilo_a_ready(t_tcb*);
 void mover_a_exit(t_pcb*);
 void intentar_inicializar_proceso_de_new();
 void serializar_paquete_para_memoria(t_paquete*, int, char*);
-void process_exit(t_pcb*, bool);
+void process_exit(t_pcb*);
 void process_cancel(t_pcb*);
 void terminar_hilos_proceso(t_pcb*);
 void eliminar_hilos_ready(uint32_t);
@@ -125,5 +125,13 @@ void desbloquear_hilo_bloqueado_join(t_tcb*);
 void terminar_procesos();
 void eliminar_hilos_lista(t_pcb*);
 void eliminar_tcb(t_tcb*);
+
+
+void process_cancel(t_pcb*);
+void terminar_hilos_proceso(t_pcb*);
+void eliminar_hilos_ready(uint32_t);
+void eliminar_hilos_block_mutex(uint32_t);
+void eliminar_hilos_block_join(uint32_t);
+void eliminar_hilos_block_io(t_pcb*);
 
 #endif /* PLANIFICADOR_H_ */
