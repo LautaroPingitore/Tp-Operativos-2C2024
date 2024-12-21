@@ -40,5 +40,8 @@ void* manejar_comunicaciones_interrupt(void*);
 void terminar_kernel();
 void destruir_mutex_semaforos();
 void destruir_colas();
+void destruir_colas_multinivel();
+void liberar_instruccion(t_instruccion*);
+
 
 #endif /* KERNEL_H_ */

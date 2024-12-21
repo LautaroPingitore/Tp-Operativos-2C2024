@@ -125,7 +125,7 @@ uint32_t asignar_tid(t_pcb* pcb) {
     return nuevo_tid;
 } 
 
-t_pcb* crear_pcb(uint32_t pid, int tamanio, t_contexto_ejecucion* contexto_ejecucion, t_estado estado, char* archivo){
+t_pcb* crear_pcb(uint32_t pid, int tamanio, t_contexto_ejecucion* contexto_ejecucion, t_estado estado, char* archivo, int prioridad){
 
     t_pcb* pcb = malloc(sizeof(t_pcb));
     if(pcb == NULL) {
@@ -145,7 +145,7 @@ t_pcb* crear_pcb(uint32_t pid, int tamanio, t_contexto_ejecucion* contexto_ejecu
     agregar_path(pid, archivo);
     list_add(tabla_procesos, pcb);
 
-    t_tcb* hilo_principal = crear_tcb(pid, asignar_tid(pcb), archivo, 0, NEW);
+    t_tcb* hilo_principal = crear_tcb(pid, asignar_tid(pcb), archivo, prioridad, NEW);
 
     list_add(pcb->TIDS, hilo_principal);
     // mover_hilo_a_ready(hilo_principal);
@@ -176,7 +176,7 @@ t_tcb* crear_tcb(uint32_t pid_padre, uint32_t tid, char* archivo_pseudocodigo, i
 void crear_proceso(char* path_proceso, int tamanio_proceso, int prioridad){
     //archivo_pseudocodigo* archivo = leer_archivo_pseudocodigo(path_proceso);
 
-    t_pcb* pcb = crear_pcb(asignar_pid(), tamanio_proceso, inicializar_contexto(), NEW, path_proceso);
+    t_pcb* pcb = crear_pcb(asignar_pid(), tamanio_proceso, inicializar_contexto(), NEW, path_proceso, prioridad);
     //obtener_recursos_del_proceso(archivo, pcb);
     
     // EN LA LISTA DE NEW, READY, ETC TENDRIAN QUE SER HILOS, NO PROCESOS

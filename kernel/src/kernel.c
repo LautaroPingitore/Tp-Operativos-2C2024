@@ -185,8 +185,9 @@ void manejar_comunicaciones(int socket, const char* nombre_modulo) {
                     cpu_libre = true;
                     tcb_interrumpido->motivo_desalojo = ESTADO_INICIAL;
 
-                    mover_hilo_a_ready(tcb_interrumpido);
                     free(tcb);
+
+                    mover_hilo_a_ready(tcb_interrumpido);
 
                     intentar_mover_a_execute();
 
@@ -209,6 +210,7 @@ void manejar_comunicaciones(int socket, const char* nombre_modulo) {
                 strcat(path_proc, inst_pc->parametro1);
 
                 syscall_process_create(hilo_pc, path_proc, tamanio, inst_pc->parametro3);
+                liberar_instruccion(inst_pc);
                 intentar_mover_a_execute();
                 break;
             case PROCESS_EXIT:
@@ -217,10 +219,10 @@ void manejar_comunicaciones(int socket, const char* nombre_modulo) {
                 t_instruccion* inst_pe = recibir_instruccion(socket);
                 log_syscall("PROCESS_EXIT", hilo_pe);
                 syscall_process_exit(hilo_pe->PID_PADRE);
+                liberar_instruccion(inst_pe);
                 if(!termino_programa) {
                     intentar_mover_a_execute();
                 }
-                free(inst_pe);
                 break;
             case THREAD_CREATE:
                 t_tcb* hilo_tc = list_remove(cola_exec, 0);
@@ -234,6 +236,7 @@ void manejar_comunicaciones(int socket, const char* nombre_modulo) {
                 strcat(path, inst_tc->parametro1);
 
                 syscall_thread_create(hilo_tc, hilo_tc->PID_PADRE, path, prioridad);
+                liberar_instruccion(inst_tc);
                 intentar_mover_a_execute();
                 break;
             case THREAD_JOIN:
@@ -243,6 +246,7 @@ void manejar_comunicaciones(int socket, const char* nombre_modulo) {
                 uint32_t tid_esperado = atoi(inst_tj->parametro1);
                 log_syscall("THREAD_JOIN", hilo_tj);
                 syscall_thread_join(hilo_tj->PID_PADRE, hilo_tj->TID, tid_esperado);
+                liberar_instruccion(inst_tj);
                 intentar_mover_a_execute();
                 break;
             case THREAD_CANCEL:
@@ -252,6 +256,7 @@ void manejar_comunicaciones(int socket, const char* nombre_modulo) {
                 uint32_t tid = atoi(inst_tcl->parametro1);
                 log_syscall("THREAD_CANCEL", hilo_tcl);
                 syscall_thread_cancel(hilo_tcl->PID_PADRE, tid);
+                liberar_instruccion(inst_tc);
                 intentar_mover_a_execute();
                 break;
             case THREAD_EXIT:
@@ -261,7 +266,7 @@ void manejar_comunicaciones(int socket, const char* nombre_modulo) {
                 log_syscall("THREAD_EXIT", hilo_te);
                 syscall_thread_exit(hilo_te->PID_PADRE, hilo_te->TID);
                 intentar_mover_a_execute();
-                free(inst_te);
+                liberar_instruccion(inst_te);
                 break;
             case MUTEX_CREATE:
                 t_tcb* hilo_mc = list_remove(cola_exec, 0);
@@ -269,6 +274,7 @@ void manejar_comunicaciones(int socket, const char* nombre_modulo) {
                 t_instruccion* inst_mc = recibir_instruccion(socket);
                 log_syscall("MUTEX_CREATE", hilo_mc);
                 syscall_mutex_create(hilo_mc, inst_mc->parametro1);
+                liberar_instruccion(inst_mc);
                 intentar_mover_a_execute();
                 break;
             case MUTEX_LOCK:
@@ -277,6 +283,7 @@ void manejar_comunicaciones(int socket, const char* nombre_modulo) {
                 t_instruccion* inst_ml = recibir_instruccion(socket);
                 log_syscall("MUTEX_LOCK", hilo_ml);
                 syscall_mutex_lock(hilo_ml, inst_ml->parametro1);
+                liberar_instruccion(inst_ml);
                 intentar_mover_a_execute();
                 break;
             case MUTEX_UNLOCK:
@@ -285,6 +292,7 @@ void manejar_comunicaciones(int socket, const char* nombre_modulo) {
                 t_instruccion* inst_mu = recibir_instruccion(socket);
                 log_syscall("MUTEX_UNLOCK", hilo_mu);
                 syscall_mutex_unlock(hilo_mu, inst_mu->parametro1);
+                liberar_instruccion(inst_mu);
                 break;
             case DUMP_MEMORY:
                 t_tcb* hilo_dm = list_remove(cola_exec, 0);
@@ -293,7 +301,7 @@ void manejar_comunicaciones(int socket, const char* nombre_modulo) {
                 log_syscall("DUMP_MEMORY", hilo_dm);
                 syscall_dump_memory(hilo_dm->PID_PADRE, hilo_dm->TID);
                 intentar_mover_a_execute();
-                free(inst_dm);
+                liberar_instruccion(inst_dm);
                 break;
             case IO:
                 t_tcb* hilo_io = list_remove(cola_exec, 0);
@@ -302,6 +310,7 @@ void manejar_comunicaciones(int socket, const char* nombre_modulo) {
                 int milisegundos = atoi(inst_io->parametro1);
                 log_syscall("IO", hilo_io);
                 syscall_io(hilo_io->PID_PADRE, hilo_io->TID, milisegundos);
+                liberar_instruccion(inst_io);
                 break;
 
             default:
@@ -316,6 +325,12 @@ void manejar_comunicaciones(int socket, const char* nombre_modulo) {
 // ====================|
 // TERMINAR EL PROGRAMA|
 // ====================|
+void liberar_instruccion(t_instruccion* inst) {
+    free(inst->nombre);
+    free(inst->parametro1);
+    free(inst->parametro2);
+    free(inst);
+}
 
 void terminar_kernel() {
     termino_programa = true;
@@ -350,11 +365,20 @@ void destruir_colas() {
     list_destroy(cola_blocked_mutex);
     list_destroy(cola_blocked_io);
     if(strcmp(ALGORITMO_PLANIFICACION, "CMN") == 0) {
-        list_destroy(colas_multinivel);
+        destruir_colas_multinivel();
     } else {
         list_destroy(cola_ready);
     }
     list_destroy(tabla_paths);
     list_destroy(tabla_procesos);
     list_destroy(recursos_globales);
+}
+
+void destruir_colas_multinivel() {
+    for(int i=0; i < list_size(colas_multinivel); i++) {
+        t_cola_multinivel* cola = list_get(colas_multinivel, i);
+        list_destroy(cola->cola);
+        free(cola);
+    }
+    list_destroy(colas_multinivel);
 }
